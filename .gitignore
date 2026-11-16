@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.env
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Private planning notes. Never commit.
+reports/
+
+# Screenshots show an account email. Remove this line once they are cropped.
+docs/screenshots/
+
+# Local environment and build output
+.env.*
+!.env.example
+.vercel/
+coverage/
+*.log
+
+# Note: .kiro/ must never be listed here. The hackathon rules require it to be committed.
