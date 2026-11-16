@@ -96,7 +96,35 @@ For each session, record:
 
 ---
 
-## Session 4: (date)
+## Session 4: engine spec, tasks (Nov 16, 2026)
+
+- **Goal**: turn the approved design into an implementation task list.
+- **Kiro feature used**: spec-driven development, tasks step ("Generate Task List").
+- **What Kiro produced**: `.kiro/specs/engine/tasks.md` with 26 top-level tasks and 52 sub-tasks, three checkpoints, requirement references on every task, and a dependency graph of 26 waves. It read the hand-edited design correctly: the tasks use `fc.asyncProperty`, the offset-based test times and the generator coverage check.
+- **What went right**: the build order is sensible. Types, then errors, state derivation, settle, serialization, storage, then the engine one method at a time, with tests beside each step.
+- **What went wrong or surprised me**: a review (done with Claude) found seven problems.
+  - Every test task was marked optional, "can be skipped for faster MVP delivery". That covered all unit tests and all ten property tests, and it contradicts the testing steering document. With "Run All Tasks", the engine could have been built with no tests at all.
+  - The fake test policy was scheduled at task 18, but the unit tests from task 4 onwards need it.
+  - Tasks 3, 4 and 5 said to export internal functions that task 26 said must not be exported.
+  - The error code count was wrong (14 instead of 16).
+  - `tend`, `due` and `resurrect` did not say that the policy must receive the settled item, not the stored one. Passing the stored item would bring back the stale-health bug.
+  - No task set up the workspace root, so `pnpm test` had nothing to run from.
+  - Nothing enforced the engine boundary rules from steering.
+- **What I changed by hand**: I edited seven fixes into `tasks.md` by hand, outside Kiro, at no credit cost.
+  - Removed the optional marker from all 28 test tasks and replaced the note with "no task is optional; never weaken a test to make a task pass".
+  - Moved the fake policy early in the dependency graph and pointed the unit test tasks at it.
+  - Made the export rule consistent: only `deriveState` and `validateThresholds` are public helpers.
+  - Corrected the error code count.
+  - Stated that `applyEvent`, `nextDueAt` and `resurrect` receive the settled item, with a test for it.
+  - Added workspace root setup and the coverage tool to task 1.
+  - Added task 24.3: boundary tests that read the engine source and fail on any clock read, any browser access outside the local storage file, any import from an app or UI library, or any runtime dependency. This turns the engine-boundary steering rules into something the test run enforces.
+- **Credits used**: 3.01 (3 minutes 53 seconds). About 37.7 of the free 50 used in total, about 12.3 left.
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: the engine spec is complete: requirements, design and tasks. No code yet. Running the tasks waits for the hackathon credits and for Node.js and pnpm to be installed.
+
+---
+
+## Session 5: (date)
 
 - **Goal**:
 - **Kiro feature used**:
