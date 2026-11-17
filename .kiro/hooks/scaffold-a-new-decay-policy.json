@@ -4,9 +4,10 @@
     {
       "name": "Scaffold a new decay policy",
       "trigger": "UserPromptSubmit",
+      "matcher": "scaffold.*policy",
       "action": {
         "type": "agent",
-        "prompt": "scaffold.*policy"
+        "prompt": "Scaffold a new decay policy for the app named in the prompt (ask if none is given).\nCreate, under apps/<app-name>/src/:\n1. policy.ts implementing the DecayPolicy contract exactly as defined in the \"Type Contract\" section of .kiro/specs/engine/requirements.md. Do not invent other signatures. Every function body is a TODO: decay rules are hand-written by the developer (see .kiro/steering/authorship.md). Do not write them.\n2. skin.css with placeholder CSS variables (--bg, --panel, --line, --text, --dim, --acc, --good, --warn, --bad) and a comment naming the app's metaphor.\n3. policy.test.ts with empty outcome-test and property-test stubs: health stays 0-100, same input gives same output, healthAt never increases between events, the policy passes checkPolicy, and one outcome test (\"dies on day N if never tended\").\nDo not modify packages/engine. Log this in docs/KIRO_LOG.md."
       },
       "description": "Creates the starting files for a new app's decay policy, skin and tests.",
       "enabled": true
