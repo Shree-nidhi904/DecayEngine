@@ -1,0 +1,8 @@
+{
+  "name": "decay-engine-monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "pnpm -r --if-present test"
+  }
+}

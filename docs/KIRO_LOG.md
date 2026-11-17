@@ -304,7 +304,38 @@ For each session, record:
 
 ---
 
-## Session 9: (date)
+## Session 9: first engine code, tasks 1-3 (Nov 17, 2026)
+
+- **Goal**: start building the engine with the three foundation tasks: workspace and types, the error class, and the state functions. One task at a time, with a review after each.
+- **Kiro feature used**: running spec tasks from `tasks.md`, plus steering, and Context7 for library docs.
+- **What Kiro produced**:
+  - **Task 1:** a pnpm workspace, `@decay-engine/engine` with strict TypeScript, the Vitest config, and `types.ts` matching the design field for field. Kiro picked current releases: TypeScript 7.0.2 (the new native compiler), Vitest 5.1.0 and fast-check 4.10.2.
+  - **Task 2:** `DecayEngineError` with 21 codes and 31 tests. The tests include a compile-time check: if a 22nd error code is added without a test, the typecheck fails.
+  - **Task 3:** `deriveState`, `validateThresholds`, `clampHealth` and `applyHealth`, with 50 tests. The tests cover every state transition, the bisected crossing times, the weak entry recorded before death, and that the input item is never changed.
+  - **Result:** 81 tests pass and the typecheck is clean.
+- **Kiro stopped and asked twice instead of guessing**, as the prompts told it to. Both were real problems:
+  - **Resurrect contract:** the steering still said `resurrect` was async with no event, while the spec said synchronous with the event. I had missed the steering when the spec changed. Kiro asked before writing `types.ts`, and the steering was fixed.
+  - **NaN thresholds:** the design's `validateThresholds` only checked `typeof === "number"`, and `NaN` passes that. A policy with a NaN threshold would never report "alive" (or never "weak") and would fail silently. Kiro found this while writing the tests. It now rejects NaN and ±Infinity with `Number.isFinite`, the design was updated, and five tests cover it.
+- **What went wrong or surprised me**:
+  - **Kiro's shell does not work on this setup.** Kiro runs on Windows while the project lives in WSL. Its shell tool rewrites the working folder as `\home\shree\decay-engine`, which bash rejects, so almost every command failed with exit code -1. Short commands sometimes got through, which is why it looked intermittent in Session 5.
+    - **Workaround:** Kiro writes files only. Tests and the typecheck are run in WSL, by me or with Claude, and the results are pasted back to Kiro, which marks a task done only after a passing run.
+    - **Probably affected:** the test-on-save hook, which runs a shell command the same way.
+    - **Possible fix for later:** run Kiro's Linux version inside WSL.
+  - **A sub-agent stopped early**, saying I had cancelled when I had not. The main agent noticed and sent it back.
+  - **Kiro reported two "conflicts" in later tasks:**
+    - One was stale: it had read an older copy of the file.
+    - The other was a wording difference. Edit-caused deaths use `now`, and bisection over an empty interval also gives `now`. I reworded Requirement 8a.7 to say so.
+- **What I changed by hand**:
+  - Fixed the async `resurrect` in three steering files (`engine-boundary.md`, `authorship.md`, `product.md`).
+  - Fixed the stale task reference "19.1" → "20.1" in task 4.2.
+  - Clarified Requirement 8a.7.
+- **Credits used**: about 17.3 for tasks 1-3: 5.56 for the shell attempts, the rest of task 1 and task 2, and 11.71 for task 3 (7 minutes 37 seconds). The first, cancelled task 1 run is not counted.
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: tasks 1-3 done (81 tests). Next: the fake policy (20.1), bisection (5), then settle (4).
+
+---
+
+## Session 10: (date)
 
 - **Goal**:
 - **Kiro feature used**:

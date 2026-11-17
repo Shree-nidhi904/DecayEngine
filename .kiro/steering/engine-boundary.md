@@ -30,7 +30,7 @@ The policy contract is what gets reviewed instead.
 
 ## Policy purity
 
-All policy functions are pure and synchronous except `resurrect`, which is asynchronous:
+All policy functions are pure and synchronous:
 
 ```typescript
 interface DecayPolicy<Payload, PolicyData, Event> {
@@ -39,17 +39,16 @@ interface DecayPolicy<Payload, PolicyData, Event> {
   healthAt(item: Item<Payload, PolicyData>, now: number): number
   applyEvent(item: Item<Payload, PolicyData>, event: Event, now: number): { health: number; policyData: PolicyData }
   nextDueAt(item: Item<Payload, PolicyData>, now: number): number | null
-  resurrect(item: Item<Payload, PolicyData>, now: number): Promise<
+  resurrect(item: Item<Payload, PolicyData>, event: Event, now: number):
     | { ok: true; payload?: Payload; policyData?: PolicyData }
     | { ok: false; reason: string }
-  >
 }
 ```
 
 Rules:
 - Same inputs → same output (all functions are pure)
 - No side effects
-- `resurrect` is the only async function; `init`, `healthAt`, `applyEvent`, and `nextDueAt` are synchronous
+- No async: there is no backend, so `resurrect` is synchronous too and receives the event (for example, the user's answer)
 - `healthAt` must never increase with time between events
 
 **Source of truth:** `.kiro/specs/engine/requirements.md` (Type Contract section)

@@ -8,7 +8,7 @@ The implementation builds incrementally: types and core pure functions first, th
 
 ## Tasks
 
-- [ ] 1. Set up project structure and foundational types
+- [x] 1. Set up project structure and foundational types
   - Create the workspace root files if they do not exist: `pnpm-workspace.yaml` (covering `packages/*` and `apps/*`) and a private root `package.json` with a `test` script that runs the tests of every package
   - Create `packages/engine/` directory structure
   - Set up `package.json` with TypeScript, Vitest, the Vitest coverage provider and fast-check as devDependencies (use current stable versions), and the scripts `test`, `test:unit`, `test:properties` and `test:coverage`
@@ -18,22 +18,22 @@ The implementation builds incrementally: types and core pure functions first, th
   - Create `src/index.ts` as the main export file
   - _Requirements: 1, 11, 12, 16, 17b, 17c, 17d_
 
-- [ ] 2. Implement error handling
-  - [ ] 2.1 Create error class with error codes
+- [x] 2. Implement error handling
+  - [x] 2.1 Create error class with error codes
     - Create `src/errors.ts`
     - Implement `DecayEngineError` class extending `Error` with `code` property
     - Define `DecayEngineErrorCode` type with all 21 error codes: MISSING_POLICY, MISSING_STORAGE_ADAPTER, MISSING_ID_GENERATOR, INVALID_THRESHOLDS, INVALID_TIMESTAMP, INVALID_HEALTH, INVALID_ID, DUPLICATE_ID, ITEM_NOT_FOUND, ITEM_ALREADY_DEAD, ITEM_NOT_DEAD, TIME_WENT_BACKWARD, UNSUPPORTED_SCHEMA_VERSION, INVALID_SNAPSHOT, INVALID_ITEM_DATA, INVALID_BUDGET, INVALID_HORIZON, AUTOPSY_REQUIRES_DEAD_ITEM, INVALID_IMPORTANCE, INVALID_COST_MINUTES, EDIT_REQUIRES_FIELD
     - Export error class and type from `src/index.ts`
     - _Requirements: 17_
   
-  - [ ] 2.2 Write unit tests for error class
+  - [x] 2.2 Write unit tests for error class
     - Create `tests/unit/errors.test.ts`
     - Test error message formatting, code property, instanceof checks
     - Test all error codes can be created
     - _Requirements: 17_
 
-- [ ] 3. Implement state derivation functions
-  - [ ] 3.1 Create pure state derivation functions
+- [x] 3. Implement state derivation functions
+  - [x] 3.1 Create pure state derivation functions
     - Create `src/state-derivation.ts`
     - Implement `deriveState(health, thresholds)` function
     - Implement `validateThresholds(thresholds)` function with all 4 validation rules
@@ -42,7 +42,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Export only `deriveState` and `validateThresholds` from `src/index.ts`. `clampHealth` and `applyHealth` are internal
     - _Requirements: 13, 14_
   
-  - [ ] 3.2 Write unit tests for state derivation
+  - [x] 3.2 Write unit tests for state derivation
     - Create `tests/unit/state-derivation.test.ts`
     - Test `deriveState` with health at boundaries (weak threshold, dead threshold, above, below, exact values)
     - Test `validateThresholds` with valid and invalid threshold configurations
@@ -53,8 +53,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test alive→dead records "state-changed" (alive→weak) then "died", in that order
     - _Requirements: 13, 14, 17a_
 
-- [ ] 4. Implement settle function
-  - [ ] 4.1 Create pure settle function
+- [x] 4. Implement settle function
+  - [x] 4.1 Create pure settle function
     - Create `src/settle.ts`
     - Implement `settle<Payload, PolicyData>(item, policy, now)` function
     - Handle already-dead items (return unchanged)
@@ -68,9 +68,9 @@ The implementation builds incrementally: types and core pure functions first, th
     - Do not export `settle` from `src/index.ts`. It is internal; tests import it from `src/settle.ts`
     - _Requirements: 3, 4, 5, 8, 8a, 14, 17a_
   
-  - [ ] 4.2 Write unit tests for settle function
+  - [x] 4.2 Write unit tests for settle function
     - Create `tests/unit/settle.test.ts`
-    - Use the fake policy from `tests/fake-policy.ts` (task 19.1, which runs before this task)
+    - Use the fake policy from `tests/fake-policy.ts` (task 20.1, which runs before this task)
     - Test settle with dead items (returns unchanged)
     - Test settle with `now < lastEventAt` (returns unchanged)
     - Test settle with unchanged health (returns unchanged)
@@ -81,8 +81,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test an item untended for 100 hours (fake policy) settles with a "state-changed" entry at about 50 hours and a "died" entry at about 80 hours, each within 1 minute after the exact time
     - _Requirements: 3, 4, 5, 8, 8a, 14_
 
-- [ ] 5. Implement bisection module
-  - [ ] 5.1 Create bisection functions
+- [x] 5. Implement bisection module
+  - [x] 5.1 Create bisection functions
     - Create `src/bisection.ts`
     - Define constant `BISECT_PRECISION_MS = 60000` (1 minute)
     - Run this task before task 4 (settle uses it; see the dependency graph)
@@ -93,7 +93,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Do not export these functions from `src/index.ts`. They are internal; tests import them from `src/bisection.ts`
     - _Requirements: 17a_
   
-  - [ ] 5.2 Write unit tests for bisection functions
+  - [x] 5.2 Write unit tests for bisection functions
     - Create `tests/unit/bisection.test.ts`
     - Use the fake policy from `tests/fake-policy.ts`
     - Test bisectCrossing finds the dead-threshold crossing within 1 minute after the exact time, never before it
@@ -105,8 +105,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test view(bisectedTime) shows item in expected state
     - _Requirements: 17a_
 
-- [ ] 6. Implement serialization and validation
-  - [ ] 6.1 Create serialization module
+- [x] 6. Implement serialization and validation
+  - [x] 6.1 Create serialization module
     - Create `src/serialization.ts`
     - Implement `parseSnapshot<Payload, PolicyData>(data)` function
     - Implement `validateItem(item)` function with all field validations
@@ -117,7 +117,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Do not export these functions from `src/index.ts`. They are internal; tests import them from `src/serialization.ts`
     - _Requirements: 15_
   
-  - [ ] 6.2 Write unit tests for serialization
+  - [x] 6.2 Write unit tests for serialization
     - Create `tests/unit/serialization.test.ts`
     - Test `validateItem` with valid items
     - Test `validateItem` with missing required fields
@@ -133,18 +133,18 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test round-trip: serializeSnapshot → parseSnapshot produces same data
     - _Requirements: 15_
 
-- [ ] 7. Checkpoint - Ensure all tests pass
+- [x] 7. Checkpoint - Ensure all tests pass
   - Run `pnpm test` and verify all unit tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Implement storage adapters
-  - [ ] 8.1 Create storage adapter interface file
+- [x] 8. Implement storage adapters
+  - [x] 8.1 Create storage adapter interface file
     - Create `src/storage/interface.ts`
     - Define `StorageAdapter` interface with `load()` and `save(snapshot)` methods
     - Export interface from `src/index.ts`
     - _Requirements: 12_
   
-  - [ ] 8.2 Implement in-memory storage adapter
+  - [x] 8.2 Implement in-memory storage adapter
     - Create `src/storage/memory.ts`
     - Implement `InMemoryAdapter` class with private storage variable
     - Implement `load()` method that returns deep copy of stored snapshot
@@ -152,7 +152,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Export class from `src/index.ts`
     - _Requirements: 12.7_
   
-  - [ ] 8.3 Write unit tests for in-memory adapter
+  - [x] 8.3 Write unit tests for in-memory adapter
     - Create `tests/unit/storage/memory.test.ts`
     - Test load returns null when empty
     - Test save then load returns same data
@@ -161,7 +161,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test multiple save operations (last save wins)
     - _Requirements: 12.7_
   
-  - [ ] 8.4 Implement localStorage storage adapter
+  - [x] 8.4 Implement localStorage storage adapter
     - Create `src/storage/local-storage.ts`
     - Implement `LocalStorageAdapter` class with namespace parameter
     - Implement `load()` method that reads from localStorage, parses JSON, returns null if key doesn't exist
@@ -171,7 +171,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Export class from `src/index.ts`
     - _Requirements: 12.4, 12.7, 12.8_
   
-  - [ ] 8.5 Write unit tests for localStorage adapter
+  - [x] 8.5 Write unit tests for localStorage adapter
     - Create `tests/unit/storage/local-storage.test.ts`
     - Mock localStorage API
     - Test load returns null when key doesn't exist
@@ -181,8 +181,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test error handling for storage failures
     - _Requirements: 12.4, 12.7, 12.8_
 
-- [ ] 9. Implement DecayEngine class - constructor and helpers
-  - [ ] 9.1 Create DecayEngine class with constructor
+- [x] 9. Implement DecayEngine class - constructor and helpers
+  - [x] 9.1 Create DecayEngine class with constructor
     - Create `src/engine.ts`
     - Implement `DecayEngine<Payload, PolicyData, Event>` class
     - Implement constructor that accepts policy, adapter, and idGenerator
@@ -196,14 +196,14 @@ The implementation builds incrementally: types and core pure functions first, th
     - Export class from `src/index.ts`
     - _Requirements: 1_
   
-  - [ ] 9.2 Implement helper methods
+  - [x] 9.2 Implement helper methods
     - Implement `_validateNow(now)` private method with timestamp validation
     - Implement `_getItem(id)` private method that throws ITEM_NOT_FOUND
     - Implement `_persist(changedItems, newHistoryEntries)` private method
     - In `_persist`: build new Maps, convert to StoredSnapshot via `serializeSnapshot`, save via adapter, update in-memory state only after successful save
     - _Requirements: 1, 11, 12_
   
-  - [ ] 9.3 Write unit tests for constructor
+  - [x] 9.3 Write unit tests for constructor
     - Create `tests/unit/engine.test.ts`
     - Use the fake policy from `tests/fake-policy.ts` for this and all later engine unit tests. Do not define other ad hoc policies unless a test needs a policy that misbehaves (for example one returning NaN)
     - Test constructor with valid inputs creates engine
@@ -216,8 +216,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test constructor throws UNSUPPORTED_SCHEMA_VERSION for unknown versions
     - _Requirements: 1_
 
-- [ ] 10. Implement DecayEngine - addItem
-  - [ ] 10.1 Implement addItem method
+- [x] 10. Implement DecayEngine - addItem
+  - [x] 10.1 Implement addItem method
     - Implement `addItem({ payload, importance, costMinutes }, now)` method in `src/engine.ts`
     - Validate `now` using `_validateNow`
     - Validate importance is integer 1-3, throw INVALID_IMPORTANCE if not
@@ -235,7 +235,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Return item ID
     - _Requirements: 2, 16_
   
-  - [ ] 10.2 Write unit tests for addItem
+  - [x] 10.2 Write unit tests for addItem
     - Test addItem creates item with correct initial values including importance and costMinutes
     - Test addItem calls policy.init and stores returned policyData
     - Test addItem calls policy.healthAt to compute starting health
@@ -253,8 +253,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test addItem propagates storage errors without retaining item in memory
     - _Requirements: 2, 16_
 
-- [ ] 11. Implement DecayEngine - view
-  - [ ] 11.1 Implement view method
+- [x] 11. Implement DecayEngine - view
+  - [x] 11.1 Implement view method
     - Implement `view(now)` method in `src/engine.ts`
     - Validate `now` using `_validateNow`
     - For each item in state, call `settle(item, policy, now)`
@@ -262,7 +262,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Do not call `_persist` (read-only operation)
     - _Requirements: 4_
   
-  - [ ] 11.2 Write unit tests for view
+  - [x] 11.2 Write unit tests for view
     - Test view computes health at given timestamp
     - Test view derives state correctly (alive, weak, dead)
     - Test view does not modify storage (verify with adapter)
@@ -272,8 +272,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test view throws INVALID_TIMESTAMP for invalid now
     - _Requirements: 4_
 
-- [ ] 12. Implement DecayEngine - tick
-  - [ ] 12.1 Implement tick method
+- [x] 12. Implement DecayEngine - tick
+  - [x] 12.1 Implement tick method
     - Implement `tick(now)` method in `src/engine.ts`
     - Validate `now` using `_validateNow`
     - For each item, call `settle(item, policy, now)`
@@ -285,7 +285,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Return count of changed items
     - _Requirements: 5, 17a_
   
-  - [ ] 12.2 Write unit tests for tick
+  - [x] 12.2 Write unit tests for tick
     - Test tick updates lastEventAt for changed items
     - Test tick does not update lastEventAt for unchanged items
     - Test tick persists changed items to storage
@@ -300,12 +300,12 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test tick error leaves storage unchanged
     - _Requirements: 5, 17a_
 
-- [ ] 13. Checkpoint - Ensure all tests pass
+- [x] 13. Checkpoint - Ensure all tests pass
   - Run `pnpm test` and verify all tests pass for core read/write operations
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 14. Implement DecayEngine - tend
-  - [ ] 14.1 Implement tend method
+- [x] 14. Implement DecayEngine - tend
+  - [x] 14.1 Implement tend method
     - Implement `tend(id, event, now)` method in `src/engine.ts`
     - Validate `now` using `_validateNow`
     - Get item using `_getItem`
@@ -320,7 +320,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Persist updated item and all history entries via `_persist`
     - _Requirements: 3_
   
-  - [ ] 14.2 Write unit tests for tend
+  - [x] 14.2 Write unit tests for tend
     - Test tend settles item first before applying event, and that policy.applyEvent receives the settled health, not the stored health
     - Test tend updates health and policyData from policy.applyEvent
     - Test tend updates lastEventAt to now
@@ -338,8 +338,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test tend propagates policy.applyEvent errors
     - _Requirements: 3_
 
-- [ ] 15. Implement DecayEngine - due and graveyard
-  - [ ] 15.1 Implement due method
+- [x] 15. Implement DecayEngine - due and graveyard
+  - [x] 15.1 Implement due method
     - Implement `due(now)` method in `src/engine.ts`
     - Validate `now` using `_validateNow`
     - For each non-dead item, call `settle(item, policy, now)` to compute health
@@ -351,14 +351,14 @@ The implementation builds incrementally: types and core pure functions first, th
     - Do not call `_persist` (read-only operation)
     - _Requirements: 6_
   
-  - [ ] 15.2 Implement graveyard method
+  - [x] 15.2 Implement graveyard method
     - Implement `graveyard()` method in `src/engine.ts`
     - Filter items where state is "dead"
     - Sort by diedAt descending, then by ID ascending
     - Return copies, not references
     - _Requirements: 7_
   
-  - [ ] 15.3 Write unit tests for due
+  - [x] 15.3 Write unit tests for due
     - Test due returns only items where nextDueAt ≤ now
     - Test due excludes items where nextDueAt returns null
     - Test due excludes dead items
@@ -368,7 +368,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test due with `now < lastEventAt` uses stored health
     - _Requirements: 6_
   
-  - [ ] 15.4 Write unit tests for graveyard
+  - [x] 15.4 Write unit tests for graveyard
     - Test graveyard returns only dead items
     - Test graveyard returns empty array when no dead items
     - Test graveyard sorts by diedAt descending, then ID ascending
@@ -376,15 +376,15 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test graveyard requires no arguments
     - _Requirements: 7_
 
-- [ ] 16. Implement DecayEngine - history and remove
-  - [ ] 16.1 Implement history method
+- [x] 16. Implement DecayEngine - history and remove
+  - [x] 16.1 Implement history method
     - Implement `history(id)` method in `src/engine.ts`
     - Get item using `_getItem` (throws ITEM_NOT_FOUND)
     - Get history entries from state.history Map
     - Return copy of history array (already sorted by timestamp)
     - _Requirements: 9_
   
-  - [ ] 16.2 Implement remove method
+  - [x] 16.2 Implement remove method
     - Implement `remove(id)` method in `src/engine.ts`
     - Get item using `_getItem` (throws ITEM_NOT_FOUND)
     - Build new state with item and its history removed
@@ -392,7 +392,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Update in-memory state only after successful save
     - _Requirements: 10_
   
-  - [ ] 16.3 Write unit tests for history
+  - [x] 16.3 Write unit tests for history
     - Test history returns all entries for an item
     - Test history returns only "created" entry for untended items
     - Test history entries are sorted by timestamp ascending
@@ -401,15 +401,15 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test history returns copy (modifications don't affect stored history)
     - _Requirements: 9_
   
-  - [ ] 16.4 Write unit tests for remove
+  - [x] 16.4 Write unit tests for remove
     - Test remove deletes item and its history atomically
     - Test remove throws ITEM_NOT_FOUND for unknown item
     - Test removed item cannot be accessed by other operations
     - Test remove error leaves storage unchanged
     - _Requirements: 10_
 
-- [ ] 17. Implement DecayEngine - resurrect (synchronous)
-  - [ ] 17.1 Implement resurrect method
+- [x] 17. Implement DecayEngine - resurrect (synchronous)
+  - [x] 17.1 Implement resurrect method
     - Implement `resurrect(id, event, now)` method in `src/engine.ts` (synchronous, no async)
     - Validate `now` using `_validateNow`
     - Get item using `_getItem`
@@ -423,7 +423,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Return `{ ok: true }` or `{ ok: false, reason }` (ResurrectOutcome)
     - _Requirements: 8_
   
-  - [ ] 17.2 Write unit tests for resurrect
+  - [x] 17.2 Write unit tests for resurrect
     - Test resurrect settles item first
     - Test resurrect on successful policy.resurrect sets health to 100, state to "alive"
     - Test resurrect clears diedAt on success
@@ -440,8 +440,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test resurrect propagates policy.resurrect errors
     - _Requirements: 8_
 
-- [ ] 18. Implement DecayEngine - edit
-  - [ ] 18.1 Implement edit method
+- [x] 18. Implement DecayEngine - edit
+  - [x] 18.1 Implement edit method
     - Implement `edit(id, { payload?, importance?, costMinutes? }, now)` method in `src/engine.ts`
     - Validate `now` using `_validateNow`
     - Throw EDIT_REQUIRES_FIELD if all fields are undefined
@@ -455,7 +455,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Persist changes via `_persist`
     - _Requirements: 8a_
   
-  - [ ] 18.2 Write unit tests for edit
+  - [x] 18.2 Write unit tests for edit
     - Test edit on dead item does not recompute health
     - Test edit on dead item replaces only provided fields
     - Test edit on non-dead item recomputes health via policy.healthAt
@@ -471,13 +471,13 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test edit propagates policy.healthAt errors
     - _Requirements: 8a_
 
-- [ ] 19. Checkpoint - Ensure all tests pass
+- [x] 19. Checkpoint - Ensure all tests pass
   - Run `pnpm test` and verify all unit tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. Create fake policy for testing
+- [x] 20. Create fake policy for testing
   - Run this task early, straight after task 3: the settle and engine unit tests depend on it (see the dependency graph)
-  - [ ] 20.1 Implement fake policy
+  - [x] 20.1 Implement fake policy
     - Create `tests/fake-policy.ts`
     - Define `FakePayload`, `FakePolicyData`, `FakeEvent` types (all JSON-serializable)
     - Implement `FakePolicy` class with time-based linear decay
@@ -490,7 +490,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Never read the clock (use only the `now` parameter)
     - _Requirements: 18.10, 18.11_
   
-  - [ ] 20.2 Write unit tests for fake policy
+  - [x] 20.2 Write unit tests for fake policy
     - Test fake policy never reads the clock
     - Test healthAt computes linear decay correctly
     - Test applyEvent handles boost events
@@ -500,8 +500,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test resurrect returns failure when configured (synchronous)
     - _Requirements: 18.10, 18.11_
 
-- [ ] 21. Implement triage feature
-  - [ ] 21.1 Implement triage algorithm (HAND-WRITTEN BY DEVELOPER: Kiro writes only the tests for this task)
+- [x] 21. Implement triage feature
+  - [x] 21.1 Implement triage algorithm (WRITTEN BY CLAUDE CODE at the developer's request; originally planned as hand-written)
     - Create `src/triage.ts`
     - Implement `triage<Payload, PolicyData>(items, budgetMinutes, policy, now)` function
     - Filter candidates: items with health ≥ dead threshold AND < weak threshold at `now`
@@ -515,7 +515,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Internal: do not export from `src/index.ts` (the public API is `engine.triage`, task 25)
     - _Requirements: 17b_
   
-  - [ ] 21.2 Write unit tests for triage
+  - [x] 21.2 Write unit tests for triage
     - Create `tests/unit/triage.test.ts`
     - Test triage only considers weak items (health in [dead, weak) range)
     - Test triage respects budget (total costMinutes of picks ≤ budgetMinutes)
@@ -529,8 +529,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test triage with no weak items returns empty picks and others
     - _Requirements: 17b_
 
-- [ ] 22. Implement autopsy feature
-  - [ ] 22.1 Implement autopsy analysis (HAND-WRITTEN BY DEVELOPER: Kiro writes only the tests for this task)
+- [x] 22. Implement autopsy feature
+  - [x] 22.1 Implement autopsy analysis (WRITTEN BY CLAUDE CODE at the developer's request; originally planned as hand-written)
     - Create `src/autopsy.ts`
     - Implement `autopsy<Payload, PolicyData, Event>(item, history, policy, now)` function
     - Settle item at `now` in memory without persisting
@@ -543,7 +543,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Internal: do not export from `src/index.ts` (the public API is `engine.autopsy`, task 25)
     - _Requirements: 17c_
   
-  - [ ] 22.2 Write unit tests for autopsy
+  - [x] 22.2 Write unit tests for autopsy
     - Create `tests/unit/autopsy.test.ts`
     - Test autopsy settles item in memory without persisting
     - Test autopsy throws AUTOPSY_REQUIRES_DEAD_ITEM for non-dead items
@@ -581,7 +581,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - _Requirements: 17d_
 
 - [ ] 24. Implement checkPolicy feature
-  - [ ] 24.1 Implement policy validation function
+  - [-] 24.1 Implement policy validation function
     - Create `src/check-policy.ts`
     - Implement `checkPolicy<Payload, PolicyData, Event>(policy, samplePayloads, sampleEvents, startTime)` function
     - Build test items and timestamps deterministically from samples (no randomness, no clock)
@@ -593,7 +593,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Export function from `src/index.ts`
     - _Requirements: 17e_
   
-  - [ ] 24.2 Write unit tests for checkPolicy
+  - [-] 24.2 Write unit tests for checkPolicy
     - Create `tests/unit/check-policy.test.ts`
     - Test checkPolicy with valid policy returns passed=true
     - Test checkPolicy detects healthAt returning values outside [0, 100]
@@ -897,7 +897,7 @@ The implementation builds incrementally: types and core pure functions first, th
 - The engine never reads the clock - all time comes from `now` parameters
 - Resurrection is synchronous (no async/await, no resurrection lock) and returns its outcome
 - Outcome tests with the three real policies live in each app (`apps/<app>/src/policy.test.ts`), not here: the engine must never import an app
-- Triage and autopsy implementation tasks are marked as HAND-WRITTEN BY DEVELOPER: Kiro writes only the tests
+- Triage and autopsy (tasks 21-22) and the DecayEngine class (tasks 9-19) were written by Claude Code; see `.kiro/steering/authorship.md`
 - Checkpoints ensure incremental validation of core functionality
 
 ## Task Dependency Graph

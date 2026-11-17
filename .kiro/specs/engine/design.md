@@ -341,6 +341,7 @@ interface StorageAdapter {
    - Only file in the package that imports browser APIs
    - Serializes snapshot to JSON string
    - Returns `null` if key doesn't exist
+   - localStorage errors and JSON parse errors propagate unchanged; a missing `localStorage` throws `STORAGE_UNAVAILABLE`
 
 ### Settle Function
 
@@ -372,7 +373,7 @@ function settle<Payload, PolicyData>(
   
   // Compute health at now
   const computedHealth = policy.healthAt(item, now)
-  const clampedHealth = clampHealth(computedHealth)
+  const clampedHealth = clampHealth(computedHealth, "healthAt")
   
   // If health unchanged, return unchanged
   if (clampedHealth === item.health) {
@@ -443,8 +444,13 @@ function deriveState(
 }
 
 function validateThresholds(thresholds: { weak: number; dead: number }): void {
-  if (typeof thresholds.weak !== "number" || typeof thresholds.dead !== "number") {
-    throw new DecayEngineError("INVALID_THRESHOLDS", "Thresholds must be numbers")
+  if (
+    typeof thresholds.weak !== "number" ||
+    typeof thresholds.dead !== "number" ||
+    !Number.isFinite(thresholds.weak) ||
+    !Number.isFinite(thresholds.dead)
+  ) {
+    throw new DecayEngineError("INVALID_THRESHOLDS", "Thresholds must be finite numbers")
   }
   if (thresholds.dead <= 0) {
     throw new DecayEngineError("INVALID_THRESHOLDS", "dead threshold must be positive")
@@ -457,9 +463,15 @@ function validateThresholds(thresholds: { weak: number; dead: number }): void {
   }
 }
 
-function clampHealth(health: unknown): number {
-  if (typeof health !== "number" || !isFinite(health)) {
-    throw new DecayEngineError("INVALID_HEALTH", "Health must be a finite number")
+// `source` names the policy function that produced `health` (for example
+// "healthAt"), so the error names the function and the bad value (Requirement 16.5).
+function clampHealth(health: unknown, source?: string): number {
+  if (typeof health !== "number" || !Number.isFinite(health)) {
+    const message =
+      source !== undefined
+        ? `Policy ${source} returned invalid health: ${String(health)}`
+        : "Health must be a finite number"
+    throw new DecayEngineError("INVALID_HEALTH", message)
   }
   if (health > 100) return 100
   if (health < 0) return 0
@@ -542,6 +554,7 @@ function applyHealth<Payload, PolicyData>(
 **Threshold constraints**:
 - 0 < policy.thresholds.dead < policy.thresholds.weak ≤ 100
 - Validated at engine construction
+- NaN and ±Infinity are rejected (Requirement 14.7)
 
 **applyHealth function**:
 - Takes an item, a new health value, a timestamp, and thresholds
@@ -624,7 +637,7 @@ function bisectCrossing<Payload, PolicyData>(
   
   while (right - left > BISECT_PRECISION_MS) {
     const mid = Math.floor((left + right) / 2)
-    const health = clampHealth(policy.healthAt(item, mid))
+    const health = clampHealth(policy.healthAt(item, mid), "healthAt")
     
     if (health < threshold) {
       // Already below at mid, search earlier
@@ -646,7 +659,7 @@ function findDeathAfter<Payload, PolicyData>(
   fromTime: number,
   toTime: number
 ): number | null {
-  const healthAtEnd = clampHealth(policy.healthAt(item, toTime))
+  const healthAtEnd = clampHealth(policy.healthAt(item, toTime), "healthAt")
   if (healthAtEnd >= policy.thresholds.dead) {
     return null // does not die within the window
   }
@@ -1672,6 +1685,7 @@ The engine uses a single `DecayEngineError` class with the following codes:
 | `INVALID_IMPORTANCE` | importance not integer 1-3 |
 | `INVALID_COST_MINUTES` | costMinutes not positive integer or > 600 |
 | `EDIT_REQUIRES_FIELD` | edit called with no fields provided |
+| `STORAGE_UNAVAILABLE` | LocalStorageAdapter load or save called when `localStorage` is missing |
 
 ### Error Messages
 

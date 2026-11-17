@@ -76,9 +76,9 @@ Answer six questions:
 3. **How healthy is it now?** `healthAt(item, now)` → number (0-100)
 4. **Something happened. What now?** `applyEvent(item, event, now)` → { health, policyData }
 5. **When to look again?** `nextDueAt(item, now)` → timestamp | null
-6. **Can it come back?** `resurrect(item, now)` → Promise<{ ok, payload?, policyData? } | { ok: false, reason }>
+6. **Can it come back?** `resurrect(item, event, now)` → { ok: true, payload?, policyData? } | { ok: false, reason }
 
-All policy functions are pure and synchronous except `resurrect`, which is asynchronous. The policy's `healthAt` must never increase with time between events.
+All policy functions are pure and synchronous, including `resurrect`. The policy's `healthAt` must never increase with time between events.
 
 **Source of truth:** `.kiro/specs/engine/requirements.md` (Type Contract section)
 

@@ -233,7 +233,7 @@ The project is built with [Kiro](https://kiro.dev). The `.kiro/` folder is commi
 | Hooks | Run the engine tests when an engine file is saved; scaffold a new decay policy on request |
 | Property-based testing | The engine rules listed above |
 
-The decay rules, the Triage selection and the Autopsy reasoning are written by hand. Kiro writes the UI, the app glue and the tests. Each session is recorded in [docs/KIRO_LOG.md](docs/KIRO_LOG.md): what Kiro produced, what was changed by hand, and what went wrong. A full write-up comparing spec-driven work with free-form prompting will be added before submission.
+The decay rules (each app's policy) are written by hand. Kiro wrote most of the engine from the spec (types, errors, state derivation, settle, bisection, serialization, storage adapters, checkPolicy) and their tests, and writes the UI, the app glue and the app tests. Claude Code, running in WSL because Kiro's shell could not, ran every test and wrote the `DecayEngine` class (tasks 9–19), the Triage selection and the Autopsy analysis, with their tests. Triage implements the locked value rule from the product steering; Autopsy reports facts only, and each app writes its own cause-of-death sentences. Each session is recorded in [docs/KIRO_LOG.md](docs/KIRO_LOG.md): what Kiro produced, what was changed by hand, and what went wrong. A full write-up comparing spec-driven work with free-form prompting will be added before submission.
 
 ## Build status
 
