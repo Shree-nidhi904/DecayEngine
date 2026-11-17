@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Scaffold a new decay policy",
+      "trigger": "UserPromptSubmit",
+      "action": {
+        "type": "agent",
+        "prompt": "scaffold.*policy"
+      },
+      "description": "Creates the starting files for a new app's decay policy, skin and tests.",
+      "enabled": true
+    }
+  ]
+}

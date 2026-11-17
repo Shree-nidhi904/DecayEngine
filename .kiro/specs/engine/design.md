@@ -4,13 +4,13 @@
 
 The Decay Engine is a pure TypeScript lifecycle management library that tracks items through states of alive, weak, and dead. It is a zero-dependency runtime package with a policy-driven architecture: applications supply a `DecayPolicy` object that defines how items decay and can be resurrected, while the engine enforces lifecycle rules, manages state transitions, maintains queues, records history, and persists data through a storage adapter.
 
-The engine knows nothing about what an item represents. All application-specific logic lives in the policy. This separation allows the same engine to power a link checker, a spaced-repetition study app, or an expiry tracker without modification.
+The engine knows nothing about what an item represents. All application-specific logic lives in the policy. This separation allows the same engine to power a spaced-repetition study app (Study Dungeon), a keep-in-touch app (Ghosted), or an expiry tracker (Expiry Reaper) without modification.
 
 **Key Design Principles:**
 - **Time as an argument**: The engine never reads the clock. Every function that needs time accepts a `now` parameter (milliseconds since Unix epoch).
 - **Pure settle logic**: One pure function computes an item's state at any time. No duplicated state calculation.
-- **Synchronous persistence**: All operations except resurrect are synchronous. Every operation builds a new snapshot, saves it once, and only then updates memory. A failed save leaves storage and memory unchanged.
-- **Policy purity**: The three core policy functions (`healthAt`, `applyEvent`, `nextDueAt`) are pure. Only `resurrect` is async and may have side effects.
+- **Synchronous everything**: Every engine operation is synchronous. Every write builds a new snapshot, saves it once, and only then updates memory. A failed save leaves storage and memory unchanged.
+- **Policy purity**: All policy functions (`init`, `healthAt`, `applyEvent`, `nextDueAt`, `resurrect`) are pure and synchronous. `healthAt` never increases with time between events; bisection relies on this.
 - **JSON-serializable data**: Payload, PolicyData, and Event types must be JSON-serializable (no functions, symbols, undefined as values, NaN, Infinity, or negative zero).
 - **No runtime dependencies**: The engine is pure TypeScript with no external runtime dependencies.
 
@@ -21,16 +21,21 @@ The engine knows nothing about what an item represents. All application-specific
 ```
 packages/engine/
 ├── src/
-│   ├── types.ts              # Item, DecayPolicy, storage interfaces, history types
+│   ├── types.ts              # Item, DecayPolicy, storage interfaces, history types, triage/autopsy/forecast types
 │   ├── errors.ts             # Single DecayEngineError class with error codes
 │   ├── state-derivation.ts   # Pure functions: deriveState, validateThresholds
 │   ├── settle.ts             # Pure settle function used by all operations
+│   ├── bisection.ts          # Binary search for death timing and weak crossings
+│   ├── triage.ts             # Knapsack algorithm for optimal item selection
+│   ├── autopsy.ts            # Cause-of-death analysis from history
+│   ├── forecast.ts           # Death prediction within time horizon
 │   ├── serialization.ts      # Parse and validate storage format
 │   ├── storage/
 │   │   ├── interface.ts      # StorageAdapter interface
 │   │   ├── memory.ts         # In-memory adapter for testing
 │   │   └── local-storage.ts  # Browser localStorage adapter (only file that touches browser APIs)
 │   ├── engine.ts             # DecayEngine class implementation
+│   ├── check-policy.ts       # Policy validation function
 │   └── index.ts              # Public API exports
 ├── tests/
 │   ├── fake-policy.ts        # Fake policy for property-based tests
@@ -49,7 +54,8 @@ packages/engine/
 - `StorageAdapter` interface
 - `EngineState<Payload, PolicyData>`: in-memory state with Maps
 - `StoredSnapshot`: JSON-serializable snapshot passed to storage adapter
-- `HistoryEntry` discriminated union (6 types)
+- `HistoryEntry` discriminated union (7 types)
+- `TriageCandidate`, `TriageResult`, `AutopsyReport`, `ForecastEntry`, `ResurrectOutcome`
 
 **errors.ts**: Single `DecayEngineError` class extending `Error` with a `code` property for programmatic error handling.
 
@@ -60,9 +66,33 @@ packages/engine/
 
 **settle.ts**: The core pure function that computes an item's health and state at a given time:
 - `settle<Payload, PolicyData>(item, policy, now)`: Returns `{ item, historyEntries }`
-- Used by tick, tend, resurrect, view, and due
+- Used by tick, tend, resurrect, edit, view, and due
 - If `now` is earlier than `item.lastEventAt`, returns the item unchanged (view and due use this behavior; write operations throw TIME_WENT_BACKWARD)
 - Otherwise, updates health via `policy.healthAt`, uses `applyHealth` to derive state and generate history, sets `lastEventAt` to `now` whenever health or state changes
+
+**bisection.ts**: Binary search for threshold crossing times:
+- `bisectCrossing(item, policy, threshold, fromTime, toTime)`: Finds when health first drops below `threshold`, to 1-minute precision. Used for both the weak and the dead threshold
+- `findDeathAfter(item, policy, fromTime, toTime)`: Returns `null` if the item is still not dead at `toTime`, otherwise `bisectCrossing` for the dead threshold. Used by triage and forecast
+- Returns upper end of final interval (earliest checked time at which health is already below the threshold)
+- Relies on policy invariant: healthAt never increases with time between events
+
+**triage.ts**: Optimal item selection within time budget:
+- `triage(items, budgetMinutes, policy, now)`: Returns TriageResult with picks and others
+- Computes value and valuePerMinute for each weak item
+- Uses exact 0/1 knapsack algorithm over integer minutes
+- Determines diesAt for each candidate via bisection up to MAX_FORECAST_HORIZON_MS
+
+**autopsy.ts**: Cause-of-death analysis:
+- `autopsy(item, history, policy, now)`: Returns AutopsyReport with facts only
+- Settles item in memory without persisting
+- Extracts facts from history: wentWeakAt, lastTend, silenceMs, tends, failedResurrections
+- Defines "this life" as period from most recent resurrection (or creation) to death
+
+**forecast.ts**: Death prediction:
+- `forecast(items, now, horizonMs, policy)`: Returns array of ForecastEntry objects
+- Computes health at `now` for all non-dead items
+- Uses bisection to find diesAt for each item up to `now + horizonMs`
+- Returns only items with diesAt within horizon, sorted by diesAt ascending
 
 **serialization.ts**: Parses and validates stored data, and converts between in-memory and storage formats:
 - `parseSnapshot<Payload, PolicyData>(data)`: Validates and returns typed EngineState from StoredSnapshot
@@ -76,13 +106,11 @@ packages/engine/
 
 **engine.ts**: The `DecayEngine` class that orchestrates all operations:
 - Constructor: validates policy, loads snapshot
-- Public methods: addItem, tend, view, tick, due, graveyard, resurrect, history, remove
+- Public methods: addItem, tend, view, tick, due, graveyard, resurrect, edit, history, remove, triage, autopsy, forecast
 - Private methods: `_persist`, `_validateNow`, `_getItem`
-- Resurrection lock tracking: `Set<string>` of item IDs currently being resurrected
-- `addItem`, `tend`, `tick`, and `remove` are synchronous
-- Only `resurrect` is async (because `policy.resurrect` is async)
+- `addItem`, `tend`, `tick`, `edit`, `resurrect`, and `remove` are synchronous
 
-**index.ts**: Exports the public API surface: `DecayEngine`, `DecayEngineError`, `StorageAdapter`, and all type definitions.
+**index.ts**: Exports the public API surface: `DecayEngine`, `DecayEngineError`, `StorageAdapter`, `checkPolicy`, `MAX_FORECAST_HORIZON_MS` constant, and all type definitions.
 
 ### Data Flow
 
@@ -91,23 +119,18 @@ packages/engine/
 2. Compute derived values (health at time, due status)
 3. Return copies, never references to stored items
 
-**Write operations** (addItem, tend, tick, remove):
+**Read-only analysis operations** (triage, autopsy, forecast):
+1. Settle items at `now` in memory (same `settle` as view)
+2. Compute the result from settled items and history
+3. Never call `_persist`
+
+**Write operations** (addItem, tend, tick, edit, resurrect, remove):
 1. Validate inputs
 2. Settle item(s) if needed (compute current state)
-3. Apply changes to create new snapshot
+3. Apply changes to create new snapshot (for resurrect, call `policy.resurrect` synchronously first)
 4. Save snapshot via adapter (synchronous, throws on failure)
 5. Update in-memory state only after successful save
 6. Return result
-
-**Async write operation** (resurrect):
-1. Validate inputs and settle item
-2. Acquire resurrection lock
-3. Call `policy.resurrect` (async, may throw)
-4. If item was removed during resurrection, throw ITEM_NOT_FOUND and persist nothing
-5. Build new snapshot based on result
-6. Save snapshot via adapter (synchronous, throws on failure)
-7. Update in-memory state only after successful save
-8. Release lock in finally block
 
 **Error handling**:
 - Policy errors propagate to caller
@@ -132,6 +155,8 @@ type Item<Payload, PolicyData> = {
   lastEventAt: number
   diedAt?: number
   timesResurrected: number
+  importance: number            // 1..3, user-set
+  costMinutes: number           // positive integer, at most 600
 }
 
 interface DecayPolicy<Payload, PolicyData, Event> {
@@ -143,13 +168,47 @@ interface DecayPolicy<Payload, PolicyData, Event> {
     policyData: PolicyData 
   }
   nextDueAt(item: Item<Payload, PolicyData>, now: number): number | null
-  resurrect(item: Item<Payload, PolicyData>, now: number): Promise<
+  resurrect(item: Item<Payload, PolicyData>, event: Event, now: number):
     | { ok: true; payload?: Payload; policyData?: PolicyData }
     | { ok: false; reason: string }
-  >
 }
 
 // Event type must be JSON-serializable (constraint on app-defined Event)
+
+type TriageCandidate<Payload, PolicyData> = {
+  item: Item<Payload, PolicyData>
+  value: number
+  valuePerMinute: number
+  diesAt: number | null
+}
+
+type TriageResult<Payload, PolicyData> = {
+  picks: TriageCandidate<Payload, PolicyData>[]
+  others: TriageCandidate<Payload, PolicyData>[]
+}
+
+type AutopsyReport<Event> = {
+  createdAt: number
+  diedAt: number
+  wentWeakAt: number | null
+  lifeStartedAt: number
+  lastTend: { at: number; event: Event } | null
+  silenceMs: number
+  tends: Array<{ at: number; event: Event; gapBeforeMs: number | null }>
+  timesResurrected: number
+  failedResurrections: number
+}
+
+type ForecastEntry<Payload, PolicyData> = {
+  item: Item<Payload, PolicyData>
+  diesAt: number
+}
+
+// Returned by engine.resurrect so the app can tell a won fight from a lost one
+type ResurrectOutcome = { ok: true } | { ok: false; reason: string }
+
+// Constants
+const MAX_FORECAST_HORIZON_MS = 315360000000 // 10 years in milliseconds
 
 type HistoryEntry = 
   | {
@@ -184,13 +243,22 @@ type HistoryEntry =
       itemId: string
       timestamp: number
       health: number
+      event: unknown
     }
   | {
       type: "resurrect-failed"
       itemId: string
       timestamp: number
       health: number
+      event: unknown
       reason: string
+    }
+  | {
+      type: "edited"
+      itemId: string
+      timestamp: number
+      health: number
+      fieldsChanged: string[]
     }
 
 // In-memory state representation
@@ -311,12 +379,25 @@ function settle<Payload, PolicyData>(
     return { item, historyEntries: [] }
   }
   
+  // Find when thresholds were actually crossed (Requirement 17a).
+  // Bisection runs on the STORED item (before settling), over [item.lastEventAt, now],
+  // because the stored item is what healthAt decays from.
+  const newState = deriveState(clampedHealth, policy.thresholds)
+  const crossings: Crossings = {}
+  if (item.state === "alive" && newState !== "alive") {
+    crossings.weakAt = bisectCrossing(item, policy, policy.thresholds.weak, item.lastEventAt, now)
+  }
+  if (newState === "dead") {
+    crossings.deadAt = bisectCrossing(item, policy, policy.thresholds.dead, item.lastEventAt, now)
+  }
+  
   // Health changed: use applyHealth to compute new state and history
   const { item: updatedItem, historyEntries } = applyHealth(
     item,
     clampedHealth,
     now,
-    policy.thresholds
+    policy.thresholds,
+    crossings
   )
   
   return { item: updatedItem, historyEntries }
@@ -329,7 +410,9 @@ function settle<Payload, PolicyData>(
 - **due(now)**: Calls settle for each non-dead item, uses computed health for filtering and sorting
 - **tick(now)**: Calls settle for each item, saves items where health or state changed, records history
 - **tend(id, event, now)**: Calls settle first to compute current state, throws if `now < lastEventAt`, throws if dead, then applies event
-- **resurrect(id, now)**: Calls settle first, throws if `now < lastEventAt`, confirms item is dead before calling policy.resurrect
+- **edit(id, changes, now)**: Calls settle first, then replaces fields (and recomputes health only if not dead)
+- **resurrect(id, event, now)**: Calls settle first, throws if `now < lastEventAt`, confirms item is dead before calling policy.resurrect
+- **triage, autopsy, forecast**: Call settle in memory only, like view
 
 **Key properties:**
 - Pure function: same inputs always produce same output
@@ -383,17 +466,23 @@ function clampHealth(health: unknown): number {
   return health
 }
 
+// When thresholds were crossed. Settle fills these from bisection.
+// Event-caused changes (tend, edit) leave them empty, so the crossing time is `now`.
+type Crossings = { weakAt?: number; deadAt?: number }
+
 function applyHealth<Payload, PolicyData>(
   item: Item<Payload, PolicyData>,
   newHealth: number,
   now: number,
-  thresholds: { weak: number; dead: number }
+  thresholds: { weak: number; dead: number },
+  crossings: Crossings = {}
 ): { item: Item<Payload, PolicyData>; historyEntries: HistoryEntry[] } {
   // Derive new state from health
   const oldState = item.state
   const newState = deriveState(newHealth, thresholds)
   
   // Build updated item with new health, state, and lastEventAt
+  // (lastEventAt is always `now`: stored health is health as of lastEventAt)
   const updatedItem = {
     ...item,
     health: newHealth,
@@ -406,13 +495,26 @@ function applyHealth<Payload, PolicyData>(
   // Record state transition if state changed
   if (oldState !== newState) {
     if (newState === "dead") {
+      const diedAt = crossings.deadAt ?? now
+      // Alive straight to dead (for example, the user was away for weeks):
+      // still record the weak crossing first, so Autopsy can report wentWeakAt
+      if (oldState === "alive") {
+        historyEntries.push({
+          type: "state-changed",
+          itemId: item.id,
+          timestamp: crossings.weakAt ?? diedAt,
+          health: thresholds.weak,
+          from: "alive",
+          to: "weak"
+        })
+      }
       // Item died: set diedAt, clamp health to 0, record "died"
-      updatedItem.diedAt = now
+      updatedItem.diedAt = diedAt
       updatedItem.health = 0
       historyEntries.push({
         type: "died",
         itemId: item.id,
-        timestamp: now,
+        timestamp: diedAt,
         health: 0
       })
     } else {
@@ -420,7 +522,7 @@ function applyHealth<Payload, PolicyData>(
       historyEntries.push({
         type: "state-changed",
         itemId: item.id,
-        timestamp: now,
+        timestamp: newState === "weak" ? (crossings.weakAt ?? now) : now,
         health: newHealth,
         from: oldState,
         to: newState
@@ -444,9 +546,11 @@ function applyHealth<Payload, PolicyData>(
 **applyHealth function**:
 - Takes an item, a new health value, a timestamp, and thresholds
 - Returns the updated item and any state-changed or died history entries
-- Used by both settle and tend to ensure death and state-change logic exists in one place
-- When state transitions to "dead", sets health to 0 and records diedAt
+- Used by settle, tend and edit to ensure death and state-change logic exists in one place
+- When state transitions to "dead", sets health to 0 and records diedAt (the bisected crossing time from settle, or `now` for an event-caused death)
+- When an item goes from alive straight to dead, records the alive→weak "state-changed" entry first, then "died"
 - When state changes between alive/weak, records state-changed history
+- `lastEventAt` is always `now`, so the invariant `diedAt ≤ lastEventAt` holds
 
 ### Error Handling
 
@@ -478,10 +582,15 @@ type DecayEngineErrorCode =
   | "ITEM_ALREADY_DEAD"
   | "ITEM_NOT_DEAD"
   | "TIME_WENT_BACKWARD"
-  | "RESURRECTION_IN_PROGRESS"
   | "UNSUPPORTED_SCHEMA_VERSION"
   | "INVALID_SNAPSHOT"
   | "INVALID_ITEM_DATA"
+  | "INVALID_BUDGET"
+  | "INVALID_HORIZON"
+  | "AUTOPSY_REQUIRES_DEAD_ITEM"
+  | "INVALID_IMPORTANCE"
+  | "INVALID_COST_MINUTES"
+  | "EDIT_REQUIRES_FIELD"
 ```
 
 **Error message requirements** (Requirement 17):
@@ -490,103 +599,74 @@ type DecayEngineErrorCode =
 - Include both lastEventAt and provided now when time goes backward
 - Include function name and return value when policy returns invalid value
 
-### Resurrection Lock
+### Death Timing with Bisection
 
-The engine prevents concurrent resurrection of the same item using an in-memory Set:
+The engine determines the exact moment an item died using binary search:
 
 ```typescript
-// Inside DecayEngine class
+// bisection.ts
 
-private _resurrectionsInProgress = new Set<string>()
+const BISECT_PRECISION_MS = 60000 // 1 minute
 
-async resurrect(id: string, now: number): Promise<void> {
-  this._validateNow(now)
+// Precondition: health at toTime is already below threshold.
+function bisectCrossing<Payload, PolicyData>(
+  item: Item<Payload, PolicyData>,
+  policy: DecayPolicy<Payload, PolicyData, unknown>,
+  threshold: number,
+  fromTime: number,
+  toTime: number
+): number {
+  // Binary search between fromTime and toTime to find when health drops below threshold
+  // Returns the earliest checked time at which health is already below it (upper end of final interval)
   
-  // Get item and settle it
-  const storedItem = this._getItem(id)
-  const { item: settledItem, historyEntries: settleHistory } = settle(storedItem, this._policy, now)
+  let left = fromTime
+  let right = toTime
   
-  // Throw if time went backward
-  if (now < storedItem.lastEventAt) {
-    throw new DecayEngineError("TIME_WENT_BACKWARD", `Time went backward: now=${now} < lastEventAt=${storedItem.lastEventAt} for item ${id}`)
-  }
-  
-  // Check that item is dead after settling
-  if (settledItem.state !== "dead") {
-    throw new DecayEngineError("ITEM_NOT_DEAD", `Item ${id} is ${settledItem.state}, not dead`)
-  }
-  
-  // Check if resurrection already in progress
-  if (this._resurrectionsInProgress.has(id)) {
-    throw new DecayEngineError("RESURRECTION_IN_PROGRESS", `Resurrection already in progress for item ${id}`)
-  }
-  
-  // Lock this item
-  this._resurrectionsInProgress.add(id)
-  
-  try {
-    // Call policy.resurrect (may throw)
-    const result = await this._policy.resurrect(settledItem, now)
+  while (right - left > BISECT_PRECISION_MS) {
+    const mid = Math.floor((left + right) / 2)
+    const health = clampHealth(policy.healthAt(item, mid))
     
-    // Check if item still exists (could have been removed during resurrection)
-    if (!this._state.items.has(id)) {
-      throw new DecayEngineError("ITEM_NOT_FOUND", `Item ${id} not found`)
-    }
-    
-    if (result.ok) {
-      // Success: update item and record history
-      const resurrectedItem: Item<Payload, PolicyData> = {
-        ...settledItem,
-        health: 100,
-        state: "alive",
-        diedAt: undefined,
-        timesResurrected: settledItem.timesResurrected + 1,
-        lastEventAt: now,
-        payload: result.payload ?? settledItem.payload,
-        policyData: result.policyData ?? settledItem.policyData
-      }
-      
-      const historyEntry: HistoryEntry = {
-        type: "resurrected",
-        itemId: id,
-        timestamp: now,
-        health: 100
-      }
-      
-      // Persist: settle history + resurrection history
-      this._persist([resurrectedItem], [...settleHistory, historyEntry])
+    if (health < threshold) {
+      // Already below at mid, search earlier
+      right = mid
     } else {
-      // Failure: record failure, don't change item
-      const historyEntry: HistoryEntry = {
-        type: "resurrect-failed",
-        itemId: id,
-        timestamp: now,
-        health: 0,
-        reason: result.reason
-      }
-      
-      // If settle changed the item, persist those changes
-      if (settleHistory.length > 0) {
-        this._persist([settledItem], [...settleHistory, historyEntry])
-      } else {
-        // Only persist the failure history
-        this._persist([], [historyEntry])
-      }
+      // Still at or above at mid, search later
+      left = mid
     }
-  } finally {
-    // Always release lock, even if policy.resurrect throws
-    this._resurrectionsInProgress.delete(id)
   }
+  
+  // Return the upper end: the earliest checked time at which health is already below
+  return right
+}
+
+// For triage and forecast: when will this (settled, not dead) item die?
+function findDeathAfter<Payload, PolicyData>(
+  item: Item<Payload, PolicyData>,
+  policy: DecayPolicy<Payload, PolicyData, unknown>,
+  fromTime: number,
+  toTime: number
+): number | null {
+  const healthAtEnd = clampHealth(policy.healthAt(item, toTime))
+  if (healthAtEnd >= policy.thresholds.dead) {
+    return null // does not die within the window
+  }
+  return bisectCrossing(item, policy, policy.thresholds.dead, fromTime, toTime)
 }
 ```
 
-**Lock behavior**:
-- Lock acquired before calling `policy.resurrect`
-- Lock released in finally block (always runs)
-- Concurrent resurrect attempts on same item throw `RESURRECTION_IN_PROGRESS`
-- Lock is per-item, not global
-- Lock is in-memory only (not persisted)
-- If item is removed during resurrection, throw `ITEM_NOT_FOUND` and persist nothing
+**Usage**:
+- In `settle`, when health has fallen below a threshold between the item's lastEventAt and `now`: `bisectCrossing(storedItem, policy, threshold, storedItem.lastEventAt, now)`, once for the weak threshold (if the item was alive) and once for the dead threshold (if it is now dead). The results are passed to `applyHealth` as `crossings`
+- Bisection always uses the stored item (before settling). The settled item has lastEventAt = now, so it cannot be used to look back in time
+- In triage: `findDeathAfter(settledItem, policy, now, now + MAX_FORECAST_HORIZON_MS)`
+- In forecast: `findDeathAfter(settledItem, policy, now, now + horizonMs)`
+- Event-caused changes (tend, edit) do not bisect: the crossing time is `now`
+- Exception: If item starts dead at creation (addItem computes starting health < dead threshold), then `diedAt = createdAt` (no bisection)
+
+**Relies on policy invariant**: `policy.healthAt` never increases with time between events for the same item. This ensures that if health is below threshold at time T, it remains below threshold for all times > T.
+
+**Precision**: 1 minute (60000 milliseconds). The final interval is [left, right] where right - left ≤ 60000.
+
+**Return value**: Always returns `right` (the upper end of the final interval), which is the earliest checked time at which the condition is already met. This ensures `view(diedAt)` always shows the item as dead.
 
 ### Atomic Persistence
 
@@ -653,6 +733,8 @@ type Item<Payload, PolicyData> = {
   lastEventAt: number           // Timestamp of last health change
   diedAt?: number               // Timestamp when item died (only for dead items)
   timesResurrected: number      // Count of successful resurrections
+  importance: number            // 1..3, set by the user, used by Triage
+  costMinutes: number           // Minutes to tend, set by the user, used by Triage
 }
 ```
 
@@ -667,8 +749,11 @@ type Item<Payload, PolicyData> = {
 - health ∈ [0, 100]
 - state matches health and thresholds per derivation rules
 - If state is "dead", then diedAt is defined and health is 0
-- lastEventAt ≤ diedAt (if diedAt is defined)
+- diedAt ≥ lastEventAt before death (diedAt is greater than or equal to the item's last event timestamp before death)
+- diedAt ≤ lastEventAt (the stored lastEventAt is the moment the death was detected, or later)
 - createdAt ≤ lastEventAt
+- importance ∈ [1, 2, 3]
+- costMinutes is a positive integer ≤ 600
 
 ### History Structure
 
@@ -680,8 +765,9 @@ type HistoryEntry =
   | { type: "tended"; itemId: string; timestamp: number; health: number; event: unknown }
   | { type: "state-changed"; itemId: string; timestamp: number; health: number; from: "alive" | "weak" | "dead"; to: "alive" | "weak" | "dead" }
   | { type: "died"; itemId: string; timestamp: number; health: number }
-  | { type: "resurrected"; itemId: string; timestamp: number; health: number }
-  | { type: "resurrect-failed"; itemId: string; timestamp: number; health: number; reason: string }
+  | { type: "resurrected"; itemId: string; timestamp: number; health: number; event: unknown }
+  | { type: "resurrect-failed"; itemId: string; timestamp: number; health: number; event: unknown; reason: string }
+  | { type: "edited"; itemId: string; timestamp: number; health: number; fieldsChanged: string[] }
 ```
 
 **Common fields**:
@@ -693,7 +779,9 @@ type HistoryEntry =
 **Type-specific fields**:
 - `tended`: includes `event` (app-defined)
 - `state-changed`: includes `from` and `to` states
-- `resurrect-failed`: includes `reason` string
+- `resurrected`: includes `event`
+- `resurrect-failed`: includes `event` and `reason` string
+- `edited`: includes `fieldsChanged` (names of the fields that were replaced)
 
 **Storage**:
 - History stored as `Map<string, HistoryEntry[]>` (item ID → entries)
@@ -736,6 +824,8 @@ type StoredSnapshot = {
 - State is one of "alive", "weak", "dead"
 - Timestamps are finite non-negative numbers
 - timesResurrected is non-negative integer
+- importance is integer 1-3
+- costMinutes is positive integer ≤ 600
 - If state is "dead", diedAt is defined
 
 ## Correctness Properties
@@ -763,7 +853,7 @@ The fake policy implements time-based linear decay for testing:
 // tests/fake-policy.ts
 
 type FakePayload = { name: string }
-type FakePolicyData = { decayRate: number }  // Health lost per millisecond
+type FakePolicyData = { decayRate: number }  // Health lost per millisecond (default: 1 per hour)
 type FakeEvent = 
   | { type: "boost"; amount: number }
   | { type: "damage"; amount: number }
@@ -778,7 +868,9 @@ class FakePolicy implements DecayPolicy<FakePayload, FakePolicyData, FakeEvent> 
   }
   
   init(payload: FakePayload, now: number): FakePolicyData {
-    return { decayRate: 0.01 }  // Loses 0.01 health per ms by default
+    // 1 health per hour: alive for 50 hours, weak until 80 hours, then dead.
+    // Sized in hours so that bisection (1-minute precision) is actually exercised.
+    return { decayRate: 1 / 3_600_000 }
   }
   
   healthAt(item: Item<FakePayload, FakePolicyData>, now: number): number {
@@ -814,10 +906,11 @@ class FakePolicy implements DecayPolicy<FakePayload, FakePolicyData, FakeEvent> 
     return now + timeUntilWeak
   }
   
-  async resurrect(
+  resurrect(
     item: Item<FakePayload, FakePolicyData>, 
+    event: FakeEvent,
     now: number
-  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+  ): { ok: true } | { ok: false; reason: string } {
     if (this._resurrectShouldFail) {
       return { ok: false, reason: "Resurrection not available" }
     }
@@ -827,11 +920,12 @@ class FakePolicy implements DecayPolicy<FakePayload, FakePolicyData, FakeEvent> 
 ```
 
 **Characteristics**:
-- Linear decay: health decreases by `decayRate * elapsed_ms`
+- Linear decay: health decreases by `decayRate * elapsed_ms` (1 health per hour by default, so with thresholds 50/20 an untended item goes weak after 50 hours and dies after 80 hours)
 - Events: "boost" adds health, "damage" subtracts health
 - Due calculation: computes time until weak threshold
 - Configurable resurrect: can be set to succeed or fail
 - Never reads the clock
+- healthAt never increases with time between events (policy invariant)
 - All types (FakePayload, FakePolicyData, FakeEvent) are JSON-serializable
 
 ### Property 1: Health Bounds
@@ -842,7 +936,7 @@ For any item and any timestamp, the item's health after settling is between 0 an
 
 **Generators**:
 - `fc.commands()`: Generates sequences of engine operations (addItem, tend, tick) that build valid items
-- `fc.integer({ min: baseTime, max: baseTime + 10000 })`: Timestamps as baseTime plus bounded offsets
+- `fc.integer({ min: baseTime, max: baseTime + 120 * HOUR_MS })`: Timestamps as baseTime plus bounded offsets
 
 **Test**:
 ```typescript
@@ -876,7 +970,7 @@ For any item and any timestamp, after settling the item's state always matches i
 
 **Generators**:
 - `fc.commands()`: Generates sequences of engine operations that build valid items
-- `fc.integer({ min: baseTime, max: baseTime + 10000 })`: Timestamps as baseTime plus bounded offsets
+- `fc.integer({ min: baseTime, max: baseTime + 120 * HOUR_MS })`: Timestamps as baseTime plus bounded offsets
 
 **Test**:
 ```typescript
@@ -910,7 +1004,7 @@ For any timestamp, a dead item is never returned by due(now).
 
 **Generators**:
 - `fc.commands()`: Generates sequences of engine operations that produce alive, weak, and dead items
-- `fc.integer({ min: baseTime, max: baseTime + 10000 })`: Timestamps sized so all states occur often
+- `fc.integer({ min: baseTime, max: baseTime + 120 * HOUR_MS })`: Timestamps sized so all states occur often
 - Outcome spread is verified once, by the Generator Coverage Check below
 
 **Test**:
@@ -1015,15 +1109,14 @@ For any dead item, a successful resurrect always yields an item with state "aliv
 - `generators.commandSequence()`: Synchronous engine operations that leave some items dead
 - `generators.offset()`: Offset added to the latest command timestamp
 
-**Async note**: resurrect is asynchronous, so this property uses `fc.asyncProperty` and the assertion is awaited. A synchronous `fc.property` cannot wait for an async body, so its checks would not be evaluated correctly.
-
 **Test**:
 ```typescript
 // Feature: engine, Property 6: Successful resurrect always yields alive with health 100
-await fc.assert(fc.asyncProperty(
+fc.assert(fc.property(
   generators.commandSequence(),
   generators.offset(),
-  async (commands, offset) => {
+  generators.event(),
+  (commands, offset, event) => {
     const policy = new FakePolicy()
     policy.setResurrectFailure(false)
     const { engine } = buildEngine(commands, { policy })
@@ -1033,7 +1126,7 @@ await fc.assert(fc.asyncProperty(
     engine.tick(now)
     
     for (const item of engine.graveyard()) {
-      await engine.resurrect(item.id, now)
+      engine.resurrect(item.id, event, now)
       
       const resurrected = engine.view(now).find(i => i.id === item.id)
       
@@ -1052,18 +1145,20 @@ For any item, history entries are always sorted by timestamp in ascending order.
 **Validates: Requirements 18.7, 9.1**
 
 **Generators**:
-- `generators.commandSequence()`: Synchronous engine operations (addItem, tend, tick)
+- `generators.commandSequence()`: Synchronous engine operations (addItem, tend, tick, edit)
 - `generators.offset()`: Offset added to the latest command timestamp
 - `fc.boolean()`: Whether the resurrect attempts succeed or fail, so both "resurrected" and "resurrect-failed" entries are covered
+- `generators.event()`: Events for tend and resurrect operations
 
 **Test**:
 ```typescript
 // Feature: engine, Property 7: History entries always in time order
-await fc.assert(fc.asyncProperty(
+fc.assert(fc.property(
   generators.commandSequence(),
   generators.offset(),
   fc.boolean(),
-  async (commands, offset, resurrectFails) => {
+  generators.event(),
+  (commands, offset, resurrectFails, event) => {
     const policy = new FakePolicy()
     policy.setResurrectFailure(resurrectFails)
     const { engine } = buildEngine(commands, { policy })
@@ -1074,7 +1169,7 @@ await fc.assert(fc.asyncProperty(
     // Add death and resurrect entries to the history
     engine.tick(now)
     for (const item of engine.graveyard()) {
-      await engine.resurrect(item.id, now)
+      engine.resurrect(item.id, event, now)
     }
     
     for (const item of engine.view(now)) {
@@ -1268,6 +1363,286 @@ it("generated scenarios reach all three states", () => {
 
 A fixed seed keeps this check stable between runs. If the generators are changed and one state drops below 10%, this test fails and the generator sizing is adjusted.
 
+### Outcome Tests with Real Policies
+
+Outcome tests check that the engine, driven by a real policy, produces hand-calculated results ("dies on day 34 if never reviewed").
+
+**Where they live**: with each app's policy, in `apps/<app>/src/policy.test.ts`, not in `packages/engine`. Two rules force this. The engine must never import an app (engine-boundary steering), and the real decay rules are hand-written by the developer inside each app (authorship steering). Each app's policy test file also runs `checkPolicy` on that policy. The engine package itself tests against the fake policy only, plus one engine-level outcome test for Triage (see Testing Strategy).
+
+**Reference rules** (from the "four questions" table in `docs/Decay Engine Home Wireframe.html`). All three use thresholds weak = 60, dead = 10. These are the rules the outcome tests check; the developer writes the actual policy code.
+
+1. **Study Dungeon** (halves every half-life since the last review):
+   `health = item.health × 0.5 ^ ((now − item.lastEventAt) / halfLife)`.
+   `halfLife` is evolving state in policyData (right answer: back to 100 and the half-life doubles; wrong answer: drops to 45 and the half-life halves). The first half-life comes from the payload ("how well do you know it"). Because this decays from `item.health` and `item.lastEventAt`, it is safe when settle moves lastEventAt forward.
+2. **Ghosted** (straight line, reaching 0 at three times the usual rhythm):
+   `health = max(0, 100 × (1 − (now − policyData.lastContactAt) / (3 × rhythm)))`, with `rhythm` from `payload.rhythmDays`.
+   It must decay from `lastContactAt`, never from `item.lastEventAt`: settle moves lastEventAt forward on every tick, so a formula based on it would jump back to 100 after each tick. A quick text (+40) is stored by moving `lastContactAt` forward to the time that gives the new health; a call or meet-up sets it to `now`.
+3. **Expiry Reaper** (date-based with a warning window):
+   100 while more than the warning window is left; `10 + 90 × (timeLeft / warningWindow)` inside the window; 0 on or after the date.
+   `expiresAt` and `warningDays` are user settings in the payload (so `edit` can change them). Renewing stores a new end date in policyData (`renewedUntil`).
+
+**Expected outcomes for an untended item created on day 0** (health in brackets). The day before each change is included on purpose: health exactly equal to a threshold still counts as the better state (`health >= weak` is alive, `health >= dead` is weak).
+
+| App | Setup | Last alive day | First weak day | Last weak day | First dead day | Exact death time (bisection) |
+|-----|-------|----------------|----------------|---------------|----------------|------------------------------|
+| Study Dungeon | half-life 10 days | 7 (61.6) | 8 (57.4) | 33 (10.2) | 34 (9.5) | 10 × log2(10) ≈ 33.22 days |
+| Ghosted | 30-day rhythm, last contact day 0 | 36 (exactly 60) | 37 (58.9) | 81 (exactly 10) | 82 (8.9) | just after 81 days |
+| Expiry Reaper | expires day 40, 30-day window | 23 (61) | 24 (58) | 39 (13) | 40 (0) | exactly day 40 |
+
+**Bisection checks**: after `tick` at day 90 on an untended item, `diedAt` (and the "died" entry) lies within 1 minute after the exact death time in the table, never before it. The alive→weak "state-changed" entry lies within 1 minute after the first moment health dropped below 60. Autopsy's `wentWeakAt` equals that entry's timestamp.
+
+**Example** (`apps/ghosted/src/policy.test.ts`):
+
+```typescript
+it("30-day rhythm, no contact: weak after day 36, dark after day 81", () => {
+  const engine = new DecayEngine(ghostedPolicy, new InMemoryAdapter(), counterIds())
+  const id = engine.addItem({
+    payload: { name: "Meera Joshi", rhythmDays: 30, lastContactAt: T0 },
+    importance: 2,
+    costMinutes: 15
+  }, T0)
+
+  expect(stateAt(engine, id, T0 + 36 * DAY_MS)).toBe("alive") // exactly 60
+  expect(stateAt(engine, id, T0 + 37 * DAY_MS)).toBe("weak")
+  expect(stateAt(engine, id, T0 + 81 * DAY_MS)).toBe("weak")  // exactly 10
+  expect(stateAt(engine, id, T0 + 82 * DAY_MS)).toBe("dead")
+
+  engine.tick(T0 + 90 * DAY_MS)
+  const diedAt = engine.graveyard()[0].diedAt!
+  expect(diedAt).toBeGreaterThan(T0 + 81 * DAY_MS)
+  expect(diedAt).toBeLessThanOrEqual(T0 + 81 * DAY_MS + 60_000)
+})
+```
+
+`stateAt` is a small test helper that returns the item's state from `engine.view(t)`.
+
+### Property 12: Triage Only Picks Weak Items
+
+For any budget and timestamp, triage never picks an item that is alive (health ≥ weak threshold) or dead (health < dead threshold) at that time.
+
+**Validates: Requirements 18.12, 17b.10**
+
+**Generators**:
+- `generators.commandSequence()`: Synchronous engine operations that produce items across all states
+- `generators.offset()`: Offset added to the latest command timestamp
+- `fc.integer({ min: 1, max: 1440 })`: Budget in minutes
+
+**Test**:
+```typescript
+// Feature: engine, Property 12: Triage never picks alive or dead items
+fc.assert(fc.property(
+  generators.commandSequence(),
+  generators.offset(),
+  fc.integer({ min: 1, max: 1440 }),
+  (commands, offset, budgetMinutes) => {
+    const policy = new FakePolicy()
+    const { engine } = buildEngine(commands, { policy })
+    const now = latestTimestamp(commands) + offset
+    
+    const result = engine.triage(budgetMinutes, now)
+    
+    // candidate.item is the item as settled at `now`
+    for (const candidate of result.picks) {
+      const item = candidate.item
+      expect(item.health).toBeGreaterThanOrEqual(policy.thresholds.dead)
+      expect(item.health).toBeLessThan(policy.thresholds.weak)
+    }
+  }
+), { numRuns: 100 })
+```
+
+### Property 13: Triage Respects Budget
+
+For any budget and timestamp, the total costMinutes of all picked items never exceeds the budget.
+
+**Validates: Requirements 18.13, 17b.6**
+
+**Generators**:
+- `generators.commandSequence()`: Synchronous engine operations
+- `generators.offset()`: Offset added to the latest command timestamp
+- `fc.integer({ min: 1, max: 1440 })`: Budget in minutes
+
+**Test**:
+```typescript
+// Feature: engine, Property 13: Total costMinutes never exceeds budget
+fc.assert(fc.property(
+  generators.commandSequence(),
+  generators.offset(),
+  fc.integer({ min: 1, max: 1440 }),
+  (commands, offset, budgetMinutes) => {
+    const { engine } = buildEngine(commands)
+    const now = latestTimestamp(commands) + offset
+    
+    const result = engine.triage(budgetMinutes, now)
+    
+    const totalCost = result.picks.reduce((sum, c) => sum + c.item.costMinutes, 0)
+    expect(totalCost).toBeLessThanOrEqual(budgetMinutes)
+  }
+), { numRuns: 100 })
+```
+
+### Property 14: Triage Optimality for Small Cases
+
+For candidate sets of 10 or fewer items, triage's total value equals the brute-force optimal total value within tolerance.
+
+**Validates: Requirements 18.14, 17b.6**
+
+**Generators**:
+- `generators.smallCommandSequence()`: Operations that produce at most 10 weak items
+- `generators.offset()`: Offset added to the latest command timestamp
+- `fc.integer({ min: 1, max: 1440 })`: Budget in minutes
+
+**Test**:
+```typescript
+// Feature: engine, Property 14: Triage optimal for small cases
+fc.assert(fc.property(
+  generators.smallCommandSequence(),
+  generators.offset(),
+  fc.integer({ min: 1, max: 1440 }),
+  (commands, offset, budgetMinutes) => {
+    const { engine } = buildEngine(commands)
+    const now = latestTimestamp(commands) + offset
+    
+    const result = engine.triage(budgetMinutes, now)
+    
+    // Only check when we have 10 or fewer weak items
+    const weakCount = [...result.picks, ...result.others].length
+    fc.pre(weakCount <= 10)
+    
+    const triageValue = result.picks.reduce((sum, c) => sum + c.value, 0)
+    const bruteForceValue = computeBruteForceOptimal([...result.picks, ...result.others], budgetMinutes)
+    
+    expect(Math.abs(triageValue - bruteForceValue)).toBeLessThan(1e-9)
+  }
+), { numRuns: 100 })
+```
+
+### Property 15: DiedAt Lies Between Events
+
+For any item that dies, the recorded diedAt timestamp lies between the item's previous lastEventAt and the `now` at which death was detected.
+
+**Validates: Requirements 18.15, 17a.6**
+
+**Generators**:
+- `generators.commandSequence()`: Synchronous engine operations
+- `generators.offset()`: Offset added to the latest command timestamp
+
+**Test**:
+```typescript
+// Feature: engine, Property 15: diedAt lies between previous lastEventAt and detection time
+fc.assert(fc.property(
+  generators.commandSequence(),
+  generators.offset(),
+  (commands, offset) => {
+    const { engine, adapter } = buildEngine(commands)
+    const now = latestTimestamp(commands) + offset
+    
+    // Stored state before the tick (read from storage, not from view,
+    // because view would already show the settled death)
+    const before = new Map(
+      (adapter.load()?.items ?? []).map(i => [i.id, i])
+    )
+    
+    engine.tick(now)
+    
+    for (const item of engine.graveyard()) {
+      const stored = before.get(item.id)!
+      // Only items that died in THIS tick. Items that were already dead
+      // have a stored lastEventAt that is later than their diedAt.
+      if (stored.state === "dead") continue
+      
+      expect(item.diedAt).toBeGreaterThanOrEqual(stored.lastEventAt)
+      expect(item.diedAt).toBeLessThanOrEqual(now)
+    }
+  }
+), { numRuns: 100 })
+```
+
+### Property 16: Read-Only Operations Never Change Storage
+
+For any sequence of autopsy, triage, and forecast calls, stored data remains unchanged.
+
+**Validates: Requirements 18.16, 17b.1, 17c.1, 17d.1**
+
+**Generators**:
+- `generators.commandSequence()`: Synchronous engine operations
+- `generators.offset()`: Offset added to the latest command timestamp
+- `fc.array(fc.integer({ min: 1, max: 1440 }))`: Multiple budgets for triage
+- `fc.array(fc.integer({ min: 1000, max: 100000000 }))`: Multiple horizons for forecast
+
+**Test**:
+```typescript
+// Feature: engine, Property 16: autopsy, triage, forecast never change storage
+fc.assert(fc.property(
+  generators.commandSequence(),
+  generators.offset(),
+  fc.array(fc.integer({ min: 1, max: 1440 }), { maxLength: 5 }),
+  fc.array(fc.integer({ min: 1000, max: 100000000 }), { maxLength: 5 }),
+  (commands, offset, budgets, horizons) => {
+    const adapter = new InMemoryAdapter()
+    const { engine } = buildEngine(commands, { adapter })
+    const now = latestTimestamp(commands) + offset
+    
+    // Capture initial state
+    const beforeSnapshot = adapter.load()
+    
+    // Call read-only operations
+    for (const budget of budgets) {
+      engine.triage(budget, now)
+    }
+    for (const horizon of horizons) {
+      engine.forecast(now, horizon)
+    }
+    for (const item of engine.graveyard()) {
+      try {
+        engine.autopsy(item.id, now)
+      } catch {
+        // Item might not be dead at `now`
+      }
+    }
+    
+    // Verify storage unchanged
+    const afterSnapshot = adapter.load()
+    expect(afterSnapshot).toEqual(beforeSnapshot)
+  }
+), { numRuns: 100 })
+```
+
+### Property 17: Forecast Consistency with View
+
+For any item forecast to die at time T, calling view(T) shows that item as dead.
+
+**Validates: Requirements 18.17, 17d.7**
+
+**Generators**:
+- `generators.commandSequence()`: Synchronous engine operations
+- `generators.offset()`: Offset added to the latest command timestamp
+- `fc.integer({ min: 1000, max: 100000000 })`: Horizon in milliseconds
+
+**Test**:
+```typescript
+// Feature: engine, Property 17: forecast consistency with view
+fc.assert(fc.property(
+  generators.commandSequence(),
+  generators.offset(),
+  fc.integer({ min: 1000, max: 100000000 }),
+  (commands, offset, horizonMs) => {
+    const { engine } = buildEngine(commands)
+    const now = latestTimestamp(commands) + offset
+    
+    const forecast = engine.forecast(now, horizonMs)
+    
+    for (const entry of forecast) {
+      const viewAtDeath = engine.view(entry.diesAt)
+      const item = viewAtDeath.find(i => i.id === entry.item.id)
+      
+      expect(item).toBeDefined()
+      expect(item.state).toBe("dead")
+    }
+  }
+), { numRuns: 100 })
+```
+
 ## Error Handling
 
 ### Error Codes
@@ -1288,10 +1663,15 @@ The engine uses a single `DecayEngineError` class with the following codes:
 | `ITEM_ALREADY_DEAD` | tend called on item that is dead after settling |
 | `ITEM_NOT_DEAD` | resurrect called on item that is not dead after settling |
 | `TIME_WENT_BACKWARD` | Operation called with now < item.lastEventAt |
-| `RESURRECTION_IN_PROGRESS` | resurrect called while another resurrect is pending |
 | `UNSUPPORTED_SCHEMA_VERSION` | Snapshot has unknown schemaVersion |
 | `INVALID_SNAPSHOT` | Snapshot structure is invalid |
 | `INVALID_ITEM_DATA` | Item deserialization finds invalid field values |
+| `INVALID_BUDGET` | budgetMinutes not integer 1-1440 |
+| `INVALID_HORIZON` | horizonMs not positive |
+| `AUTOPSY_REQUIRES_DEAD_ITEM` | autopsy called on item not dead at `now` |
+| `INVALID_IMPORTANCE` | importance not integer 1-3 |
+| `INVALID_COST_MINUTES` | costMinutes not positive integer or > 600 |
+| `EDIT_REQUIRES_FIELD` | edit called with no fields provided |
 
 ### Error Messages
 
@@ -1322,6 +1702,11 @@ Error messages follow these conventions:
 - `tests/unit/engine.test.ts`: Engine methods
 - `tests/unit/settle.test.ts`: Settle function
 - `tests/unit/state-derivation.test.ts`: State derivation and validation
+- `tests/unit/bisection.test.ts`: Binary search algorithms
+- `tests/unit/triage.test.ts`: Knapsack algorithm and candidate selection
+- `tests/unit/autopsy.test.ts`: Cause-of-death analysis
+- `tests/unit/forecast.test.ts`: Death prediction
+- `tests/unit/check-policy.test.ts`: Policy validation function
 - `tests/unit/serialization.test.ts`: Parse and validate
 - `tests/unit/storage/memory.test.ts`: In-memory adapter
 - `tests/unit/storage/local-storage.test.ts`: localStorage adapter (with mocked localStorage)
@@ -1343,9 +1728,11 @@ Error messages follow these conventions:
 - Tag format: `// Feature: engine, Property N: <statement>`
 
 **Generators and helpers** (`tests/generators.ts`):
-- `commandSequence()`: Generates sequences of synchronous engine operations (addItem, tend, tick) that build valid items. Timestamps within a sequence never decrease. resurrect is asynchronous and is not part of the sequence; Properties 6 and 7 call it explicitly
+- `commandSequence()`: Generates sequences of synchronous engine operations (addItem with random importance 1-3 and costMinutes 1-60, tend, tick, edit) that build valid items. Timestamps within a sequence never decrease and advance in whole minutes, with gaps of up to several hours, so that bisection is exercised. resurrect is not part of the sequence; Properties 6 and 7 call it explicitly after a tick
+- `smallCommandSequence()`: Like `commandSequence()` but adds at most 10 items (used by Property 14)
 - Command execution ignores one expected error, ITEM_ALREADY_DEAD (a generated tend can target an item that has already died). Every other error propagates and fails the test
 - `offset()`: A non-negative bounded integer. Tests compute `now` as `latestTimestamp(commands) + offset`, so `now` is never earlier than any item's lastEventAt and no property can fail with TIME_WENT_BACKWARD by accident
+- `offset()` and `timestamp()` are measured in whole minutes, up to about 120 hours, matching the fake policy's 1-health-per-hour decay (`HOUR_MS = 3_600_000`)
 - `timestamp()`: Valid timestamps as baseTime plus bounded offsets. Used only for view and due, which accept any time
 - `event()`: Fake events (boost or damage with random amounts, JSON-safe values)
 - `latestTimestamp(commands)`: The largest timestamp in a sequence, or baseTime for an empty sequence
@@ -1365,6 +1752,10 @@ Error messages follow these conventions:
 - `tests/properties/history.test.ts`: Property 7
 - `tests/properties/tend.test.ts`: Property 8
 - `tests/properties/serialization.test.ts`: Property 10
+- `tests/properties/triage.test.ts`: Properties 12, 13, 14
+- `tests/properties/timing.test.ts`: Property 15
+- `tests/properties/read-only.test.ts`: Property 16
+- `tests/properties/forecast.test.ts`: Property 17
 - `tests/properties/generator-coverage.test.ts`: Generator Coverage Check
 
 **Distribution checks**:
@@ -1372,12 +1763,23 @@ Error messages follow these conventions:
 - Individual properties contain no distribution code, and `fc.statistics` is not called inside any property
 
 **Async properties**:
-- Properties that call resurrect (6 and 7) use `fc.asyncProperty` and `await fc.assert(...)`
-- All other properties are synchronous and use `fc.property`
+- Removed: resurrect is now synchronous
+- All properties use `fc.property` (synchronous)
+
+### Outcome Tests
+
+**Real-policy outcome tests** live in each app, not in the engine package (see "Outcome Tests with Real Policies" above):
+- `apps/study-dungeon/src/policy.test.ts`
+- `apps/ghosted/src/policy.test.ts`
+- `apps/expiry-reaper/src/policy.test.ts`
+
+They are written when each app's policy is written, use the expected-outcomes table above, check bisection accuracy, and run `checkPolicy` on the policy.
+
+**Engine-level Triage outcome test** (`tests/unit/triage.test.ts`): a worked example with the fake policy. Four weak items with known health, importance and costMinutes, and a 20-minute budget; the test asserts exactly which items are picked, their order, and the minutes used. The expected answer is worked out by hand in a comment in the test.
 
 ### Integration Tests
 
-Not applicable: the engine has no external dependencies. Unit and property tests provide complete coverage.
+Not applicable: the engine has no external dependencies. Unit, property, and outcome tests provide complete coverage.
 
 ### Test Execution
 
@@ -1426,24 +1828,30 @@ class DecayEngine<Payload, PolicyData, Event> {
 ### addItem
 
 ```typescript
-addItem(payload: Payload, now: number): string
+addItem(params: { payload: Payload; importance: number; costMinutes: number }, now: number): string
 ```
 
 **Behavior**:
 - Generates unique ID using idGenerator
-- Creates item with health 100, state "alive"
+- Validates importance (must be integer 1-3) and costMinutes (must be positive integer ≤ 600)
+- Creates provisional item with health 100, state "alive", lastEventAt = createdAt = now
 - Calls `policy.init(payload, now)` to initialize policyData
+- Calls `policy.healthAt(provisionalItem, now)` to compute starting health
+- Derives state from starting health using state derivation rules
+- If starting health < dead threshold: sets state to "dead", diedAt to createdAt (no bisection), health to 0
 - Persists item to storage (synchronous)
-- Records "created" history entry
+- Records "created" history entry (and "died" entry if item starts dead)
 - Returns item ID
 
 **Returns**: Item ID (string)
 
 **Throws**:
 - `DecayEngineError` with code `"INVALID_TIMESTAMP"` if now is invalid
+- `DecayEngineError` with code `"INVALID_IMPORTANCE"` if importance is not an integer 1-3
+- `DecayEngineError` with code `"INVALID_COST_MINUTES"` if costMinutes is not a positive integer or > 600
 - `DecayEngineError` with code `"INVALID_ID"` if ID generator returns invalid value
 - `DecayEngineError` with code `"DUPLICATE_ID"` if ID already exists
-- Propagates errors from `policy.init` or storage adapter
+- Propagates errors from `policy.init`, `policy.healthAt`, or storage adapter
 
 ### tend
 
@@ -1550,28 +1958,26 @@ graveyard(): Item<Payload, PolicyData>[]
 ### resurrect
 
 ```typescript
-async resurrect(id: string, now: number): Promise<void>
+resurrect(id: string, event: Event, now: number): ResurrectOutcome
 ```
 
 **Behavior**:
-- Settles item at `now`
+- Settles item at `now` (computes current health and state)
 - Throws if `now < item.lastEventAt`
 - Throws if item is not dead after settling
-- Throws if resurrection already in progress for this item
-- Acquires resurrection lock for item
-- Calls `policy.resurrect(item, now)` (async)
-- Checks if item still exists (throws if removed during resurrection)
+- Calls `policy.resurrect(item, event, now)` (synchronous)
 - If success: sets health to 100, state to "alive", clears diedAt, increments timesResurrected, updates payload and policyData if provided, records "resurrected" history
-- If failure: preserves item unchanged, records "resurrect-failed" history
-- Releases lock in finally block (always)
-- Persists changes to storage (synchronous, after async policy call)
+- If failure: preserves item unchanged, records "resurrect-failed" history (with the event and reason)
+- Persists changes to storage (synchronous)
+- Returns `{ ok: true }` or `{ ok: false, reason }`, so the app can tell a won fight from a lost one
+
+**Returns**: ResurrectOutcome
 
 **Throws**:
 - `DecayEngineError` with code `"INVALID_TIMESTAMP"` if now is invalid
-- `DecayEngineError` with code `"ITEM_NOT_FOUND"` if item doesn't exist (before or after policy call)
+- `DecayEngineError` with code `"ITEM_NOT_FOUND"` if item doesn't exist
 - `DecayEngineError` with code `"TIME_WENT_BACKWARD"` if now < item.lastEventAt
 - `DecayEngineError` with code `"ITEM_NOT_DEAD"` if item is not dead after settling
-- `DecayEngineError` with code `"RESURRECTION_IN_PROGRESS"` if resurrection already pending
 - Propagates errors from `policy.resurrect` or storage adapter
 
 ### history
@@ -1597,15 +2003,143 @@ remove(id: string): void
 ```
 
 **Behavior**:
-- Throws if a resurrection is in progress for this item
 - Deletes item and all its history atomically
 - Either both succeed or both fail (no partial state)
 - Persists changes to storage (synchronous)
 
 **Throws**:
 - `DecayEngineError` with code `"ITEM_NOT_FOUND"` if item doesn't exist
-- `DecayEngineError` with code `"RESURRECTION_IN_PROGRESS"` if resurrection is pending for this item
 - Propagates errors from storage adapter
+
+### edit
+
+```typescript
+edit(id: string, changes: { payload?: Payload; importance?: number; costMinutes?: number }, now: number): void
+```
+
+**Behavior**:
+- Settles item at `now` (computes current health and state)
+- Throws if `now < item.lastEventAt`
+- Throws if no fields provided (all undefined)
+- Validates importance (1-3 integer) and costMinutes (positive integer ≤ 600) if provided
+- If settled item is dead:
+  - Replaces only provided fields
+  - Leaves health at 0, state as "dead", diedAt unchanged
+  - Does NOT call policy.healthAt to recompute health
+  - Sets lastEventAt to `now`
+  - Records "edited" history with array of changed field names
+- If settled item is not dead:
+  - Replaces only provided fields
+  - Calls `policy.healthAt(item, now)` to recompute health
+  - Derives state from new health using state derivation rules
+  - Uses bisection if health drops below dead threshold to determine diedAt
+  - Sets lastEventAt to `now`
+  - Records "edited" history (and "died" if death occurs)
+- Persists changes to storage (synchronous)
+
+**Throws**:
+- `DecayEngineError` with code `"INVALID_TIMESTAMP"` if now is invalid
+- `DecayEngineError` with code `"ITEM_NOT_FOUND"` if item doesn't exist
+- `DecayEngineError` with code `"TIME_WENT_BACKWARD"` if now < item.lastEventAt
+- `DecayEngineError` with code `"EDIT_REQUIRES_FIELD"` if all fields are undefined
+- `DecayEngineError` with code `"INVALID_IMPORTANCE"` if importance provided but not integer 1-3
+- `DecayEngineError` with code `"INVALID_COST_MINUTES"` if costMinutes provided but not positive integer ≤ 600
+- Propagates errors from `policy.healthAt` or storage adapter
+
+### triage
+
+```typescript
+triage(budgetMinutes: number, now: number): TriageResult<Payload, PolicyData>
+```
+
+**Behavior**:
+- Read-only: does not modify stored items or history
+- Validates budgetMinutes (must be integer 1-1440)
+- Computes candidates: all items whose health at `now` is ≥ dead threshold AND < weak threshold (weak items)
+- For each candidate:
+  - Computes value = (100 - health) × (1 - health / 100) × importance
+  - Computes valuePerMinute = value / costMinutes
+  - Determines diesAt via bisection (searching forward from `now` up to MAX_FORECAST_HORIZON_MS), or null if doesn't die in horizon
+- Selects subset of candidates using exact 0/1 knapsack algorithm over integer minutes
+- Returns picks (sorted by valuePerMinute descending, ties by id ascending) and others (sorted by diesAt ascending with nulls last, ties by id ascending)
+
+**Returns**: TriageResult with picks and others arrays
+
+**Throws**:
+- `DecayEngineError` with code `"INVALID_TIMESTAMP"` if now is invalid
+- `DecayEngineError` with code `"INVALID_BUDGET"` if budgetMinutes not integer 1-1440
+
+### autopsy
+
+```typescript
+autopsy(id: string, now: number): AutopsyReport<Event>
+```
+
+**Behavior**:
+- Read-only: settles item at `now` in memory without persisting
+- Throws if item health at `now` is ≥ dead threshold (not dead)
+- Returns fact-only report with no interpretations:
+  - createdAt, diedAt (from item)
+  - wentWeakAt: most recent alive→weak crossing before death in current life, or null
+  - lifeStartedAt: createdAt if never resurrected, else most recent resurrection timestamp
+  - lastTend: most recent "tended" entry in current life with timestamp and event, or null
+  - silenceMs: milliseconds from lastTend.at (or lifeStartedAt if never tended) to diedAt
+  - tends: all "tended" entries in current life with timestamps, events, and gapBeforeMs
+  - timesResurrected (from item)
+  - failedResurrections: count of "resurrect-failed" entries in full history
+
+**Returns**: AutopsyReport
+
+**Throws**:
+- `DecayEngineError` with code `"INVALID_TIMESTAMP"` if now is invalid
+- `DecayEngineError` with code `"ITEM_NOT_FOUND"` if item doesn't exist
+- `DecayEngineError` with code `"AUTOPSY_REQUIRES_DEAD_ITEM"` if item not dead at `now`
+
+### forecast
+
+```typescript
+forecast(now: number, horizonMs: number): ForecastEntry<Payload, PolicyData>[]
+```
+
+**Behavior**:
+- Read-only: does not modify stored items or history
+- Validates horizonMs (must be positive number)
+- Computes health at `now` for all items using policy.healthAt
+- For each non-dead item (health ≥ dead threshold):
+  - Determines diesAt via bisection searching forward from `now` up to `now + horizonMs`
+- Returns only items with diesAt not null and diesAt ≤ now + horizonMs
+- Sorted by diesAt ascending (soonest first), ties by id ascending
+
+**Returns**: Array of ForecastEntry objects
+
+**Throws**:
+- `DecayEngineError` with code `"INVALID_TIMESTAMP"` if now is invalid
+- `DecayEngineError` with code `"INVALID_HORIZON"` if horizonMs not positive
+
+### checkPolicy
+
+```typescript
+function checkPolicy<Payload, PolicyData, Event>(
+  policy: DecayPolicy<Payload, PolicyData, Event>,
+  samplePayloads: Payload[],
+  sampleEvents: Event[],
+  startTime: number
+): { passed: boolean; failures: string[] }
+```
+
+**Behavior** (exported standalone function, not a method):
+- Builds test items and timestamps deterministically from provided samples
+- Does not use randomness or read system clock
+- Verifies:
+  1. policy.healthAt returns number 0-100 for all test cases
+  2. policy.healthAt is pure (same inputs → same output)
+  3. policy.healthAt never increases with time between events (for any item and t1 < t2 with no events: healthAt(item, t2) ≤ healthAt(item, t1))
+  4. policy.init returns JSON-serializable data (round-trips through JSON)
+- Returns report with passed flag and array of failure descriptions
+
+**Returns**: Check report object
+
+**Throws**: Never (reports failures in return value)
 
 ## Purity and Boundaries
 
@@ -1676,7 +2210,7 @@ The following requirements needed interpretation during design:
 
 ### 2. Settle Before Resurrect (Requirement 8.1-8.3)
 
-**Requirement**: "WHEN I call resurrect(id, now), THE engine SHALL first settle the item at `now`... WHEN I call resurrect(id, now), THE engine SHALL check that the item's state is 'dead' after settling before calling policy.resurrect."
+**Requirement**: "WHEN I call resurrect(id, event, now), THE engine SHALL first settle the item at `now`... WHEN I call resurrect(id, event, now), THE engine SHALL check that the item's state is 'dead' after settling before calling policy.resurrect."
 
 **Interpretation**: Similar to tend, resurrect must settle first. If settling produces history entries (e.g., state-changed from alive to dead), those are persisted along with the resurrection result. This ensures we always check the most current state.
 
@@ -1698,11 +2232,11 @@ The following requirements needed interpretation during design:
 
 **Interpretation**: Tick only persists items where settle changed something. This is an optimization to avoid rewriting unchanged items. The settle function naturally handles this by returning the item unchanged if health and state are the same.
 
-### 6. Resurrection Lock Lifetime (Requirement 8.4)
+### 6. Synchronous Resurrect (Requirement 8)
 
-**Requirement**: "WHILE a resurrect call for an item is waiting on policy.resurrect to complete, IF a second resurrect call is made for the same item, THEN THE engine SHALL throw an error."
+**Requirement**: policy.resurrect is synchronous and receives the event.
 
-**Interpretation**: Lock is acquired before calling `policy.resurrect` and released in a finally block. This ensures the lock is released even if policy.resurrect throws. Lock is not persisted; it only prevents concurrent resurrections in a single engine instance.
+**Interpretation**: With no backend, nothing in a resurrection needs to wait, so the earlier resurrection lock and the RESURRECTION_IN_PROGRESS error are gone. The event (for example, the answer in Study Dungeon) is passed to the policy, recorded in the history entry, and the engine returns the outcome to the caller.
 
 ### 7. Atomic Remove (Requirement 10.1)
 

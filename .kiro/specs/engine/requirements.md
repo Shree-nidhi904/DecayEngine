@@ -2,12 +2,14 @@
 
 ## Introduction
 
-The Decay Engine is a pure TypeScript library that tracks the lifecycle of any item through states of alive, weak, and dead. Apps integrate by supplying a decay policy that defines how items lose health and can be resurrected. The engine enforces lifecycle rules, manages state transitions, maintains due queues and a graveyard, records history, and persists data through a storage adapter—all without knowing what an item represents.
+The Decay Engine is a pure TypeScript library that tracks the lifecycle of any item through states of alive, weak, and dead. Apps integrate by supplying a decay policy that defines how items lose health and can be resurrected. The engine enforces lifecycle rules, manages state transitions, maintains due queues and a graveyard, records history, and persists data through a storage adapter—all without knowing what an item represents. The engine also provides Triage (optimal item selection within a time budget), Autopsy (cause-of-death analysis), and Forecast (prediction of future deaths).
 
 ## Glossary
 
 - **Engine**: The core lifecycle management system that orchestrates item state transitions
-- **Item**: A tracked entity with health, state, timestamps, and app-specific payload and policy data
+- **Item**: A tracked entity with health, state, timestamps, importance, cost, and app-specific payload and policy data
+- **Importance**: A user-set integer from 1 to 3 indicating how much the user cares about an item
+- **CostMinutes**: A positive integer (at most 600) indicating how many minutes it takes to tend an item
 - **Policy**: A contract object supplied by an app that defines health calculation, event handling, due dates, and resurrection logic
 - **Payload**: App-specific data about an item that the engine stores but never interprets
 - **PolicyData**: App-specific state maintained by the policy and stored by the engine
@@ -20,6 +22,10 @@ The Decay Engine is a pure TypeScript library that tracks the lifecycle of any i
 - **Graveyard**: The collection of dead items
 - **Due_Queue**: Items that need attention according to their policy's nextDueAt
 - **Time_Machine**: The capability to view or modify state at any point in time by passing `now` as an argument
+- **Triage**: A read-only operation that selects weak items worth tending within a time budget, prioritizing value per minute
+- **Autopsy**: A read-only, time-machine-capable analysis of why and when a dead item died
+- **Forecast**: A read-only operation that predicts which items will die within a time horizon
+- **Value**: The calculated benefit of tending a weak item, based on health deficit, urgency, and importance
 
 ## Type Contract
 
@@ -34,6 +40,8 @@ type Item<Payload, PolicyData> = {
   lastEventAt: number
   diedAt?: number
   timesResurrected: number
+  importance: number        // 1..3, user-set
+  costMinutes: number       // positive integer, at most 600
 }
 
 interface DecayPolicy<Payload, PolicyData, Event> {
@@ -42,10 +50,38 @@ interface DecayPolicy<Payload, PolicyData, Event> {
   healthAt(item: Item<Payload, PolicyData>, now: number): number
   applyEvent(item: Item<Payload, PolicyData>, event: Event, now: number): { health: number; policyData: PolicyData }
   nextDueAt(item: Item<Payload, PolicyData>, now: number): number | null
-  resurrect(item: Item<Payload, PolicyData>, now: number): Promise<
+  resurrect(item: Item<Payload, PolicyData>, event: Event, now: number):
     | { ok: true; payload?: Payload; policyData?: PolicyData }
     | { ok: false; reason: string }
-  >
+}
+
+type TriageCandidate<Payload, PolicyData> = {
+  item: Item<Payload, PolicyData>
+  value: number
+  valuePerMinute: number
+  diesAt: number | null
+}
+
+type TriageResult<Payload, PolicyData> = {
+  picks: TriageCandidate<Payload, PolicyData>[]
+  others: TriageCandidate<Payload, PolicyData>[]
+}
+
+type AutopsyReport<Event> = {
+  createdAt: number
+  diedAt: number
+  wentWeakAt: number | null
+  lifeStartedAt: number
+  lastTend: { at: number; event: Event } | null
+  silenceMs: number
+  tends: Array<{ at: number; event: Event; gapBeforeMs: number | null }>
+  timesResurrected: number
+  failedResurrections: number
+}
+
+type ForecastEntry<Payload, PolicyData> = {
+  item: Item<Payload, PolicyData>
+  diesAt: number
 }
 ```
 
@@ -76,12 +112,15 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 
 #### Acceptance Criteria
 
-1. WHEN addItem(payload, now) is called, THE engine SHALL generate a unique ID, store the provided payload, call policy.init(payload, now) and store the returned value in policyData, set health to 100, set state to "alive", set createdAt and lastEventAt to `now`, set timesResurrected to 0, and leave diedAt undefined.
-2. WHEN the engine creates a new item, THEN THE engine SHALL persist the item via the storage adapter before returning.
-3. WHEN the engine creates a new item, THEN THE engine SHALL record a history entry of type "created" with the item id, timestamp `now`, and health value 100.
-4. WHEN addItem completes successfully, THEN THE engine SHALL return the item's unique ID as a string.
-5. IF policy.init(payload, now) throws an error, THEN THE engine SHALL propagate the error without creating the item or modifying storage.
-6. IF the storage adapter fails to persist the item, THEN THE engine SHALL propagate the error and SHALL NOT retain the item in memory.
+1. WHEN addItem({ payload, importance, costMinutes }, now) is called, THE engine SHALL generate a unique ID, store the provided payload, importance, and costMinutes, call policy.init(payload, now) and store the returned value in policyData, create a provisional item with health 100 and lastEventAt = createdAt = now, call policy.healthAt on that provisional item at `now` to compute the starting health, derive the state from that health using the three state derivation rules from Requirement 14, set createdAt and lastEventAt to `now`, set timesResurrected to 0, and leave diedAt undefined unless the item starts dead.
+2. IF importance is not an integer in the range 1 to 3 inclusive, THEN THE engine SHALL throw an error indicating invalid importance value.
+3. IF costMinutes is not a positive integer or is greater than 600, THEN THE engine SHALL throw an error indicating invalid costMinutes value.
+4. WHEN the engine creates a new item, THEN THE engine SHALL persist the item via the storage adapter before returning.
+5. WHEN the engine creates a new item, THEN THE engine SHALL record a history entry of type "created" with the item id, timestamp `now`, and the computed starting health.
+6. IF the item's computed starting health is less than policy.thresholds.dead, THEN THE engine SHALL set state to "dead", set diedAt to `now`, set health to 0, and record a "died" history entry with timestamp `now` immediately after the "created" entry.
+7. WHEN addItem completes successfully, THEN THE engine SHALL return the item's unique ID as a string.
+8. IF policy.init(payload, now) throws an error, THEN THE engine SHALL propagate the error without creating the item or modifying storage.
+9. IF the storage adapter fails to persist the item, THEN THE engine SHALL propagate the error and SHALL NOT retain the item in memory.
 
 ### Requirement 3: Tend Items
 
@@ -122,8 +161,8 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 
 1. WHEN I call tick(now), THE engine SHALL compute the view at `now` as if calling view(now), and for each item where health has changed OR state has changed, THE engine SHALL set lastEventAt to `now`, persist that item to storage, and record history entries for state transitions, and finally return the count of items modified.
 2. IF tick finds an item's health and state unchanged at `now`, THEN THE engine SHALL NOT modify that item's lastEventAt or persist that item.
-3. WHEN an item's health drops below policy.thresholds.dead during tick, THE engine SHALL set state to "dead", set diedAt to `now`, set health to 0, and record a history entry of type "died" with the item id, timestamp `now`, and health 0.
-4. WHEN an item's state changes between "alive" and "weak" in either direction during tick, THE engine SHALL record a history entry of type "state-changed" with the item id, timestamp `now`, the health after the change, and the from and to states.
+3. WHEN an item's health drops below policy.thresholds.dead during tick, THE engine SHALL use bisection as specified in Requirement 17a to determine the exact moment diedAt when health crossed the dead threshold, set state to "dead", set diedAt to that bisected timestamp, set health to 0, set lastEventAt to `now`, and record a history entry of type "died" with the item id, timestamp equal to the bisected diedAt, and health 0.
+4. WHEN an item's state changes between "alive" and "weak" in either direction during tick, THE engine SHALL use bisection as specified in Requirement 17a to determine the exact moment when health crossed policy.thresholds.weak, set lastEventAt to `now`, and record a history entry of type "state-changed" with the item id, timestamp equal to the bisected crossing time, the health after the change, and the from and to states.
 5. WHEN I call tick(now1) followed by tick(now1) with the same timestamp, THE engine SHALL detect no changes and write no history entries.
 6. IF an item has lastEventAt = T and I call tick with now < T, THEN THE engine SHALL throw an error indicating that time cannot go backward.
 7. IF storage persistence fails during tick, THEN THE engine SHALL throw an error indicating the persistence failure, preserve the pre-tick state in memory, and leave storage unchanged.
@@ -157,14 +196,32 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 
 #### Acceptance Criteria
 
-1. WHEN I call resurrect(id, now), THE engine SHALL first settle the item at `now` using policy.healthAt exactly as tick would for that one item, including state derivation and recording a death if health falls below policy.thresholds.dead.
-2. WHEN I call resurrect(id, now), THE engine SHALL check that the item's state is "dead" after settling before calling policy.resurrect.
+1. WHEN I call resurrect(id, event, now), THE engine SHALL first settle the item at `now` using policy.healthAt exactly as tick would for that one item, including state derivation and recording a death if health falls below policy.thresholds.dead.
+2. WHEN I call resurrect(id, event, now), THE engine SHALL check that the item's state is "dead" after settling before calling policy.resurrect.
 3. IF the item's state is not "dead" after settling, THEN THE engine SHALL throw an error indicating that only dead items can be resurrected without calling policy.resurrect.
-4. WHILE a resurrect call for an item is waiting on policy.resurrect to complete, IF a second resurrect call is made for the same item, THEN THE engine SHALL throw an error indicating that a resurrection is already in progress for this item.
-5. WHEN I call resurrect(id, now) on a dead item AND policy.resurrect(item, now) returns { ok: true }, THE engine SHALL set health to 100, set state to "alive", clear diedAt, increment timesResurrected by 1, set lastEventAt to now, replace the item's payload with any returned payload, replace the item's policyData with any returned policyData, and record a history entry of type "resurrected" with the item id, timestamp equal to now, and health 100.
-6. WHEN I call resurrect(id, now) on a dead item AND policy.resurrect(item, now) returns { ok: false, reason }, THE engine SHALL preserve the item's current health, state, diedAt, timesResurrected, lastEventAt, payload, and policyData without modification, and record a history entry of type "resurrect-failed" with the item id, timestamp equal to now, health 0, and the reason value.
+4. WHEN I call resurrect(id, event, now) on a dead item, THE engine SHALL call policy.resurrect(item, event, now) synchronously.
+5. WHEN policy.resurrect returns { ok: true }, THE engine SHALL set health to 100, set state to "alive", clear diedAt, increment timesResurrected by 1, set lastEventAt to now, replace the item's payload with any returned payload, replace the item's policyData with any returned policyData, and record a history entry of type "resurrected" with the item id, the event, timestamp equal to now, and health 100.
+6. WHEN policy.resurrect returns { ok: false, reason }, THE engine SHALL preserve the item's current health, state, diedAt, timesResurrected, lastEventAt, payload, and policyData without modification, and record a history entry of type "resurrect-failed" with the item id, the event, timestamp equal to now, health 0, and the reason value.
 7. IF resurrect is called with now less than the item's lastEventAt, THEN THE engine SHALL throw an error indicating that time cannot go backward.
 8. IF resurrect is called with an unknown item ID, THEN THE engine SHALL throw an error indicating that the item does not exist.
+9. WHEN resurrect completes without throwing, THE engine SHALL return { ok: true } on success or { ok: false, reason } on failure, so that the app can tell the user whether the item came back.
+
+### Requirement 8a: Edit Items
+
+**User Story:** As a developer, I want to modify an existing item's properties, so that user changes take effect without recreating the item.
+
+#### Acceptance Criteria
+
+1. WHEN edit(id, { payload?, importance?, costMinutes? }, now) is called, THE engine SHALL first settle the item at `now` using policy.healthAt exactly as tick would for that one item, including state derivation and recording a death if health falls below policy.thresholds.dead.
+2. IF the settled item is dead, THEN THE engine SHALL replace only the provided fields among payload, importance, and costMinutes, leave health at 0, leave state as "dead", leave diedAt unchanged, NOT call policy.healthAt to recompute health, set lastEventAt to `now`, and record a history entry of type "edited" with the item id, timestamp `now`, health 0, and an array of the names of the fields that were changed.
+3. IF the settled item is not dead, THEN THE engine SHALL replace only the provided fields among payload, importance, and costMinutes, call policy.healthAt(item, now) to recompute health at `now`, derive the state from that health using the three state derivation rules from Requirement 14, set lastEventAt to `now`, and record a history entry of type "edited" with the item id, timestamp `now`, the resulting health, and an array of the names of the fields that were changed.
+4. WHEN edit is called with at least one of payload, importance, or costMinutes, THE engine SHALL replace only the provided fields and leave other fields unchanged.
+5. IF importance is provided and is not an integer in the range 1 to 3 inclusive, THEN THE engine SHALL throw an error indicating invalid importance value.
+6. IF costMinutes is provided and is not a positive integer or is greater than 600, THEN THE engine SHALL throw an error indicating invalid costMinutes value.
+7. IF the recomputed health (for a non-dead item after edit) causes the item to die (health drops below policy.thresholds.dead), THE engine SHALL use bisection as specified in Requirement 17a to determine diedAt, set state to "dead", set diedAt to the bisected timestamp, set health to 0, and record a "died" history entry with timestamp equal to diedAt in addition to the "edited" entry.
+8. IF edit is called with now less than the item's lastEventAt, THEN THE engine SHALL throw an error indicating that time cannot go backward.
+9. IF edit is called with an unknown item ID, THEN THE engine SHALL throw an error indicating that the item does not exist.
+10. IF edit is called with no fields provided (all of payload, importance, and costMinutes are undefined), THEN THE engine SHALL throw an error indicating that at least one field must be provided.
 
 ### Requirement 9: Item History
 
@@ -176,11 +233,13 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 2. IF an item has never been tended, resurrected, or transitioned states, THEN THE engine SHALL return an array containing only the "created" entry when history(id) is called for that item.
 3. IF history(id) is called with an unknown item ID, THEN THE engine SHALL throw an Error with a message indicating the item does not exist.
 4. THE history entry SHALL contain a type field (string), an item id field (string), a timestamp field (number representing milliseconds since epoch), a health field (number), and type-specific data.
-5. THE type field SHALL be one of: "created", "tended", "state-changed", "died", "resurrected", "resurrect-failed".
+5. THE type field SHALL be one of: "created", "tended", "state-changed", "died", "resurrected", "resurrect-failed", "edited".
 6. THE "tended" history entry SHALL include the event that was applied.
 7. THE "state-changed" history entry SHALL include from and to state fields.
 8. THE "resurrect-failed" history entry SHALL include the reason field.
-9. WHEN multiple history entries have identical timestamps, THE engine SHALL preserve the order in which the events were recorded.
+9. THE "resurrected" history entry SHALL include the event that was applied.
+10. THE "edited" history entry SHALL include an array of field names that were changed.
+11. WHEN multiple history entries have identical timestamps, THE engine SHALL preserve the order in which the events were recorded.
 
 ### Requirement 10: Remove Items
 
@@ -190,7 +249,7 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 
 1. WHEN remove(id) is called with a valid item ID, THE engine SHALL delete the item and all its history entries atomically such that either both succeed or both fail with no partial state persisted.
 2. IF remove(id) is called with an unknown item ID, THEN THE engine SHALL throw an Error with a message indicating the item does not exist.
-3. IF any engine function that takes an item ID (tend, resurrect, history, or remove) is called with an item ID that has been successfully removed, THEN THE engine SHALL throw an Error with a message indicating the item does not exist.
+3. IF any engine function that takes an item ID (tend, resurrect, edit, autopsy, history, or remove) is called with an item ID that has been successfully removed, THEN THE engine SHALL throw an Error with a message indicating the item does not exist.
 
 ### Requirement 11: Time Handling
 
@@ -239,12 +298,12 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 1. WHEN an item's health is greater than or equal to policy.thresholds.weak, THEN the engine SHALL set the item's state to "alive".
 2. WHEN an item's health is less than policy.thresholds.weak and greater than or equal to policy.thresholds.dead, THEN the engine SHALL set the item's state to "weak".
 3. WHEN an item's health is less than policy.thresholds.dead, THEN the engine SHALL set the item's state to "dead" and set the stored health to 0.
-4. WHEN an item transitions to "dead" state, THEN the engine SHALL record the current time as the diedAt timestamp.
+4. WHEN an item transitions to "dead" state, THEN the engine SHALL record diedAt as specified in Requirement 17a (the bisected moment when health crossed the dead threshold).
 5. THE policy SHALL define health as a numeric value in the range 0 to 100.
 6. THE policy SHALL define policy.thresholds.dead and policy.thresholds.weak such that 0 < policy.thresholds.dead < policy.thresholds.weak <= 100.
 7. IF the policy provides thresholds outside the constraint 0 < policy.thresholds.dead < policy.thresholds.weak <= 100, THEN the engine SHALL throw an error indicating invalid threshold configuration.
 8. THE stored health SHALL always represent the health as of lastEventAt.
-9. WHENEVER the engine stores a new health value for an item (in tick, in settling, in tend, in resurrect), THE engine SHALL also set lastEventAt to `now`.
+9. WHENEVER the engine stores a new health value for an item (in tick, in settling, in tend, in resurrect, in edit for non-dead items, or in autopsy settling), THE engine SHALL also set lastEventAt to `now`.
 
 ### Requirement 15: Parser for Storage Schema
 
@@ -252,9 +311,9 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 
 #### Acceptance Criteria
 
-1. WHEN serializing an item, THEN the engine SHALL produce a format that includes all fields: id, payload, policyData, health, state, createdAt, lastEventAt, diedAt, and timesResurrected.
-2. WHEN deserializing an item, THEN the engine SHALL validate that required fields (id, payload, policyData, health, state, createdAt, lastEventAt, timesResurrected) exist.
-3. WHEN deserializing an item, THEN the engine SHALL validate that id is a non-empty string, health is a number in range 0 to 100, state is one of "alive", "weak", or "dead", createdAt, lastEventAt, and diedAt (if present) are finite numbers greater than or equal to 0, timesResurrected is a non-negative integer, and diedAt is either a finite number greater than or equal to 0 or undefined.
+1. WHEN serializing an item, THEN the engine SHALL produce a format that includes all fields: id, payload, policyData, health, state, createdAt, lastEventAt, diedAt, timesResurrected, importance, and costMinutes.
+2. WHEN deserializing an item, THEN the engine SHALL validate that required fields (id, payload, policyData, health, state, createdAt, lastEventAt, timesResurrected, importance, costMinutes) exist.
+3. WHEN deserializing an item, THEN the engine SHALL validate that id is a non-empty string, health is a number in range 0 to 100, state is one of "alive", "weak", or "dead", createdAt, lastEventAt, and diedAt (if present) are finite numbers greater than or equal to 0, timesResurrected is a non-negative integer, importance is an integer in range 1 to 3, costMinutes is a positive integer at most 600, and diedAt is either a finite number greater than or equal to 0 or undefined.
 4. IF deserialization validation fails, THEN the engine SHALL throw an error indicating which field failed validation.
 5. IF deserializing an item with state "dead" and diedAt undefined, THEN the engine SHALL throw an error indicating missing diedAt for dead item.
 6. WHEN an item is serialized and then deserialized, THEN the resulting item SHALL be deeply equal to the original, where deep equality means all fields have identical values and types.
@@ -283,6 +342,79 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 4. WHEN time goes backward, THEN the error message SHALL include the item's lastEventAt value and the invalid now value provided.
 5. WHEN a policy function returns an invalid value, THEN the error message SHALL include the function name and the invalid return value.
 
+### Requirement 17a: Death Timing with Bisection
+
+**User Story:** As a developer, I want the exact moment an item died to be recorded, so that Autopsy and forecast are accurate.
+
+#### Acceptance Criteria
+
+1. WHEN an item's health drops below policy.thresholds.dead during tick or settling, THE engine SHALL determine the exact moment (diedAt) when health crossed the dead threshold by binary search between the item's lastEventAt and `now`, to 1-minute precision.
+2. WHERE bisection is used to find diedAt, THE engine SHALL rely on the policy invariant that policy.healthAt never increases with time between events for the same item.
+3. THE bisection SHALL return the earliest checked time at which health is already below the dead threshold (the upper end of the final 1-minute interval), such that view(diedAt) always shows the item as dead.
+4. WHEN the engine records a "died" history entry, THE entry's timestamp SHALL be the bisected diedAt value, not the `now` value passed to tick or the operation that caused settling.
+5. WHEN the engine records a "state-changed" history entry for a transition to or from "weak", THE entry's timestamp SHALL be the bisected moment when health crossed policy.thresholds.weak, not the `now` value passed to the operation.
+6. THE diedAt field SHALL always satisfy the invariant: diedAt is greater than or equal to the item's last event timestamp before death, and less than or equal to the `now` value at which death was detected.
+7. IF an item starts dead when added (health computed by policy.healthAt at creation is below policy.thresholds.dead), THEN diedAt SHALL be set to createdAt without bisection.
+
+### Requirement 17b: Triage
+
+**User Story:** As a developer, I want to know which weak items are worth tending within a time budget, so that the app can help users prioritize.
+
+#### Acceptance Criteria
+
+1. WHEN triage(budgetMinutes, now) is called, THE engine SHALL be read-only and SHALL NOT modify any stored item or history.
+2. IF budgetMinutes is not an integer in the range 1 to 1440 inclusive, THEN THE engine SHALL throw an error indicating invalid budget value.
+3. WHEN triage is called, THE engine SHALL compute candidates as the set of all items whose health at `now` (computed via policy.healthAt) is greater than or equal to policy.thresholds.dead AND less than policy.thresholds.weak (items that are weak at `now`).
+4. FOR each candidate, THE engine SHALL compute value = (100 - health) × (1 - health / 100) × importance, and valuePerMinute = value / costMinutes.
+5. FOR each candidate, THE engine SHALL determine diesAt by binary search for the moment when policy.healthAt would drop below policy.thresholds.dead, searching forward from `now` up to a maximum horizon of 10 years (315360000000 milliseconds, an exported constant), or null if the item does not die within that horizon.
+6. THE engine SHALL select the subset of candidates whose total costMinutes does not exceed budgetMinutes and whose total value is maximized, using an exact 0/1 knapsack algorithm over integer minutes.
+7. THE triage result SHALL be deterministic: given the same engine state, budgetMinutes, and `now`, the result SHALL always be identical.
+8. THE picks array SHALL be sorted by valuePerMinute descending, with ties broken by item id ascending.
+9. THE others array (candidates not picked) SHALL be sorted by diesAt ascending (soonest first), with items that have diesAt = null appearing last, and ties broken by item id ascending.
+10. THE engine SHALL never pick an item whose health at `now` is greater than or equal to policy.thresholds.weak (alive) or less than policy.thresholds.dead (dead).
+
+### Requirement 17c: Autopsy
+
+**User Story:** As a developer, I want to analyze why and when a dead item died, so that the app can show a cause-of-death report.
+
+#### Acceptance Criteria
+
+1. WHEN autopsy(id, now) is called, THE engine SHALL be read-only: it SHALL settle the item at `now` in memory without persisting the settled state.
+2. IF the item's health at `now` is greater than or equal to policy.thresholds.dead (item is not dead at `now`), THEN THE engine SHALL throw an error indicating that autopsy requires a dead item.
+3. WHEN autopsy is called on a dead item, THE engine SHALL return an AutopsyReport containing only facts derived from the item and its history, never sentences or interpretations.
+4. THE AutopsyReport SHALL include: createdAt (item creation timestamp), diedAt (death timestamp), wentWeakAt (timestamp of the most recent alive-to-weak crossing before death in the current life, or null if the item died without going weak or went weak then recovered to alive before dying), lifeStartedAt (createdAt if never resurrected, otherwise the timestamp of the most recent resurrection), lastTend (the most recent "tended" history entry with its timestamp and event, or null if never tended in this life), silenceMs (milliseconds from lastTend.at to diedAt, or from lifeStartedAt to diedAt if never tended), tends (array of all "tended" entries in this life with their timestamps, events, and gapBeforeMs indicating milliseconds since the previous tend or since lifeStartedAt for the first tend), timesResurrected (from the item), and failedResurrections (count of "resurrect-failed" entries in the item's full history).
+5. WHERE "this life" is referenced, it SHALL mean the period from the most recent resurrection (or creation if never resurrected) up to and including death.
+6. IF autopsy is called with an unknown item ID, THEN THE engine SHALL throw an error indicating that the item does not exist.
+
+### Requirement 17d: Forecast (Crystal Ball)
+
+**User Story:** As a developer, I want to predict which items will die within a time horizon, so that the app can show a forecast.
+
+#### Acceptance Criteria
+
+1. WHEN forecast(now, horizonMs) is called, THE engine SHALL be read-only and SHALL NOT modify any stored item or history.
+2. IF horizonMs is not a positive number, THEN THE engine SHALL throw an error indicating invalid horizon value.
+3. WHEN forecast is called, THE engine SHALL compute the health at `now` for all items using policy.healthAt.
+4. FOR each item that is not dead at `now` (health >= policy.thresholds.dead), THE engine SHALL determine diesAt by binary search for the moment when policy.healthAt would drop below policy.thresholds.dead, searching forward from `now` up to `now + horizonMs`.
+5. THE forecast result SHALL include only items whose diesAt is not null and diesAt <= now + horizonMs.
+6. THE forecast result SHALL be sorted by diesAt ascending (soonest first), with ties broken by item id ascending.
+7. WHERE forecast predicts that an item dies at time T, THE engine SHALL ensure that view(T) would show that item as dead, such that forecast and view are consistent (this is guaranteed by the bisection rule in Requirement 17a that returns the earliest time at which the item is already dead).
+
+### Requirement 17e: Policy Test Kit
+
+**User Story:** As a developer, I want to verify that a new policy implementation is correct, so that I can catch bugs before integrating with an app.
+
+#### Acceptance Criteria
+
+1. THE engine package SHALL export a function checkPolicy(policy, samplePayloads, sampleEvents, startTime) that accepts a DecayPolicy, an array of sample payloads, an array of sample events, and a start timestamp, and returns a test report.
+2. THE checkPolicy function SHALL build its own test items and timestamps deterministically from the provided samples without using randomness or reading the system clock.
+3. THE checkPolicy function SHALL verify that for all constructed test items and timestamps, policy.healthAt always returns a number between 0 and 100 inclusive.
+4. THE checkPolicy function SHALL verify that for the same item and the same timestamp, policy.healthAt returns the same value when called multiple times (purity check).
+5. THE checkPolicy function SHALL verify that for any item and any two timestamps t1 and t2 where t1 < t2 and no events occur between them, policy.healthAt(item, t2) is less than or equal to policy.healthAt(item, t1) (health never increases with time between events).
+6. THE checkPolicy function SHALL verify that policy.init returns data that is JSON-serializable (round-trips through JSON.stringify and JSON.parse without loss).
+7. IF any check fails, THE checkPolicy function SHALL return a report containing the check name and a description of the failure.
+8. IF all checks pass, THE checkPolicy function SHALL return a report indicating success.
+
 ### Requirement 18: Correctness Properties
 
 **User Story:** As a developer, I want the engine to be verified with property-based tests, so that I can trust its correctness.
@@ -300,3 +432,9 @@ interface DecayPolicy<Payload, PolicyData, Event> {
 9. WHERE property-based testing with fast-check is used, THE test suite SHALL verify that splitting time makes no difference: for an item with no events between times t1 and t2, calling tick(t1) then view(t2) produces the same health as calling view(t2) directly, for any t1 <= t2, within floating-point tolerance.
 10. WHERE the fake policy used in property-based tests is implemented, it SHALL include time-based decay computed from item.health and item.lastEventAt.
 11. WHERE property-based tests are implemented, THE tests SHALL use a fake policy and SHALL NOT use the real clock.
+12. WHERE property-based testing with fast-check is used, THE test suite SHALL verify that triage never picks an alive or dead item, only weak items.
+13. WHERE property-based testing with fast-check is used, THE test suite SHALL verify that the total costMinutes of all picked items never exceeds the budgetMinutes.
+14. WHERE property-based testing with fast-check is used, THE test suite SHALL verify that for candidate sets of 10 or fewer items, the total value of triage picks equals the brute-force optimal total value within 1e-9 tolerance, and the total costMinutes of the picks does not exceed the budgetMinutes.
+15. WHERE property-based testing with fast-check is used, THE test suite SHALL verify that a recorded diedAt timestamp lies between the item's previous lastEventAt and the `now` at which death was detected.
+16. WHERE property-based testing with fast-check is used, THE test suite SHALL verify that autopsy, triage, and forecast never change stored data.
+17. WHERE property-based testing with fast-check is used, THE test suite SHALL verify that an item forecast to die at time T is dead when view(T) is called.

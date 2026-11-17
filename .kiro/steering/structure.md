@@ -2,12 +2,29 @@
 
 ```
 packages/engine/       engine and policy test kit
-packages/shell/        app frame, time machine, storage
-templates/decay-app/   starting point for a new app
-apps/link-cemetery/
+packages/shell/        shared frame: hero, counters, item card, history, 
+                       autopsy, Triage panel, time machine
 apps/study-dungeon/
+apps/ghosted/
 apps/expiry-reaper/
-server/                link-checking functions
-site/                  landing page and sample page
+site/                  landing page; one site, one tab per app
 docs/                  logs and guides
 ```
+
+## Shared shell components
+
+The shell (`packages/shell/`) provides:
+- Hero section (what needs attention)
+- Three counters (alive/weak/dead)
+- Item card layout
+- History log viewer
+- Autopsy panel
+- Triage panel
+- Time machine slider
+
+Each app supplies its own skin (colors, fonts, wording) and policy (decay rules).
+
+## No backend
+
+There is no `server/` folder and no `templates/` folder. One static site deployed to Vercel.
+

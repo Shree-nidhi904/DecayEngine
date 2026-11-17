@@ -1,6 +1,6 @@
 # Decay Engine
 
-**One engine for things that fade, die, and can be brought back.**
+**A hospital for the things in your life: one engine for things that fade, die, and can be brought back.**
 
 Built for [Kiroween 2026](https://kiroween.devpost.com/) in the **Skeleton Crew** category: one reusable foundation, shown with separate apps built on top of it.
 
@@ -13,13 +13,13 @@ Built for [Kiroween 2026](https://kiroween.devpost.com/) in the **Skeleton Crew*
 Some things get worse quietly when nobody is looking at them.
 
 - A fact you studied last month is half gone today.
-- A link you put in your documentation two years ago now points to a missing page.
+- A friend you used to talk to every week has not heard from you since spring.
 - The milk in the fridge and the passport in the drawer both have a date you are not tracking.
 
 These look like different problems, but they have the same shape:
 
 1. The thing starts healthy.
-2. It loses health, either as time passes or when something goes wrong.
+2. It loses health as time passes.
 3. If nobody acts, it dies.
 4. Sometimes it can be brought back.
 
@@ -30,153 +30,145 @@ Today, each of these is solved by a separate app that rebuilds the same logic fr
 Decay Engine is a small TypeScript library. It tracks the life of any item:
 
 ```
-ALIVE  (health 100 to 60)
+ALIVE        healthy
   ↓
-WEAK   (health 59 to 1)     ← needs attention
+WEAK         fading, needs attention
   ↓
-DEAD   (health 0)           ← moved to the graveyard
+DEAD         moved to the graveyard
   ↓
-RESURRECTED                 ← back to ALIVE
+RESURRECTED  back to ALIVE
 ```
 
-The engine does not know what an item is. It does not know about studying, links or food. An app plugs in by answering four questions:
+Each app sets where the lines between these states are. All three apps here use the same lines: weak below 60, dead below 10.
+
+The engine does not know what an item is. It does not know about studying, friends or food. An app plugs in by answering four questions about its items:
 
 | Question | In code |
 |---|---|
-| How healthy is this item right now? | `healthAt(item, now)` |
-| Something happened to it. What is its health now? | `applyEvent(item, event, now)` |
-| When should I look at it again? | `nextDueAt(item, now)` |
-| Someone wants to bring it back. Did it work? | `resurrect(item)` |
+| How healthy is it now? | `healthAt(item, now)` |
+| Something happened. What now? | `applyEvent(item, event, now)` |
+| When should we look again? | `nextDueAt(item, now)` |
+| Can it come back? | `resurrect(item, event, now)` |
 
-These four functions are called a **decay policy**. Write one policy and you have a new app.
+That set of answers is called a **decay policy**. Write one policy and a skin, and you have a new app.
 
 In return the engine gives every app the same tools:
 
 | Function | What it does |
 |---|---|
 | `addItem` | Start tracking a new item |
-| `tend(id, event)` | Record that something happened to an item |
-| `tick(now)` | Recalculate health for everything and move items between states |
-| `due(now)` | List the items that need attention now |
-| `graveyard()` | List the dead items |
-| `resurrect(id)` | Try to bring a dead item back |
-| `history(id)` | Show everything that ever happened to an item |
+| `tend` | Record that something happened to an item |
+| `edit` | Change an item's details |
+| `tick` | Recalculate health for everything and move items between states |
+| `due` | List the items that need attention now |
+| `graveyard` | List the dead items |
+| `resurrect` | Try to bring a dead item back |
+| `history` | Show everything that ever happened to an item |
+| `triage` | "I have N minutes. What should I save?" |
+| `autopsy` | The facts behind an item's death |
+| `forecast` | What will die in the next 7, 30 or 90 days |
 
 **The rule that keeps it honest:** the engine never imports an app. If an app needs the engine changed, the policy contract is wrong, and the contract gets fixed instead.
 
-## The time machine
+## Three features every app gets for free
+
+### Triage: "I have 20 minutes. What should I save?"
+
+You tell the app how much time you have. Triage looks at everything that is fading and picks the set worth saving first that fits your time.
+
+Each item is scored the same way in every app:
+
+```
+value = health you would restore × how close it is to dying × importance
+```
+
+- **Importance** is 1 to 3, and you set it. The engine never decides what matters to you.
+- **Cost** is how many minutes tending the item takes, which you also set.
+- Triage picks the set with the most value that fits the minutes you gave it.
+
+### Autopsy: why did this die?
+
+Every change is written to a history log. When an item dies, the autopsy reads that log and reports what happened: when it started fading, when it was last tended, how long the silence lasted, and how close you came to saving it. The engine reports the facts; each app turns them into its own words.
+
+### The time machine
 
 Decay is slow. Nobody wants to wait three weeks to see whether an app works.
 
-Every engine function takes the current time as an input instead of reading the clock. So each app has a **time slider**: drag it forward 30 days and watch items weaken and die in seconds. Drag it back and they recover.
+Every engine function takes the current time as an input instead of reading the clock. So each app has a **time slider**: drag it forward 30 days and watch items weaken and die in seconds. Drag it back and they recover. Nothing is saved while you look into the future.
 
-It is useful for three things: seeing what your future looks like if you do nothing, testing a decay policy quickly, and showing the engine working in a short demo.
-
----
-
-## App 1: Link Cemetery
-
-**Who it is for:** anyone who maintains a page full of links, such as documentation, a blog, a README or a reading list.
-
-**What it solves:** links break over time and the page owner rarely finds out. Readers hit a dead end. Link Cemetery finds the dead links and offers a saved copy from the Internet Archive.
-
-**How it uses the engine:** a link does not decay on its own. Its health changes only when it is checked.
-
-| Policy question | Link Cemetery's answer |
-|---|---|
-| What is an item? | One link: its URL and the page it was found on |
-| Health right now | Whatever the last check left it at |
-| What an event does | Check passed: health 100. Check failed: health drops by 50 |
-| When to look again | Later for healthy links, sooner for weak ones |
-| Resurrect | Look for an archived copy of the page. Success if one exists |
-
-### What happens, step by step
-
-**You scan a page.**
-You paste the address of a page. A small server-side function fetches the page, pulls out every link and checks each one. (A browser is not allowed to check other websites directly, which is why this one step runs on a server.) Each link becomes an item in the engine at full health.
-
-**A link fails once.**
-Its health drops to 50, so it becomes WEAK. It shows as a cracked headstone. One failure might be a temporary outage, so the link is not declared dead. It is scheduled for an earlier re-check.
-
-**The link recovers.**
-The next check passes. Health returns to 100 and the crack disappears.
-
-**The link fails twice.**
-Health reaches 0. The link is DEAD and gets a tombstone in the cemetery, showing the URL, the page it was on and the date it died.
-
-**You resurrect a link.**
-You click a tombstone. The app asks the Internet Archive whether it holds a saved copy of that page. If it does, the link is resurrected: you get the archived address to use as a replacement. If no copy exists, the tombstone stays and says so.
-
-**You come back next month.**
-The due list shows which links need a re-check. You run the scan again. The history of each link shows every check and result, so you can tell a link that broke yesterday from one that has been flaky for months.
+The same idea gives the **forecast** (what dies in the next 7, 30 or 90 days) almost for free.
 
 ---
 
-## App 2: Study Dungeon
+## App 1: Study Dungeon
 
 **Who it is for:** anyone learning facts they need to keep, such as exam material, vocabulary or interview prep.
 
-**What it solves:** people forget most of what they study unless they review it at the right time. Review too early and you waste time. Review too late and the fact is gone. Study Dungeon tells you exactly which facts are about to slip away, and makes reviewing them a short game.
+**What it solves:** people forget most of what they study unless they review it at the right time. Study Dungeon shows which facts are about to slip away and makes reviewing them a short fight.
 
-**How it uses the engine:** a fact decays with time, even if nothing happens to it.
+**Look:** a dungeon lit by candles. A fading fact comes back as a monster.
 
-| Policy question | Study Dungeon's answer |
+| Question | Study Dungeon's answer |
 |---|---|
-| What is an item? | One fact: a question and its answer |
-| Health right now | Drops by half every *half-life* since the last review |
-| What an event does | Correct answer: health back to 100 and the half-life doubles. Wrong answer: health drops and the half-life halves |
-| When to look again | The moment health is predicted to fall below 60 |
-| Resurrect | Win the fight: answer the question correctly |
+| What is an item? | A fact: a question and its answer |
+| How healthy is it now? | Halves every half-life since the last review |
+| Something happened | Right answer: back to 100 and the half-life doubles. Wrong answer: drops to 45 and the half-life halves |
+| When to look again? | When health is predicted to fall below 60 |
+| Can it come back? | Yes, by answering it right |
 
-The half-life is how long a fact takes to lose half its health. A fact you keep getting right earns a longer half-life, so you see it less often. A fact you keep missing comes back sooner.
+A fact you keep getting right earns a longer half-life, so you see it less often. A fact you keep missing comes back sooner.
 
-### What happens, step by step
+The three lists are **the Crypt** (healthy facts, asleep), **the Dungeon** (weak facts, weakest first) and **the Graveyard** (forgotten for too long; challenge a grave to bring it back).
 
-**You add facts.**
-You start with a deck of questions and answers. Each fact is an item at full health with a short half-life.
+## App 2: Ghosted
 
-**You do nothing for a while.**
-Health falls as time passes. When a fact drops below 60 it becomes WEAK and appears in the dungeon as a monster.
+**Who it is for:** anyone who wants to stay in touch with people and keeps meaning to.
 
-**You fight a monster and win.**
-You are shown the question and answer it correctly. The monster is defeated, the fact returns to full health, and its half-life doubles. It will take twice as long to come back.
+**What it solves:** contact fades without anyone deciding it should. Ghosted shows who you have not been in touch with for longer than your usual rhythm, before the gap becomes awkward.
 
-**You fight a monster and lose.**
-You answer wrongly. The fact loses health and its half-life is cut in half, so the monster returns sooner.
+**Look:** a street of windows. Each window is a person, and its light shows how recently you were in touch.
 
-**You ignore a fact for too long.**
-Health reaches 0. The fact is DEAD and moves to the graveyard. It is no longer in your normal review queue.
+| Question | Ghosted's answer |
+|---|---|
+| What is an item? | A person you want to stay in touch with |
+| How healthy is it now? | Falls in a straight line, reaching 0 at three times their usual rhythm |
+| Something happened | A quick text adds 40. A call or a meet-up restores 100 |
+| When to look again? | When freshness falls below 60 |
+| Can it come back? | Yes, if they reply |
 
-**You resurrect a fact.**
-You visit the graveyard and challenge a dead fact. Answer correctly and it comes back to life with a short half-life, as if newly learned.
+Ghosted measures **connection freshness**: how recently you were in touch. It never measures how much someone matters.
 
-**You use the time machine.**
-You drag the slider forward two weeks. The dungeon fills with the monsters you will face if you stop studying today.
-
----
+The three lists are **Still lit**, **Fading** and **Empty windows**.
 
 ## App 3: Expiry Reaper (the reuse test)
 
 **Who it is for:** anyone tracking things with an end date, such as food, medicine, subscriptions or documents.
 
-Each item has an expiry date. Health is the share of time left. Tending means "used it" or "renewed it".
+**Look:** jars of time on shelves. Deal with them before the reaper arrives.
 
-This app exists to test a claim: **a new app needs only a new policy, with zero changes to the engine.** If building it forces an engine change, the contract has failed and gets fixed.
+| Question | Expiry Reaper's answer |
+|---|---|
+| What is an item? | Something with an end date |
+| How healthy is it now? | Full until the warning window opens, then falls toward the date. 0 on the date |
+| Something happened | Renewed: a new date. Used: removed from the shelf |
+| When to look again? | When the warning window opens |
+| Can it come back? | Only if it can be renewed. Food cannot |
+
+This app exists to test a claim: **a new app needs only a new policy and a skin, with zero changes to the engine.** If building it forces an engine change, the contract has failed and gets fixed.
 
 ---
 
-## Why two such different apps
+## Why these apps
 
-The two main apps were chosen because they decay in opposite ways.
+The three apps decay in three different ways, all run by the same engine:
 
-| | Study Dungeon | Link Cemetery |
-|---|---|---|
-| What causes decay | Time passing | A failed check |
-| Health between events | Keeps falling | Stays the same |
-| Resurrect is | A test of the user | A lookup on an outside service |
-| Needs a server | No | Yes, for checking links |
+| | Study Dungeon | Ghosted | Expiry Reaper |
+|---|---|---|---|
+| Shape of decay | Exponential (half-life) | Straight line | Date-based |
+| What slows it | Getting answers right | Staying in touch | Nothing; only renewing helps |
+| Coming back | A test of you | A reply from them | Only if renewable |
 
-If one engine can run both without knowing which is which, it can run most things that fade.
+If one engine can run all three without knowing which is which, it can run most things that fade.
 
 ---
 
@@ -185,14 +177,15 @@ If one engine can run both without knowing which is which, it can run most thing
 ```
 decay-engine/
   packages/
-    engine/              the core: states, policy contract, due queue, graveyard, history
+    engine/              the core: states, policy contract, Triage, Autopsy, forecast, history
+    shell/               the shared frame: counters, item card, history, Triage panel, time machine
   apps/
-    link-cemetery/       app 1
-    study-dungeon/       app 2
+    study-dungeon/       app 1
+    ghosted/             app 2
     expiry-reaper/       app 3, the reuse test
-  server/                the link-checking function
+  site/                  landing page; one site, one tab per app
+  docs/                  design notes and the Kiro log
   .kiro/                 Kiro specs, steering and hooks
-  reports/               planning notes and hackathon research
 ```
 
 How the pieces talk to each other:
@@ -201,53 +194,56 @@ How the pieces talk to each other:
         the app                          the engine
   ┌──────────────────┐   policy    ┌──────────────────────┐
   │ what an item is  │ ──────────▶ │ health and states    │
-  │ how it decays    │             │ due queue            │
-  │ how it revives   │ ◀────────── │ graveyard            │
-  │ how it looks     │   results   │ history              │
+  │ how it decays    │             │ due queue, graveyard │
+  │ how it revives   │ ◀────────── │ history, Triage      │
+  │ how it looks     │   results   │ time passed in       │
   └──────────────────┘             └──────────────────────┘
                                              │
-                                          storage
+                                    storage (this browser)
 ```
 
-Planned technology:
+Technology:
 
 | Part | Choice |
 |---|---|
-| Engine | TypeScript, no UI code, time passed in as an input |
-| Tests | Unit tests plus property-based tests of the engine rules |
-| Apps | React |
-| Storage | The browser's local storage, so there are no accounts and no login |
-| Link checking | One serverless function |
-| Archived copies | The Internet Archive's public availability lookup |
+| Engine | TypeScript (strict), no UI code, no runtime dependencies, time passed in as an input |
+| Tests | Vitest unit tests, outcome tests and fast-check property-based tests |
+| Apps | React with Vite, in a pnpm monorepo |
+| Look | CSS and SVG only |
+| Storage | The browser's local storage, so there are no accounts, no login and no server |
 
-Engine rules that the property-based tests will check:
+Engine rules checked by property-based tests:
 
 - Health is always between 0 and 100.
 - A dead item never appears in the due list.
-- A successful resurrect always returns the item to ALIVE.
-- Asking for health twice at the same moment gives the same answer.
+- The same input at the same moment gives the same answer.
+- Triage never goes over your time budget, and finds the best possible set.
+- Looking into the future (view, Triage, Autopsy, forecast) never changes saved data.
+
+Outcome tests check exact results, for example: "a Ghosted contact with a 30-day rhythm goes dark just after day 81 if you never get in touch".
 
 ## How Kiro is used
 
 The project is built with [Kiro](https://kiro.dev). The `.kiro/` folder is committed on purpose.
 
-| Kiro feature | Planned use |
+| Kiro feature | Use |
 |---|---|
-| Specs | One for the engine contract and one for each app: requirements, design, tasks |
-| Steering | Naming, visual theme, and the rule that the engine never imports an app |
-| Hooks | Run the engine tests whenever an engine file is saved |
+| Specs | The engine spec (requirements, design, tasks), then one short spec per app |
+| Steering | Product, engine boundary, structure, testing, theme and wording, and who writes what |
+| Hooks | Run the engine tests when an engine file is saved; scaffold a new decay policy on request |
 | Property-based testing | The engine rules listed above |
 
-A full write-up of what Kiro did, what was written by hand and how spec-driven work compared with free-form prompting will be added here before submission.
+The decay rules, the Triage selection and the Autopsy reasoning are written by hand. Kiro writes the UI, the app glue and the tests. Each session is recorded in [docs/KIRO_LOG.md](docs/KIRO_LOG.md): what Kiro produced, what was changed by hand, and what went wrong. A full write-up comparing spec-driven work with free-form prompting will be added before submission.
 
 ## Build status
 
+- [x] Engine spec: requirements, design, tasks
+- [x] Steering and hooks
 - [ ] Engine and tests
-- [ ] Time machine
-- [ ] Link Cemetery
 - [ ] Study Dungeon
+- [ ] Ghosted
 - [ ] Expiry Reaper
-- [ ] Deployed site
+- [ ] Deployed site with sample data
 - [ ] Demo video
 - [ ] Kiro write-up
 
@@ -257,4 +253,4 @@ Setup instructions will be added when the first code lands.
 
 ## Licence
 
-[MIT](LICENSE)
+[MIT](LICENSE). Everything stays in your browser. Names and items in the samples are made up.
