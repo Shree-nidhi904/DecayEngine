@@ -21,6 +21,14 @@ export interface ItemCardProps<Payload, PolicyData> {
   onEdit?: () => void;
   /** Remove the item. No button when omitted. The app asks for confirmation. */
   onRemove?: () => void;
+  /**
+   * Disables every button (for example while the app previews the future).
+   * The buttons stay visible and focusable, are marked aria-disabled, and
+   * ignore clicks.
+   */
+  disabled?: boolean;
+  /** Why the buttons are disabled: shown as their title and read as their description. */
+  disabledReason?: string;
 }
 
 /**
@@ -40,11 +48,29 @@ export function ItemCard<Payload, PolicyData>({
   onAction,
   onEdit,
   onRemove,
+  disabled = false,
+  disabledReason,
 }: ItemCardProps<Payload, PolicyData>) {
   const textId = useId();
+  const reasonId = useId();
   const actionLabel = state === "dead" ? wording.actions.resurrect : wording.actions.tend;
   const detail = renderDetail?.(item);
   const hasActions = onAction !== undefined || onEdit !== undefined || onRemove !== undefined;
+  const showReason = disabled && disabledReason !== undefined;
+
+  // A disabled button keeps its place and label, but its click does nothing.
+  const button = (label: string, className: string, onClick: () => void) => (
+    <button
+      type="button"
+      className={className}
+      aria-describedby={showReason ? `${textId} ${reasonId}` : textId}
+      aria-disabled={disabled ? true : undefined}
+      title={showReason ? disabledReason : undefined}
+      onClick={disabled ? undefined : onClick}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <article
@@ -67,35 +93,13 @@ export function ItemCard<Payload, PolicyData>({
       )}
       {hasActions && (
         <div className="shell-item-actions">
-          {onAction !== undefined && (
-            <button
-              type="button"
-              className="shell-button shell-button-primary"
-              aria-describedby={textId}
-              onClick={onAction}
-            >
-              {actionLabel}
-            </button>
-          )}
-          {onEdit !== undefined && (
-            <button
-              type="button"
-              className="shell-button shell-button-quiet"
-              aria-describedby={textId}
-              onClick={onEdit}
-            >
-              {wording.actions.edit}
-            </button>
-          )}
-          {onRemove !== undefined && (
-            <button
-              type="button"
-              className="shell-button shell-button-quiet"
-              aria-describedby={textId}
-              onClick={onRemove}
-            >
-              {wording.actions.remove}
-            </button>
+          {onAction !== undefined && button(actionLabel, "shell-button shell-button-primary", onAction)}
+          {onEdit !== undefined && button(wording.actions.edit, "shell-button shell-button-quiet", onEdit)}
+          {onRemove !== undefined && button(wording.actions.remove, "shell-button shell-button-quiet", onRemove)}
+          {showReason && (
+            <span id={reasonId} hidden>
+              {disabledReason}
+            </span>
           )}
         </div>
       )}

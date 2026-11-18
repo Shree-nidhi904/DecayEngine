@@ -5,8 +5,11 @@ import {
   challengeText,
   fightText,
   formatHalfLifeDays,
+  formatPreviewDate,
+  previewBlockedText,
   removeCancelLabel,
   removeConfirmText,
+  sessionText,
   studyDungeonWording,
 } from "./wording"
 
@@ -161,6 +164,54 @@ describe("studyDungeonWording", () => {
 
   it("names the states sleeping, monster and dead", () => {
     expect(studyDungeonWording.states).toEqual({ alive: "sleeping", weak: "monster", dead: "dead" })
+  })
+})
+
+describe("time machine, preview and triage text", () => {
+  // Words from Requirement 9 and 11 and tasks 8-9.
+  it("uses the banner and button words of Requirement 11.3 and 11.4", () => {
+    expect(studyDungeonWording.preview).toEqual({
+      banner: "Future preview · nothing is saved",
+      backToToday: "Back to today",
+    })
+    expect(previewBlockedText).toBe("Nothing is saved in a future preview. Go back to today first.")
+  })
+
+  it("labels the quick jumps +7, +14, +30 days and says which day is shown", () => {
+    const tm = studyDungeonWording.timeMachine
+    expect([7, 14, 30].map(tm.jump)).toEqual(["+7 days", "+14 days", "+30 days"])
+    expect(tm.showing("1 Oct 2026", 0)).toBe("Today, 1 Oct 2026")
+    expect(tm.showing("2 Oct 2026", 1)).toBe("2 Oct 2026 · 1 day ahead")
+    expect(tm.showing("31 Oct 2026", 30)).toBe("31 Oct 2026 · 30 days ahead")
+  })
+
+  it("says dies in N days, with today and one day spelled out", () => {
+    const t = studyDungeonWording.triage
+    expect(t.diesIn(0)).toBe("dies today")
+    expect(t.diesIn(1)).toBe("dies in 1 day")
+    expect(t.diesIn(24)).toBe("dies in 24 days")
+    expect(t.diesNever).toBe("not dying within 10 years")
+  })
+
+  it("shows value per minute with at most two decimals, and Start the session", () => {
+    const t = studyDungeonWording.triage
+    expect(t.valuePerMinute(75)).toBe("Worth 75 per minute")
+    expect(t.valuePerMinute(56.25)).toBe("Worth 56.25 per minute")
+    expect(t.valuePerMinute(25 / 3)).toBe("Worth 8.33 per minute")
+    expect(t.minutes(5)).toBe("5 min")
+    expect(t.startSession).toBe("Start the session")
+  })
+
+  it("formats a previewed day as day, short month and year", () => {
+    expect(formatPreviewDate(Date.UTC(2026, 9, 31, 12), { timeZone: "UTC" })).toBe("31 Oct 2026")
+    expect(formatPreviewDate(Date.UTC(2026, 9, 31, 23), { timeZone: "Asia/Kolkata" })).toBe("1 Nov 2026")
+  })
+
+  it("names the session's progress, stop and skips", () => {
+    expect(sessionText.progress(2, 3)).toBe("Fight 2 of 3")
+    expect(sessionText.stop).toBe("Stop session")
+    expect(sessionText.skippedDied("Q")).toBe("Skipped “Q”: it died before its turn. Challenge it from the Graveyard.")
+    expect(sessionText.skippedRemoved("Q")).toBe("Skipped “Q”: it was removed before its turn.")
   })
 })
 

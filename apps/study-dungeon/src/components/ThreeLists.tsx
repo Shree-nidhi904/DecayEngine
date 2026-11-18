@@ -29,11 +29,25 @@ export interface ThreeListsProps {
   onEdit: (fact: Fact) => void
   /** Called after the user confirms removal. */
   onRemove: (id: string) => void
+  /**
+   * When set, every card's buttons are disabled with this reason (the time
+   * machine is previewing). They stay visible and say why.
+   */
+  writesDisabledReason?: string
 }
 
 const TABS: readonly FactState[] = ["alive", "weak", "dead"]
 
-export function ThreeLists({ engine, now, version, onAction, onEdit, onRemove }: ThreeListsProps) {
+export function ThreeLists({
+  engine,
+  now,
+  version,
+  onAction,
+  onEdit,
+  onRemove,
+  writesDisabledReason,
+}: ThreeListsProps) {
+  const writesDisabled = writesDisabledReason !== undefined
   const [selected, setSelected] = useState<FactState>("weak")
   const [removing, setRemoving] = useState<Fact | null>(null)
   const tabRefs = useRef<Record<FactState, HTMLButtonElement | null>>({ alive: null, weak: null, dead: null })
@@ -76,6 +90,8 @@ export function ThreeLists({ engine, now, version, onAction, onEdit, onRemove }:
         onAction={() => onAction(fact, fact.state === "dead" ? "resurrect" : "tend")}
         onEdit={() => onEdit(fact)}
         onRemove={() => setRemoving(fact)}
+        disabled={writesDisabled}
+        disabledReason={writesDisabledReason}
       />
     </li>
   )

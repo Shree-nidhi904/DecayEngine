@@ -144,6 +144,42 @@ describe("ItemCard", () => {
     expect(textOf(withEdit)).toBe("State-A" + "What is the note?" + "Tend-Word" + "Edit-Word" + "Remove-Word");
   });
 
+  it("disabled keeps every button and its label, marks each aria-disabled and titles it with the reason", () => {
+    const html = render("weak", {
+      onAction: noop,
+      onEdit: noop,
+      onRemove: noop,
+      disabled: true,
+      disabledReason: "Reason-Text",
+    });
+    expect(buttons(html)).toEqual(["Tend-Word", "Edit-Word", "Remove-Word"]);
+    const tags = [...html.matchAll(/<button\b[^>]*>/g)].map((m) => m[0]);
+    expect(tags).toHaveLength(3);
+    for (const tag of tags) {
+      expect(tag).toContain('aria-disabled="true"');
+      expect(tag).toContain('title="Reason-Text"');
+      // Not the native attribute: the buttons stay focusable so the reason can be read.
+      expect(tag).not.toMatch(/\sdisabled(=|\s|>)/);
+    }
+  });
+
+  it("disabled describes each button by the item's text and the reason", () => {
+    const html = render("dead", { onAction: noop, disabled: true, disabledReason: "Reason-Text" });
+    const textId = html.match(/<p id="([^"]+)" class="shell-item-text">/)?.[1];
+    const reason = html.match(/<span id="([^"]+)" hidden="">Reason-Text<\/span>/);
+    expect(textId).toBeDefined();
+    expect(reason).not.toBeNull();
+    const tag = html.match(/<button\b[^>]*>/)![0];
+    expect(tag).toContain(`aria-describedby="${textId} ${reason![1]}"`);
+  });
+
+  it("without disabled, no button is aria-disabled or titled and no reason is rendered", () => {
+    const html = render("alive", { onAction: noop, onEdit: noop, onRemove: noop, disabledReason: "Reason-Text" });
+    expect(html).not.toContain("aria-disabled");
+    expect(html).not.toContain("title=");
+    expect(html).not.toContain("Reason-Text");
+  });
+
   it("sets exactly the --shell-* variables from the theme prop on its root", () => {
     expect(rootStyle(render("alive"))).toEqual(FIXTURE_VARIABLES);
     const other = rootStyle(render("dead", { theme: otherTheme }));

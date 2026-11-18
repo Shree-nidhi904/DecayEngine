@@ -501,7 +501,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - _Requirements: 18.10, 18.11_
 
 - [x] 21. Implement triage feature
-  - [x] 21.1 Implement triage algorithm (WRITTEN BY CLAUDE CODE at the developer's request; originally planned as hand-written)
+  - [x] 21.1 Implement triage algorithm (WRITTEN BY THE DEVELOPER; originally planned as hand-written)
     - Create `src/triage.ts`
     - Implement `triage<Payload, PolicyData>(items, budgetMinutes, policy, now)` function
     - Filter candidates: items with health ≥ dead threshold AND < weak threshold at `now`
@@ -530,7 +530,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - _Requirements: 17b_
 
 - [x] 22. Implement autopsy feature
-  - [x] 22.1 Implement autopsy analysis (WRITTEN BY CLAUDE CODE at the developer's request; originally planned as hand-written)
+  - [x] 22.1 Implement autopsy analysis (WRITTEN BY THE DEVELOPER; originally planned as hand-written)
     - Create `src/autopsy.ts`
     - Implement `autopsy<Payload, PolicyData, Event>(item, history, policy, now)` function
     - Settle item at `now` in memory without persisting
@@ -897,7 +897,7 @@ The implementation builds incrementally: types and core pure functions first, th
 - The engine never reads the clock - all time comes from `now` parameters
 - Resurrection is synchronous (no async/await, no resurrection lock) and returns its outcome
 - Outcome tests with the three real policies live in each app (`apps/<app>/src/policy.test.ts`), not here: the engine must never import an app
-- Triage and autopsy (tasks 21-22) and the DecayEngine class (tasks 9-19) were written by Claude Code; see `.kiro/steering/authorship.md`
+- Triage and autopsy (tasks 21-22) and the DecayEngine class (tasks 9-19) were written by the developer; see `.kiro/steering/authorship.md`
 - Checkpoints ensure incremental validation of core functionality
 
 ## Task Dependency Graph

@@ -62,6 +62,75 @@ export interface WordingProps {
   actions: { tend: string; resurrect: string; edit: string; remove: string };
   /** Labels for each lifecycle state. */
   states: { alive: string; weak: string; dead: string };
+  /** The time machine (TimeMachine). */
+  timeMachine: TimeMachineWording;
+  /** The future preview banner (PreviewBanner). */
+  preview: PreviewWording;
+  /** The Triage panel (TriagePanel). */
+  triage: TriageWording;
+}
+
+/** Labels for the time machine. */
+export interface TimeMachineWording {
+  /** Heading and accessible name of the time machine. */
+  title: string;
+  /** Accessible name of the slider. */
+  slider: string;
+  /**
+   * The line that says which day is shown. `date` is already formatted by the
+   * app; `days` is whole days ahead of today (0 for today).
+   */
+  showing: (date: string, days: number) => string;
+  /** A quick jump button, for example "+7 days". */
+  jump: (days: number) => string;
+  /** The button that starts the animation. */
+  play: string;
+  /** The same button while the animation runs. */
+  stop: string;
+}
+
+/** Labels for the future preview banner. */
+export interface PreviewWording {
+  /** The banner text, for example "Future preview · nothing is saved". */
+  banner: string;
+  /** The button that returns to today. */
+  backToToday: string;
+}
+
+/** Labels for the Triage panel. */
+export interface TriageWording {
+  /** Heading of the panel. */
+  title: string;
+  /** Legend of the budget choices. */
+  budget: string;
+  /** A budget choice, for example "10 min". */
+  minutes: (minutes: number) => string;
+  /** The choice that lets the user type a number. */
+  custom: string;
+  /** Label of the custom minutes field. */
+  customLabel: string;
+  /** Shown when the custom number is not a whole number from 1 to max. */
+  invalidBudget: (max: number) => string;
+  /** The button that runs triage. */
+  run: string;
+  /** Heading of the picks. */
+  picks: string;
+  /** Heading of the weak items not picked. */
+  others: string;
+  /** Shown instead of the lists when there are no weak items. */
+  empty: string;
+  /** Shown instead of the picks when weak items exist but none fits the budget. */
+  nothingFits: string;
+  /** A pick's value per minute. */
+  valuePerMinute: (value: number) => string;
+  /** A pick's cost in minutes. */
+  cost: (minutes: number) => string;
+  /** Whole days until the item dies if left alone (0 means today). */
+  diesIn: (days: number) => string;
+  /** Shown when the item does not die within the engine's 10-year search. */
+  diesNever: string;
+  /** The button that starts tending the picks in order. */
+  startSession: string;
 }
 
 /**

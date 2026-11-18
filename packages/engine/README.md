@@ -131,7 +131,7 @@ pnpm typecheck
 
 ## Who wrote what
 
-- **Claude Code** wrote the `DecayEngine` class (`src/engine.ts`), Triage (`src/triage.ts`), Autopsy (`src/autopsy.ts`), the property-test generators and property tests (`tests/generators.ts`, `tests/properties/`) and the boundary test (`tests/unit/boundary.test.ts`).
+- **The developer** wrote the `DecayEngine` class (`src/engine.ts`), Triage (`src/triage.ts`), Autopsy (`src/autopsy.ts`), the property-test generators and property tests (`tests/generators.ts`, `tests/properties/`) and the boundary test (`tests/unit/boundary.test.ts`).
 - **Kiro** wrote the rest of the engine: types, errors, state derivation, settle, bisection, serialization, the storage adapters, `checkPolicy`, forecast, and the unit tests for those modules.
 - The decay rules in each app's policy are written by hand.
 

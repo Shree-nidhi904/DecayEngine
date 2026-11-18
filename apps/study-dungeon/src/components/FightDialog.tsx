@@ -9,7 +9,7 @@ import { useRef, useState } from "react"
 import { DecayEngineError } from "@decay-engine/engine"
 import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
-import { fightText, studyDungeonWording } from "../wording"
+import { fightText, sessionText, studyDungeonWording } from "../wording"
 import { useModalDialog } from "./useModalDialog"
 import "../styles/dialogs.css"
 
@@ -22,13 +22,18 @@ export interface FightDialogProps {
   fact: Fact
   /** Called after the engine saved something, so the App reads the lists again. */
   onWrite: () => void
-  /** Closes the dialog (Walk away, Close and Escape). */
+  /** Closes the dialog (Walk away, Close and Escape). In a session this moves to the next fight. */
   onClose: () => void
+  /**
+   * Set when the fight is part of a Triage session (task 9.2): shows
+   * "Fight N of M" and a "Stop session" button that ends the whole queue.
+   */
+  session?: { position: number; total: number; onStop: () => void }
 }
 
 type Step = "question" | "answer" | "correct" | "incorrect" | "died"
 
-export function FightDialog({ engine, now, fact, onWrite, onClose }: FightDialogProps) {
+export function FightDialog({ engine, now, fact, onWrite, onClose, session }: FightDialogProps) {
   const ref = useModalDialog()
   const [step, setStep] = useState<Step>("question")
   // Guards against a second answer before React re-renders.
@@ -72,6 +77,10 @@ export function FightDialog({ engine, now, fact, onWrite, onClose }: FightDialog
         {studyDungeonWording.actions.tend}
       </h2>
 
+      {session !== undefined && (
+        <p className="sd-dialog-progress num">{sessionText.progress(session.position, session.total)}</p>
+      )}
+
       <p className="sd-dialog-label">{fightText.question}</p>
       <p className="sd-dialog-question">{fact.payload.question}</p>
 
@@ -87,6 +96,11 @@ export function FightDialog({ engine, now, fact, onWrite, onClose }: FightDialog
       </p>
 
       <div className="sd-dialog-actions">
+        {session !== undefined && (
+          <button type="button" className="sd-button sd-button-quiet sd-button-stop" onClick={session.onStop}>
+            {sessionText.stop}
+          </button>
+        )}
         {step === "question" && (
           <>
             <button type="button" className="sd-button sd-button-quiet" onClick={onClose}>

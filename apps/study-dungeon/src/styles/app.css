@@ -1,0 +1,51 @@
+/*
+ * Study Dungeon: App layout, disabled write buttons while previewing, the
+ * fight progress line and the session completion message.
+ * Uses the app's own --color-* and --font-* variables from global.css.
+ */
+
+.sd-app {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* A write button blocked by the time machine: still visible and focusable. */
+.sd-button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sd-dialog-progress {
+  margin: -0.5rem 0 0.5rem;
+  color: var(--color-bone-dim);
+  font-size: 0.9rem;
+}
+
+.sd-button-stop {
+  margin-right: auto;
+}
+
+.sd-session-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-stone);
+  border: 1px solid var(--color-line);
+  border-left: 4px solid var(--color-ecto);
+  border-radius: 6px;
+}
+
+.sd-session-done-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.sd-session-skipped {
+  margin: 0.25rem 0 0;
+  color: var(--color-bone-dim);
+}

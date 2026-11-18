@@ -159,7 +159,8 @@
   outline-offset: 2px;
 }
 
-.shell-button:disabled {
+.shell-button:disabled,
+.shell-button[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -185,6 +186,192 @@
   color: var(--shell-text-dim);
   font-family: var(--shell-font-mono);
   font-size: 0.85rem;
+}
+
+/* Time machine */
+.shell-time-machine {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  background: var(--shell-panel);
+  color: var(--shell-text);
+  font-family: var(--shell-font-body);
+  border: 1px solid var(--shell-line);
+  border-radius: 6px;
+}
+
+.shell-time-machine-title,
+.shell-triage-title {
+  margin: 0;
+  font-family: var(--shell-font-display);
+  font-size: 1.35rem;
+  font-weight: normal;
+}
+
+.shell-time-machine-showing {
+  margin: 0;
+  font-family: var(--shell-font-mono);
+  color: var(--shell-text);
+}
+
+.shell-time-machine-slider {
+  width: 100%;
+  accent-color: var(--shell-accent);
+}
+
+.shell-time-machine-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Future preview banner */
+.shell-preview-banner {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
+  background: var(--shell-accent);
+  color: var(--shell-bg);
+  font-family: var(--shell-font-body);
+}
+
+.shell-preview-banner-text {
+  margin: 0;
+  font-weight: 600;
+}
+
+.shell-preview-banner .shell-button {
+  background: var(--shell-bg);
+  border-color: var(--shell-bg);
+  color: var(--shell-text);
+}
+
+.shell-preview-banner .shell-button:focus-visible {
+  outline-color: var(--shell-bg);
+}
+
+/* Triage panel */
+.shell-triage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  background: var(--shell-panel);
+  color: var(--shell-text);
+  font-family: var(--shell-font-body);
+  border: 1px solid var(--shell-line);
+  border-radius: 6px;
+}
+
+.shell-triage-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.shell-triage-budget {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--shell-line);
+  border-radius: 4px;
+}
+
+.shell-triage-budget legend {
+  padding: 0 0.25rem;
+  color: var(--shell-text-dim);
+}
+
+.shell-triage-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.shell-triage-choice input {
+  accent-color: var(--shell-accent);
+}
+
+.shell-triage-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.shell-triage-custom input {
+  width: 6rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--shell-bg);
+  border: 1px solid var(--shell-line);
+  border-radius: 4px;
+  color: var(--shell-text);
+  font-family: var(--shell-font-mono);
+}
+
+.shell-triage-custom input[aria-invalid="true"] {
+  border-color: var(--shell-weak);
+}
+
+.shell-triage-error {
+  margin: 0;
+  color: var(--shell-text);
+}
+
+.shell-triage-heading {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+}
+
+.shell-triage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shell-triage-entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  padding: 0.45rem 0.75rem;
+  background: var(--shell-panel-hi);
+  border-left: 4px solid var(--shell-line);
+  border-radius: 4px;
+}
+
+.shell-triage-picks .shell-triage-entry {
+  border-left-color: var(--shell-accent);
+}
+
+.shell-triage-others .shell-triage-entry {
+  color: var(--shell-text-dim);
+}
+
+.shell-triage-text {
+  flex: 1 1 100%;
+  overflow-wrap: anywhere;
+}
+
+.shell-triage-number {
+  font-family: var(--shell-font-mono);
+  font-size: 0.85rem;
+}
+
+.shell-triage-empty {
+  margin: 0;
+  color: var(--shell-text-dim);
 }
 
 @media (prefers-reduced-motion: reduce) {

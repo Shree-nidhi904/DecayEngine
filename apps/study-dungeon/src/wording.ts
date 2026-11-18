@@ -6,11 +6,76 @@
 import type { WordingProps } from "@decay-engine/shell"
 import type { Knowledge } from "./policy"
 
+/** "1 day", "2 days". */
+const daysText = (days: number) => `${days} ${days === 1 ? "day" : "days"}`
+
+/** At most two decimals, trailing zeros dropped (75 → "75", 56.25 → "56.25"). */
+const twoDecimals = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 })
+
 export const studyDungeonWording = {
   lists: { alive: "Crypt", weak: "Dungeon", dead: "Graveyard" },
   actions: { tend: "Fight", resurrect: "Challenge", edit: "Edit", remove: "Remove" },
   states: { alive: "sleeping", weak: "monster", dead: "dead" },
+  // The time machine (task 8.2, Requirement 11).
+  timeMachine: {
+    title: "Time machine",
+    slider: "Days ahead",
+    showing: (date: string, days: number) => (days === 0 ? `Today, ${date}` : `${date} · ${daysText(days)} ahead`),
+    jump: (days: number) => `+${days} days`,
+    play: "Play",
+    stop: "Stop",
+  },
+  // The future preview banner (task 8.3, Requirement 11.3).
+  preview: {
+    banner: "Future preview · nothing is saved",
+    backToToday: "Back to today",
+  },
+  // The Triage panel (task 9.1, Requirement 9).
+  triage: {
+    title: "Triage",
+    budget: "How much time do you have?",
+    minutes: (minutes: number) => `${minutes} min`,
+    custom: "Other",
+    customLabel: "Minutes",
+    invalidBudget: (max: number) => `Enter a whole number of minutes from 1 to ${max}.`,
+    run: "Triage",
+    picks: "Fight these first",
+    others: "Still lurking",
+    empty: "No monsters in the Dungeon. Nothing needs saving right now.",
+    nothingFits: "None of them fits in that time. Try more minutes.",
+    valuePerMinute: (value: number) => `Worth ${twoDecimals.format(value)} per minute`,
+    cost: (minutes: number) => `${minutes} min`,
+    diesIn: (days: number) => (days === 0 ? "dies today" : `dies in ${daysText(days)}`),
+    diesNever: "not dying within 10 years",
+    startSession: "Start the session",
+  },
 } satisfies WordingProps
+
+/** Why a write button is disabled while previewing (Requirement 11.3). */
+export const previewBlockedText = "Nothing is saved in a future preview. Go back to today first."
+
+/** The fight queue started from Triage (task 9.2, Requirement 9.5). */
+export const sessionText = {
+  /** Shown in each fight of a session, e.g. "Fight 2 of 3". */
+  progress: (position: number, total: number) => `Fight ${position} of ${total}`,
+  stop: "Stop session",
+  done: "Session complete.",
+  skippedDied: (question: string) => `Skipped “${question}”: it died before its turn. Challenge it from the Graveyard.`,
+  skippedRemoved: (question: string) => `Skipped “${question}”: it was removed before its turn.`,
+  dismiss: "Close",
+} as const
+
+/** A previewed day as "8 Oct 2026". */
+export function formatPreviewDate(ms: number, options: { timeZone?: string; locale?: string } = {}): string {
+  const parts = new Intl.DateTimeFormat(options.locale ?? "en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    ...(options.timeZone === undefined ? {} : { timeZone: options.timeZone }),
+  }).formatToParts(new Date(ms))
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? ""
+  return `${part("day")} ${part("month")} ${part("year")}`
+}
 
 /** Confirmation asked before a fact is removed (Requirement 6.1). */
 export const removeConfirmText = "Remove this fact? This cannot be undone."

@@ -17,9 +17,10 @@ const files = readdirSync(SRC, { recursive: true, encoding: "utf8" })
   .map((f) => ({ name: f, text: readFileSync(join(SRC, f), "utf8") }));
 
 // Study Dungeon's palette names (theme-and-wording.md) and its list,
-// action and state words (src/wording.ts in the app).
+// action and state words (src/wording.ts in the app). "lurking" is the
+// Triage heading for weak facts not picked (round 5).
 const APP_COLOUR_NAMES = ["stone", "stoneHi", "bone", "boneDim", "ecto", "pumpkin", "blood", "moon", "slate"];
-const APP_WORDS = ["Crypt", "Dungeon", "Graveyard", "Fight", "Challenge", "sleeping", "monster"];
+const APP_WORDS = ["Crypt", "Dungeon", "Graveyard", "Fight", "Challenge", "sleeping", "monster", "lurking"];
 
 function importSpecifiers(text: string): string[] {
   return [...text.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g)].map((m) => m[1]!);
@@ -36,6 +37,9 @@ describe("shell boundary", () => {
         "components/Counters.tsx",
         "components/ItemCard.tsx",
         "components/HistoryLogViewer.tsx",
+        "components/TimeMachine.tsx",
+        "components/PreviewBanner.tsx",
+        "components/TriagePanel.tsx",
       ])
     );
   });

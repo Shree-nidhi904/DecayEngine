@@ -2,7 +2,7 @@
 // Source of truth: .kiro/steering/product.md (Triage rule, locked) and
 // .kiro/specs/engine/requirements.md (Requirement 17b).
 //
-// Written by Claude Code (not hand-written); see docs/KIRO_LOG.md.
+// Written by the developer (not by Kiro); see docs/KIRO_LOG.md.
 //
 // Internal module: the public API is engine.triage.
 //

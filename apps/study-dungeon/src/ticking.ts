@@ -51,24 +51,34 @@ export function startTicking(
   }
 }
 
+/** What useSettleTicks reads the time and schedules with. Tests pass fakes. */
+export type SettleTickOptions = {
+  /** Defaults to Date.now. */
+  getNow?: () => number
+  /** Defaults to the global setInterval and clearInterval. */
+  scheduler?: Scheduler
+}
+
 /**
  * Ticks the engine on mount and every minute while `previewing` is false.
  * While previewing it does nothing, and turning preview on stops the interval.
- * The app reads the clock here (Date.now); only the engine may not.
+ * Turning preview off ticks straight away (and so calls onTick), then every
+ * minute again. The app reads the clock here (Date.now); only the engine may not.
  */
 export function useSettleTicks(
   engine: Tickable,
   previewing: boolean,
-  onTick?: (now: number) => void
+  onTick?: (now: number) => void,
+  options: SettleTickOptions = {}
 ): void {
   // Keep the latest callback without restarting the interval on every render.
   const onTickRef = useRef(onTick)
   onTickRef.current = onTick
+  const getNow = options.getNow ?? Date.now
+  const scheduler = options.scheduler ?? globalScheduler
 
   useEffect(() => {
     if (previewing) return
-    return startTicking(engine, Date.now, globalScheduler, TICK_INTERVAL_MS, (now) =>
-      onTickRef.current?.(now)
-    )
-  }, [engine, previewing])
+    return startTicking(engine, getNow, scheduler, TICK_INTERVAL_MS, (now) => onTickRef.current?.(now))
+  }, [engine, previewing, getNow, scheduler])
 }

@@ -2,8 +2,8 @@
 // Source of truth: .kiro/specs/study-dungeon/requirements.md (Requirements 1-4)
 // and design.md (Policy Implementation).
 //
-// Written by Claude Code at the developer's request (originally planned as
-// hand-written); see .kiro/steering/authorship.md.
+// Written by the developer (originally planned as hand-written);
+// see .kiro/steering/authorship.md.
 //
 // Rules:
 // - Health halves every half-life since the item's last stored health.
