@@ -604,6 +604,8 @@ type DecayEngineErrorCode =
   | "INVALID_IMPORTANCE"
   | "INVALID_COST_MINUTES"
   | "EDIT_REQUIRES_FIELD"
+  | "STORAGE_UNAVAILABLE"
+  | "INVALID_POLICY_RESULT"
 ```
 
 **Error message requirements** (Requirement 17):
@@ -1686,6 +1688,7 @@ The engine uses a single `DecayEngineError` class with the following codes:
 | `INVALID_COST_MINUTES` | costMinutes not positive integer or > 600 |
 | `EDIT_REQUIRES_FIELD` | edit called with no fields provided |
 | `STORAGE_UNAVAILABLE` | LocalStorageAdapter load or save called when `localStorage` is missing |
+| `INVALID_POLICY_RESULT` | policy.nextDueAt returns something other than a number or null, or policy.resurrect returns something other than `{ ok: true, ... }` or `{ ok: false, reason: string }` |
 
 ### Error Messages
 
@@ -1952,6 +1955,7 @@ due(now: number): Item<Payload, PolicyData>[]
 
 **Throws**:
 - `DecayEngineError` with code `"INVALID_TIMESTAMP"` if now is invalid
+- `DecayEngineError` with code `"INVALID_POLICY_RESULT"` if policy.nextDueAt returns something other than a number or null
 
 ### graveyard
 
@@ -1992,6 +1996,7 @@ resurrect(id: string, event: Event, now: number): ResurrectOutcome
 - `DecayEngineError` with code `"ITEM_NOT_FOUND"` if item doesn't exist
 - `DecayEngineError` with code `"TIME_WENT_BACKWARD"` if now < item.lastEventAt
 - `DecayEngineError` with code `"ITEM_NOT_DEAD"` if item is not dead after settling
+- `DecayEngineError` with code `"INVALID_POLICY_RESULT"` if policy.resurrect returns a malformed result (nothing is saved)
 - Propagates errors from `policy.resurrect` or storage adapter
 
 ### history
@@ -2275,3 +2280,17 @@ The following requirements needed interpretation during design:
 **Requirement**: "calling tick(t1) then view(t2) produces the same health as calling view(t2) directly... within floating-point tolerance."
 
 **Interpretation**: The fake policy uses floating-point arithmetic (decay = rate * elapsed). JavaScript floating-point operations have rounding error. Tests use a tolerance of 0.0001 for health comparisons. In practice, the engine stores health as-is without additional rounding.
+
+### 11. View Returns the Settled Item (Requirement 4.3)
+
+**Requirement**: view(now) returns each item as it would be at `now` without changing stored fields.
+
+**Interpretation**: view returns the settled item: health and state at `now`, lastEventAt set to `now`, and for an item that has died since it was stored, the bisected diedAt. Nothing is saved, so storage keeps its lastEventAt and diedAt. Returning the stored lastEventAt with the new health would break the rule that health is stored as of lastEventAt (Requirement 14.8), and a dead view without diedAt would be an invalid item.
+
+### 12. Malformed Policy Results (Requirement 17.5)
+
+**Interpretation**: A policy return value the engine cannot use is a policy bug, so the engine throws `INVALID_POLICY_RESULT` naming the function and the value, and saves nothing. This covers policy.nextDueAt returning anything other than a number or null (for example NaN, a string or undefined), and policy.resurrect returning anything other than `{ ok: true, ... }` or `{ ok: false, reason: string }`. A malformed resurrect result is never recorded as a failed resurrection, because that would show a policy bug to the user as a lost fight. Invalid health values keep their own code, `INVALID_HEALTH`.
+
+### 13. Fields Listed by edit (Requirement 8a)
+
+**Interpretation**: The "edited" history entry lists every field the caller provided, in the order payload, importance, costMinutes, even when the new value equals the old one. These are the fields that were replaced.

@@ -1,6 +1,6 @@
 // Public API of @decay-engine/engine.
 
-export { MAX_FORECAST_HORIZON_MS } from "./types"
+export { MAX_FORECAST_HORIZON_MS, MAX_TIMESTAMP } from "./types"
 
 export { deriveState, validateThresholds } from "./state-derivation"
 

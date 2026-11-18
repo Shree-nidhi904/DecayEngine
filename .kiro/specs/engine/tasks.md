@@ -557,8 +557,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test autopsy for an item that went from alive straight to dead in one tick still reports wentWeakAt (from the state-changed entry)
     - _Requirements: 17c_
 
-- [ ] 23. Implement forecast feature
-  - [ ] 23.1 Implement forecast prediction
+- [x] 23. Implement forecast feature
+  - [x] 23.1 Implement forecast prediction
     - Create `src/forecast.ts`
     - Implement `forecast<Payload, PolicyData>(items, now, horizonMs, policy)` function
     - Compute health at `now` for all items using policy.healthAt
@@ -569,7 +569,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Internal: do not export from `src/index.ts` (the public API is `engine.forecast`, task 25)
     - _Requirements: 17d_
   
-  - [ ] 23.2 Write unit tests for forecast
+  - [x] 23.2 Write unit tests for forecast
     - Create `tests/unit/forecast.test.ts`
     - Test forecast excludes items already dead at `now`
     - Test forecast uses bisection to find diesAt
@@ -580,8 +580,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test forecast consistency: view(entry.diesAt) shows item dead
     - _Requirements: 17d_
 
-- [ ] 24. Implement checkPolicy feature
-  - [-] 24.1 Implement policy validation function
+- [x] 24. Implement checkPolicy feature
+  - [x] 24.1 Implement policy validation function
     - Create `src/check-policy.ts`
     - Implement `checkPolicy<Payload, PolicyData, Event>(policy, samplePayloads, sampleEvents, startTime)` function
     - Build test items and timestamps deterministically from samples (no randomness, no clock)
@@ -593,7 +593,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Export function from `src/index.ts`
     - _Requirements: 17e_
   
-  - [-] 24.2 Write unit tests for checkPolicy
+  - [x] 24.2 Write unit tests for checkPolicy
     - Create `tests/unit/check-policy.test.ts`
     - Test checkPolicy with valid policy returns passed=true
     - Test checkPolicy detects healthAt returning values outside [0, 100]
@@ -604,8 +604,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test checkPolicy never reads the clock
     - _Requirements: 17e_
 
-- [ ] 25. Integrate triage, autopsy, forecast into DecayEngine
-  - [ ] 25.1 Add methods to DecayEngine class
+- [x] 25. Integrate triage, autopsy, forecast into DecayEngine
+  - [x] 25.1 Add methods to DecayEngine class
     - Add `triage(budgetMinutes, now)` method to `src/engine.ts`
     - Add `autopsy(id, now)` method to `src/engine.ts`
     - Add `forecast(now, horizonMs)` method to `src/engine.ts`
@@ -615,7 +615,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - All three methods are read-only (do not persist)
     - _Requirements: 17b, 17c, 17d_
   
-  - [ ] 25.2 Write integration tests for DecayEngine triage/autopsy/forecast
+  - [x] 25.2 Write integration tests for DecayEngine triage/autopsy/forecast
     - Test engine.triage respects budget and selects weak items
     - Test engine.autopsy throws for non-dead items
     - Test engine.forecast predicts deaths within horizon
@@ -623,12 +623,12 @@ The implementation builds incrementally: types and core pure functions first, th
     - Test triage/autopsy/forecast throw appropriate errors for invalid inputs
     - _Requirements: 17b, 17c, 17d_
 
-- [ ] 26. Checkpoint - Ensure all tests pass
+- [x] 26. Checkpoint - Ensure all tests pass
   - Run `pnpm test` and verify all unit tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 27. Create property-based test generators
-  - [ ] 27.1 Implement test generators and helpers
+- [x] 27. Create property-based test generators
+  - [x] 27.1 Implement test generators and helpers
     - Create `tests/generators.ts`
     - Implement `commandSequence()`: generates sequences of addItem (random importance 1-3, costMinutes 1-60), tend, tick and edit commands with non-decreasing timestamps that advance in whole minutes, with gaps of up to several hours
     - Implement `smallCommandSequence()`: like `commandSequence()` but adds at most 10 items (Property 14)
@@ -643,15 +643,15 @@ The implementation builds incrementally: types and core pure functions first, th
     - Generate only JSON-safe numbers (no NaN, Infinity, negative zero)
     - _Requirements: 18_
   
-  - [ ] 27.2 Write generator coverage check
+  - [x] 27.2 Write generator coverage check
     - Create `tests/properties/generator-coverage.test.ts`
     - Sample generators 300 times with fixed seed
     - Count alive, weak, and dead items
     - Assert each state makes up at least 10% of generated items
     - _Requirements: 18_
 
-- [ ] 28. Implement property-based tests - health and state
-  - [ ] 28.1 Write Property 1: Health bounds
+- [x] 28. Implement property-based tests - health and state
+  - [x] 28.1 Write Property 1: Health bounds
     - Create `tests/properties/health-and-state.test.ts`
     - Implement property: for any command sequence and timestamp, all item health values are in [0, 100]
     - Generate command sequences and offsets
@@ -661,7 +661,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 1: Health is always between 0 and 100 inclusive`
     - _Requirements: 18.1, 13_
   
-  - [ ] 28.2 Write Property 2: State matches health
+  - [x] 28.2 Write Property 2: State matches health
     - Implement property: for any command sequence and timestamp, all item states match health and thresholds
     - Generate command sequences and offsets
     - Build engine, execute commands, call view(now)
@@ -671,8 +671,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 2: State always matches health and thresholds`
     - _Requirements: 18.2, 14_
 
-- [ ] 29. Implement property-based tests - due and view
-  - [ ] 29.1 Write Property 3: Dead items not in due queue
+- [x] 29. Implement property-based tests - due and view
+  - [x] 29.1 Write Property 3: Dead items not in due queue
     - Create `tests/properties/due-queue.test.ts`
     - Implement property: for any command sequence and timestamp, due(now) never returns dead items
     - Generate command sequences and offsets
@@ -682,7 +682,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 3: Dead items never appear in due queue`
     - _Requirements: 18.3, 6_
   
-  - [ ] 29.2 Write Property 4: View does not change storage
+  - [x] 29.2 Write Property 4: View does not change storage
     - Create `tests/properties/view.test.ts`
     - Implement property: calling view multiple times never changes stored data
     - Generate command sequences and array of timestamps
@@ -695,8 +695,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 4: View never changes stored data`
     - _Requirements: 18.4, 4.6_
 
-- [ ] 30. Implement property-based tests - tick
-  - [ ] 30.1 Write Property 5: Tick idempotence
+- [x] 30. Implement property-based tests - tick
+  - [x] 30.1 Write Property 5: Tick idempotence
     - Create `tests/properties/tick.test.ts`
     - Implement property: calling tick(now) twice with same timestamp makes no changes second time
     - Generate command sequences and offset
@@ -708,7 +708,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 5: Tick is idempotent for the same timestamp`
     - _Requirements: 18.5, 5.5_
   
-  - [ ] 30.2 Write Property 9: Time splitting equivalence
+  - [x] 30.2 Write Property 9: Time splitting equivalence
     - Implement property: tick(t1) then view(t2) produces same result as view(t2) directly
     - Generate command sequences and two offsets
     - Compute t1 = latestTimestamp + offset1, t2 = t1 + offset2
@@ -722,8 +722,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 9: Splitting time makes no difference (away from thresholds)`
     - _Requirements: 18.9_
 
-- [ ] 31. Implement property-based tests - resurrect and history
-  - [ ] 31.1 Write Property 6: Resurrect yields alive state (synchronous)
+- [x] 31. Implement property-based tests - resurrect and history
+  - [x] 31.1 Write Property 6: Resurrect yields alive state (synchronous)
     - Create `tests/properties/resurrect.test.ts`
     - Implement property: successful resurrect always yields alive with health 100
     - Generate command sequences, offset, and event
@@ -735,7 +735,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 6: Successful resurrect always yields alive with health 100`
     - _Requirements: 18.6, 8.5_
   
-  - [ ] 31.2 Write Property 7: History time order (synchronous)
+  - [x] 31.2 Write Property 7: History time order (synchronous)
     - Create `tests/properties/history.test.ts`
     - Implement property: history entries are always sorted by timestamp ascending
     - Generate command sequences, offset, and boolean for resurrect success/failure
@@ -746,8 +746,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 7: History entries always in time order`
     - _Requirements: 18.7, 9.1_
 
-- [ ] 32. Implement property-based tests - tend and serialization
-  - [ ] 32.1 Write Property 8: Tend never succeeds on dead items
+- [x] 32. Implement property-based tests - tend and serialization
+  - [x] 32.1 Write Property 8: Tend never succeeds on dead items
     - Create `tests/properties/tend.test.ts`
     - Implement property: tend throws ITEM_ALREADY_DEAD when settled item is dead
     - Generate command sequences, event, and offset
@@ -759,7 +759,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 8: Tend never succeeds when settled item is dead`
     - _Requirements: 18.8, 3.3_
   
-  - [ ] 32.2 Write Property 10: Round-trip serialization
+  - [x] 32.2 Write Property 10: Round-trip serialization
     - Create `tests/properties/serialization.test.ts`
     - Implement property: saving as JSON and loading produces same state
     - Generate command sequences and offset
@@ -772,7 +772,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 10: Serialization round-trip preserves data`
     - _Requirements: 15.6, 15.7_
 
-  - [ ] 32.3 Write boundary tests for the engine-boundary steering rules
+  - [x] 32.3 Write boundary tests for the engine-boundary steering rules
     - Create `tests/unit/boundary.test.ts`
     - Read every file under `src/` as text
     - Assert no file contains `Date.now`, `new Date` or `performance.now`
@@ -781,8 +781,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Assert `package.json` has no runtime `dependencies`
     - _Requirements: 1.9, 11.2, 12.4_
 
-- [ ] 33. Implement property-based tests - triage
-  - [ ] 33.1 Write Property 12: Triage only picks weak items
+- [x] 33. Implement property-based tests - triage
+  - [x] 33.1 Write Property 12: Triage only picks weak items
     - Create `tests/properties/triage.test.ts`
     - Implement property: triage never picks alive or dead items
     - Generate command sequences, offset, and budgetMinutes
@@ -793,7 +793,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 12: Triage never picks alive or dead items`
     - _Requirements: 18.12, 17b.10_
   
-  - [ ] 33.2 Write Property 13: Triage respects budget
+  - [x] 33.2 Write Property 13: Triage respects budget
     - Implement property: total costMinutes of picks never exceeds budget
     - Generate command sequences, offset, and budgetMinutes
     - Build engine, execute commands
@@ -803,7 +803,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 13: Total costMinutes never exceeds budget`
     - _Requirements: 18.13, 17b.6_
   
-  - [ ] 33.3 Write Property 14: Triage optimality for small cases
+  - [x] 33.3 Write Property 14: Triage optimality for small cases
     - Implement property: for ≤10 weak items, triage equals brute-force optimal
     - Generate small command sequences (≤10 weak items), offset, and budgetMinutes
     - Build engine, execute commands
@@ -813,8 +813,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 14: Triage optimal for small cases`
     - _Requirements: 18.14, 17b.6_
 
-- [ ] 34. Implement property-based tests - timing and read-only ops
-  - [ ] 34.1 Write Property 15: DiedAt lies between events
+- [x] 34. Implement property-based tests - timing and read-only ops
+  - [x] 34.1 Write Property 15: DiedAt lies between events
     - Create `tests/properties/timing.test.ts`
     - Implement property: diedAt is between previous lastEventAt and detection time
     - Generate command sequences and offset
@@ -826,7 +826,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 15: diedAt lies between previous lastEventAt and detection time`
     - _Requirements: 18.15, 17a.6_
   
-  - [ ] 34.2 Write Property 16: Read-only operations never change storage
+  - [x] 34.2 Write Property 16: Read-only operations never change storage
     - Create `tests/properties/read-only.test.ts`
     - Implement property: autopsy, triage, forecast never change stored data
     - Generate command sequences, offset, budgets array, horizons array
@@ -839,8 +839,8 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 16: autopsy, triage, forecast never change storage`
     - _Requirements: 18.16, 17b.1, 17c.1, 17d.1_
 
-- [ ] 35. Implement property-based tests - forecast consistency
-  - [ ] 35.1 Write Property 17: Forecast consistency with view
+- [x] 35. Implement property-based tests - forecast consistency
+  - [x] 35.1 Write Property 17: Forecast consistency with view
     - Create `tests/properties/forecast.test.ts`
     - Implement property: item forecast to die at T is dead when view(T) called
     - Generate command sequences, offset, and horizonMs
@@ -852,13 +852,13 @@ The implementation builds incrementally: types and core pure functions first, th
     - Tag: `// Feature: engine, Property 17: forecast consistency with view`
     - _Requirements: 18.17, 17d.7_
 
-- [ ] 36. Final checkpoint - Ensure all tests pass
+- [x] 36. Final checkpoint - Ensure all tests pass
   - Run `pnpm test` and verify all tests pass (unit and property-based)
   - Run `pnpm test:coverage` to check coverage
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 37. Finalize package exports and documentation
-  - [ ] 37.1 Finalize src/index.ts exports
+- [x] 37. Finalize package exports and documentation
+  - [x] 37.1 Finalize src/index.ts exports
     - Export `DecayEngine` class
     - Export `DecayEngineError` class and `DecayEngineErrorCode` type
     - Export `StorageAdapter` interface, `InMemoryAdapter`, `LocalStorageAdapter`
@@ -868,7 +868,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Do not export internal functions (settle, bisection, serialize, triage/autopsy/forecast internal functions)
     - _Requirements: All_
   
-  - [ ] 37.2 Add JSDoc comments to public API
+  - [x] 37.2 Add JSDoc comments to public API
     - Add JSDoc comments to `DecayEngine` class and all public methods
     - Add JSDoc comments to `DecayPolicy` interface and all methods
     - Add JSDoc comments to `Item` type and all fields
@@ -877,7 +877,7 @@ The implementation builds incrementally: types and core pure functions first, th
     - Include @param, @returns, @throws tags
     - _Requirements: All_
   
-  - [ ] 37.3 Create package README
+  - [x] 37.3 Create package README
     - Create `packages/engine/README.md`
     - Include library overview and key features
     - Include installation instructions (once published)

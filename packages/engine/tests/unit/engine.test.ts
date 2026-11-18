@@ -1253,7 +1253,7 @@ describe("DecayEngine.due", () => {
     add(engine, T0)
 
     const fn = () => engine.due(T0 + HOUR)
-    expectEngineError(fn, "INVALID_TIMESTAMP")
+    expectEngineError(fn, "INVALID_POLICY_RESULT")
     expect(fn).toThrow(new RegExp(`nextDueAt.*${String(value)}`))
   })
 
@@ -1719,6 +1719,27 @@ describe("DecayEngine.resurrect", () => {
     it.each(INVALID_NOWS)("throws INVALID_TIMESTAMP for now = %s", (_label, now) => {
       const { engine } = engineWithDeadItem()
       expectEngineError(() => engine.resurrect("item-1", ANSWER, now as number), "INVALID_TIMESTAMP")
+    })
+
+    it.each([
+      ["undefined", undefined],
+      ["null", null],
+      ["a string", "yes"],
+      ["ok as a string", { ok: "yes" }],
+      ["ok missing", { reason: "no" }],
+      ["a failure without a reason", { ok: false }],
+      ["a failure with a non-string reason", { ok: false, reason: 42 }],
+    ])("throws INVALID_POLICY_RESULT when policy.resurrect returns %s, and saves nothing", (_label, value) => {
+      const policy = new FakePolicy()
+      const { engine, adapter } = engineWithDeadItem(policy)
+      policy.resurrect = () => value as unknown as { ok: true }
+      const saves = adapter.saved.length
+
+      const fn = () => engine.resurrect("item-1", ANSWER, T0 + 5 * HOUR)
+      expectEngineError(fn, "INVALID_POLICY_RESULT")
+      expect(fn).toThrow(/resurrect.*item-1/)
+      expect(adapter.saved).toHaveLength(saves)
+      expect(engine.graveyard().map((i) => i.id)).toEqual(["item-1"])
     })
 
     it("propagates a policy.resurrect error unchanged and saves nothing", () => {

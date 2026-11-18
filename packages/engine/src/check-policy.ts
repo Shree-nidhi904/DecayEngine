@@ -171,6 +171,13 @@ function checkJsonRoundTrip(value: unknown, path: string): string | null {
  *
  * Timestamps: startTime plus each offset in SAMPLE_OFFSETS_MS (0 to 10 years),
  * leaving out any past the largest valid timestamp.
+ *
+ * @param policy - The policy to check.
+ * @param samplePayloads - At least one payload to build test items from.
+ * @param sampleEvents - Events to apply to each test item (may be empty).
+ * @param startTime - Creation time of the test items, in milliseconds.
+ * @returns `passed` is true when there are no failures. Each failure is
+ *   "<check name>: <description>". Never throws, even if the policy throws.
  */
 export function checkPolicy<Payload, PolicyData, Event>(
   policy: DecayPolicy<Payload, PolicyData, Event>,

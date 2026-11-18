@@ -5,6 +5,13 @@
 import { DecayEngineError } from "./errors"
 import type { HistoryEntry, Item } from "./types"
 
+/**
+ * The state for a health value (Requirement 14).
+ *
+ * @param health - Health from 0 to 100.
+ * @param thresholds - The policy's weak and dead thresholds.
+ * @returns "alive" when health ≥ weak, "weak" when dead ≤ health < weak, otherwise "dead".
+ */
 export function deriveState(
   health: number,
   thresholds: { weak: number; dead: number }
@@ -18,6 +25,12 @@ export function deriveState(
   return "dead"
 }
 
+/**
+ * Checks a policy's thresholds: finite numbers with 0 < dead < weak ≤ 100.
+ *
+ * @param thresholds - The thresholds to check.
+ * @throws DecayEngineError INVALID_THRESHOLDS naming the rule that failed.
+ */
 export function validateThresholds(thresholds: { weak: number; dead: number }): void {
   if (
     typeof thresholds.weak !== "number" ||

@@ -17,7 +17,7 @@
 import { findDeathAfter } from "./bisection"
 import { DecayEngineError } from "./errors"
 import { settle } from "./settle"
-import { MAX_FORECAST_HORIZON_MS } from "./types"
+import { MAX_FORECAST_HORIZON_MS, MAX_TIMESTAMP } from "./types"
 import type { DecayPolicy, Item, TriageCandidate, TriageResult } from "./types"
 
 export const MAX_BUDGET_MINUTES = 1440
@@ -65,7 +65,7 @@ export function triage<Payload, PolicyData>(
       item: JSON.parse(JSON.stringify(item)) as Item<Payload, PolicyData>,
       value,
       valuePerMinute: value / item.costMinutes,
-      diesAt: findDeathAfter(item, policy, now, now + MAX_FORECAST_HORIZON_MS),
+      diesAt: findDeathAfter(item, policy, now, Math.min(now + MAX_FORECAST_HORIZON_MS, MAX_TIMESTAMP)),
     })
   }
 

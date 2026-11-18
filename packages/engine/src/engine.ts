@@ -9,6 +9,7 @@
 import { DecayEngineError } from "./errors"
 import { parseSnapshot, serializeSnapshot } from "./serialization"
 import { autopsy } from "./autopsy"
+import { forecast } from "./forecast"
 import { settle } from "./settle"
 import { triage } from "./triage"
 import { applyHealth, clampHealth, deriveState, validateThresholds } from "./state-derivation"
@@ -16,6 +17,7 @@ import type {
   AutopsyReport,
   DecayPolicy,
   EngineState,
+  ForecastEntry,
   HistoryEntry,
   IdGenerator,
   Item,
@@ -24,14 +26,37 @@ import type {
   TriageResult,
 } from "./types"
 
-// Largest valid JavaScript timestamp (Requirement 11.3)
-export const MAX_TIMESTAMP = 8_640_000_000_000_000
+// Re-exported for existing imports; defined in types.ts to avoid import cycles.
+import { MAX_TIMESTAMP } from "./types"
+export { MAX_TIMESTAMP }
 
 // Deep copy. Items are JSON-serializable by contract (see types.ts).
 function cloneItem<Payload, PolicyData>(
   item: Item<Payload, PolicyData>
 ): Item<Payload, PolicyData> {
   return JSON.parse(JSON.stringify(item)) as Item<Payload, PolicyData>
+}
+
+type ResurrectResult<Payload, PolicyData> =
+  | { ok: true; payload?: Payload; policyData?: PolicyData }
+  | { ok: false; reason: string }
+
+// A malformed result is a policy bug, not a lost fight, so it is rejected
+// rather than recorded as a failed resurrection.
+function isResurrectResult<Payload, PolicyData>(
+  value: unknown
+): value is ResurrectResult<Payload, PolicyData> {
+  if (typeof value !== "object" || value === null) return false
+  const { ok, reason } = value as { ok?: unknown; reason?: unknown }
+  return ok === true || (ok === false && typeof reason === "string")
+}
+
+function describe(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? String(value)
+  } catch {
+    return String(value)
+  }
 }
 
 // Plain lexicographic (UTF-16 code unit) order, independent of locale.
@@ -62,12 +87,36 @@ function validateCostMinutes(costMinutes: unknown, operation: string): void {
   }
 }
 
+/**
+ * Tracks items through alive, weak and dead using a policy supplied by the app.
+ * Every operation takes the current time as `now` (milliseconds); the engine
+ * never reads the clock. Every change is saved through the storage adapter
+ * before memory is updated, so a failed save leaves both unchanged.
+ *
+ * @typeParam Payload - App data about an item; stored, never read by the engine. JSON-serializable.
+ * @typeParam PolicyData - Data the policy keeps per item. JSON-serializable.
+ * @typeParam Event - What the app passes to tend and resurrect. JSON-serializable.
+ */
 export class DecayEngine<Payload, PolicyData, Event> {
   private readonly _policy: DecayPolicy<Payload, PolicyData, Event>
   private readonly _adapter: StorageAdapter
   private readonly _idGenerator: IdGenerator
   private _state: EngineState<Payload, PolicyData>
 
+  /**
+   * Creates an engine and loads any saved snapshot from the adapter (Requirement 1).
+   *
+   * @param policy - The decay policy (thresholds and the five policy functions).
+   * @param adapter - Where snapshots are loaded from and saved to.
+   * @param idGenerator - Returns a new, unique, non-empty id for each addItem call.
+   * @throws DecayEngineError MISSING_POLICY, MISSING_STORAGE_ADAPTER or
+   *   MISSING_ID_GENERATOR when an argument is null or undefined.
+   * @throws DecayEngineError INVALID_THRESHOLDS when policy.thresholds is not
+   *   an object or breaks a threshold rule.
+   * @throws DecayEngineError UNSUPPORTED_SCHEMA_VERSION, INVALID_SNAPSHOT or
+   *   INVALID_ITEM_DATA when the loaded snapshot cannot be used.
+   * @throws Any error thrown by adapter.load(), unchanged.
+   */
   constructor(
     policy: DecayPolicy<Payload, PolicyData, Event>,
     adapter: StorageAdapter,
@@ -119,6 +168,19 @@ export class DecayEngine<Payload, PolicyData, Event> {
    * Starting health comes from policy.healthAt on a provisional item at health 100.
    * An item whose starting health is below the dead threshold starts dead,
    * with diedAt = createdAt = now (no bisection).
+   *
+   * @param params - payload (app data), importance (integer 1 to 3) and
+   *   costMinutes (minutes to tend, integer 1 to 600).
+   * @param now - Current time in milliseconds.
+   * @returns The new item's id.
+   * @throws DecayEngineError INVALID_TIMESTAMP, INVALID_IMPORTANCE or
+   *   INVALID_COST_MINUTES for invalid arguments.
+   * @throws DecayEngineError INVALID_ID or DUPLICATE_ID when the id generator
+   *   returns an empty, non-string or already used id.
+   * @throws DecayEngineError INVALID_HEALTH when policy.healthAt returns a
+   *   non-finite value.
+   * @throws Errors from policy.init, policy.healthAt or adapter.save, unchanged.
+   *   Nothing is kept when one is thrown.
    */
   addItem(
     params: { payload: Payload; importance: number; costMinutes: number },
@@ -179,6 +241,12 @@ export class DecayEngine<Payload, PolicyData, Event> {
    * item without saving it and discards the history entries. Returns copies, so
    * callers cannot change stored data through them. Items whose lastEventAt is
    * after `now` are returned as stored.
+   *
+   * @param now - The time to look at, in milliseconds. May be in the past or future.
+   * @returns A copy of every item, settled at `now`.
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError INVALID_HEALTH when policy.healthAt returns a
+   *   non-finite value.
    */
   view(now: number): Item<Payload, PolicyData>[] {
     this._validateNow(now, "view")
@@ -194,6 +262,14 @@ export class DecayEngine<Payload, PolicyData, Event> {
    * Returns the number of items whose health or state changed. Crossing times
    * in history come from settle's bisection. Throws TIME_WENT_BACKWARD, before
    * changing anything, if `now` is earlier than any item's lastEventAt.
+   *
+   * @param now - Current time in milliseconds.
+   * @returns How many items changed.
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError TIME_WENT_BACKWARD when `now` is before an item's lastEventAt.
+   * @throws DecayEngineError INVALID_HEALTH when policy.healthAt returns a
+   *   non-finite value.
+   * @throws Errors from adapter.save, unchanged.
    */
   tick(now: number): number {
     const op = "tick"
@@ -227,6 +303,16 @@ export class DecayEngine<Payload, PolicyData, Event> {
    * is thrown; the event is not applied. Otherwise policy.applyEvent receives the
    * settled item, and its health (clamped) and policyData are stored.
    * Deaths caused by the event itself are dated `now` (no bisection).
+   *
+   * @param id - The item to tend.
+   * @param event - App-defined event passed to policy.applyEvent and saved in history.
+   * @param now - Current time in milliseconds.
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError ITEM_NOT_FOUND for an unknown id.
+   * @throws DecayEngineError TIME_WENT_BACKWARD when `now` is before the item's lastEventAt.
+   * @throws DecayEngineError ITEM_ALREADY_DEAD when the item is dead at `now`.
+   * @throws DecayEngineError INVALID_HEALTH when the policy returns a non-finite health.
+   * @throws Errors from policy.applyEvent, policy.healthAt or adapter.save, unchanged.
    */
   tend(id: string, event: Event, now: number): void {
     const op = "tend"
@@ -272,6 +358,20 @@ export class DecayEngine<Payload, PolicyData, Event> {
    * - not ok: the item stays as it is (dead) and a resurrect-failed entry
    *   records the event and reason.
    * A death found while settling is saved together with the outcome.
+   *
+   * @param id - The dead item to bring back.
+   * @param event - App-defined event (for example the user's answer) passed to
+   *   policy.resurrect and saved in history.
+   * @param now - Current time in milliseconds.
+   * @returns `{ ok: true }`, or `{ ok: false, reason }` with the policy's reason.
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError ITEM_NOT_FOUND for an unknown id.
+   * @throws DecayEngineError TIME_WENT_BACKWARD when `now` is before the item's lastEventAt.
+   * @throws DecayEngineError ITEM_NOT_DEAD when the item is not dead at `now`.
+   * @throws DecayEngineError INVALID_POLICY_RESULT when policy.resurrect returns
+   *   anything other than `{ ok: true, ... }` or `{ ok: false, reason: string }`;
+   *   nothing is saved.
+   * @throws Errors from policy.resurrect or adapter.save, unchanged.
    */
   resurrect(id: string, event: Event, now: number): ResurrectOutcome {
     const op = "resurrect"
@@ -287,9 +387,16 @@ export class DecayEngine<Payload, PolicyData, Event> {
       )
     }
 
-    const result = this._policy.resurrect(settled.item, event, now)
+    const result: unknown = this._policy.resurrect(settled.item, event, now)
+    if (!isResurrectResult<Payload, PolicyData>(result)) {
+      throw new DecayEngineError(
+        "INVALID_POLICY_RESULT",
+        `${op} failed: policy resurrect returned invalid value ${describe(result)} for item ${id}; ` +
+          `expected { ok: true } or { ok: false, reason: string }`
+      )
+    }
 
-    if (result.ok === true) {
+    if (result.ok) {
       const { diedAt: _cleared, ...living } = settled.item
       const revived: Item<Payload, PolicyData> = {
         ...living,
@@ -310,7 +417,7 @@ export class DecayEngine<Payload, PolicyData, Event> {
       return { ok: true }
     }
 
-    const reason = String(result.reason)
+    const reason = result.reason
     this._persist(
       [settled.item],
       [
@@ -329,6 +436,18 @@ export class DecayEngine<Payload, PolicyData, Event> {
    * - Living item: health is recomputed with policy.healthAt on the edited item;
    *   if that kills it, diedAt is `now` (the settled item's interval is empty).
    * Records an "edited" entry listing the provided fields.
+   *
+   * @param id - The item to edit.
+   * @param changes - At least one of payload, importance (integer 1 to 3) and
+   *   costMinutes (integer 1 to 600).
+   * @param now - Current time in milliseconds.
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError EDIT_REQUIRES_FIELD when no field is given.
+   * @throws DecayEngineError INVALID_IMPORTANCE or INVALID_COST_MINUTES for invalid values.
+   * @throws DecayEngineError ITEM_NOT_FOUND for an unknown id.
+   * @throws DecayEngineError TIME_WENT_BACKWARD when `now` is before the item's lastEventAt.
+   * @throws DecayEngineError INVALID_HEALTH when policy.healthAt returns a non-finite value.
+   * @throws Errors from policy.healthAt or adapter.save, unchanged.
    */
   edit(
     id: string,
@@ -392,6 +511,14 @@ export class DecayEngine<Payload, PolicyData, Event> {
 
   /**
    * Which weak items to tend within budgetMinutes (Requirement 17b). Read-only.
+   *
+   * @param budgetMinutes - Minutes available, an integer from 1 to 1440.
+   * @param now - Current time in milliseconds.
+   * @returns `picks`: the weak items with the largest total value whose
+   *   costMinutes fit the budget, by value per minute descending. `others`:
+   *   the remaining weak items, soonest death first.
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError INVALID_BUDGET for an invalid budgetMinutes.
    */
   triage(budgetMinutes: number, now: number): TriageResult<Payload, PolicyData> {
     this._validateNow(now, "triage")
@@ -401,6 +528,13 @@ export class DecayEngine<Payload, PolicyData, Event> {
   /**
    * Fact-only report on how a dead item died (Requirement 17c). Read-only:
    * the item is settled in memory, so a death not yet ticked is still found.
+   *
+   * @param id - The dead item.
+   * @param now - Current time in milliseconds.
+   * @returns Facts about the item's current life and death; the app writes the words.
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError ITEM_NOT_FOUND for an unknown id.
+   * @throws DecayEngineError AUTOPSY_REQUIRES_DEAD_ITEM when the item is not dead at `now`.
    */
   autopsy(id: string, now: number): AutopsyReport<Event> {
     const op = "autopsy"
@@ -410,11 +544,42 @@ export class DecayEngine<Payload, PolicyData, Event> {
   }
 
   /**
+   * Items that die within horizonMs after `now`, soonest first, ties by id
+   * ascending (Requirement 17d). Read-only: items are settled in memory only.
+   * view(entry.diesAt) shows each returned item dead.
+   *
+   * @param now - Current time in milliseconds.
+   * @param horizonMs - How far ahead to look, in milliseconds; a positive finite number.
+   * @returns One entry per item that dies in the horizon, with the item as
+   *   settled at `now` and its diesAt (to 1-minute precision).
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError INVALID_HORIZON for an invalid horizonMs.
+   */
+  forecast(now: number, horizonMs: number): ForecastEntry<Payload, PolicyData>[] {
+    const op = "forecast"
+    this._validateNow(now, op)
+    if (typeof horizonMs !== "number" || !Number.isFinite(horizonMs) || horizonMs <= 0) {
+      throw new DecayEngineError(
+        "INVALID_HORIZON",
+        `${op} failed: horizonMs must be a positive finite number, got ${String(horizonMs)}`
+      )
+    }
+    return forecast(this._state.items.values(), now, horizonMs, this._policy)
+  }
+
+  /**
    * Items that need attention at `now` (Requirement 6). Read-only. An item is
    * due when it is not dead at `now` and policy.nextDueAt(settled item, now)
    * is a time at or before `now`; null means never due. Sorted by health at
    * `now` ascending, then id ascending. Items whose lastEventAt is after `now`
    * are judged on their stored health (no error).
+   *
+   * @param now - Current time in milliseconds.
+   * @returns Copies of the due items, settled at `now`.
+   * @throws DecayEngineError INVALID_TIMESTAMP for an invalid `now`.
+   * @throws DecayEngineError INVALID_POLICY_RESULT when policy.nextDueAt returns
+   *   something other than a number or null.
+   * @throws DecayEngineError INVALID_HEALTH when policy.healthAt returns a non-finite value.
    */
   due(now: number): Item<Payload, PolicyData>[] {
     this._validateNow(now, "due")
@@ -428,7 +593,7 @@ export class DecayEngine<Payload, PolicyData, Event> {
       if (nextDueAt === null) continue
       if (typeof nextDueAt !== "number" || Number.isNaN(nextDueAt)) {
         throw new DecayEngineError(
-          "INVALID_TIMESTAMP",
+          "INVALID_POLICY_RESULT",
           `due failed: policy nextDueAt returned invalid value ${String(nextDueAt)} ` +
             `for item ${item.id}; expected a number or null`
         )
@@ -444,6 +609,8 @@ export class DecayEngine<Payload, PolicyData, Event> {
    * All dead items, most recent death first, ties by id ascending (Requirement 7).
    * Read-only and takes no time: an item that has decayed past death but was
    * never settled is not dead in storage yet (call tick first).
+   *
+   * @returns Copies of the dead items as stored.
    */
   graveyard(): Item<Payload, PolicyData>[] {
     const dead: Item<Payload, PolicyData>[] = []
@@ -456,6 +623,10 @@ export class DecayEngine<Payload, PolicyData, Event> {
   /**
    * The item's history, oldest first; entries recorded at the same time keep
    * the order they were recorded in (Requirement 9). Returns a copy.
+   *
+   * @param id - The item whose history to return.
+   * @returns A copy of the item's history entries.
+   * @throws DecayEngineError ITEM_NOT_FOUND for an unknown id.
    */
   history(id: string): HistoryEntry[] {
     this._getItem(id, "history")
@@ -466,6 +637,10 @@ export class DecayEngine<Payload, PolicyData, Event> {
   /**
    * Deletes an item and all its history in one save (Requirement 10). If the
    * save fails, nothing changes in storage or memory.
+   *
+   * @param id - The item to delete.
+   * @throws DecayEngineError ITEM_NOT_FOUND for an unknown id.
+   * @throws Errors from adapter.save, unchanged.
    */
   remove(id: string): void {
     this._getItem(id, "remove")

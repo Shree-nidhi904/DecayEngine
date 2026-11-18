@@ -29,6 +29,7 @@ const ALL_CODES = [
   "INVALID_COST_MINUTES",
   "EDIT_REQUIRES_FIELD",
   "STORAGE_UNAVAILABLE",
+  "INVALID_POLICY_RESULT",
 ] as const satisfies readonly DecayEngineErrorCode[]
 
 // Compile-time check: if a code is added to the union but not to ALL_CODES,
@@ -87,9 +88,9 @@ describe("DecayEngineError", () => {
 })
 
 describe("DecayEngineError codes", () => {
-  it("lists 22 distinct codes", () => {
-    expect(ALL_CODES).toHaveLength(22)
-    expect(new Set(ALL_CODES).size).toBe(22)
+  it("lists 23 distinct codes", () => {
+    expect(ALL_CODES).toHaveLength(23)
+    expect(new Set(ALL_CODES).size).toBe(23)
   })
 
   it.each(ALL_CODES)("can be created with code %s", (code) => {

@@ -23,8 +23,14 @@ export type DecayEngineErrorCode =
   | "INVALID_COST_MINUTES"
   | "EDIT_REQUIRES_FIELD"
   | "STORAGE_UNAVAILABLE"
+  | "INVALID_POLICY_RESULT"
 
+/** The only error type the engine throws itself. Check `code`, not `message`. */
 export class DecayEngineError extends Error {
+  /**
+   * @param code - What went wrong.
+   * @param message - A readable description naming the operation and the bad value.
+   */
   constructor(
     public readonly code: DecayEngineErrorCode,
     message: string

@@ -335,7 +335,68 @@ For each session, record:
 
 ---
 
-## Session 10: (date)
+## Session 10: engine core, tasks 4-22, with Claude Code alongside (Nov 17, 2026)
+
+- **Goal**: build the rest of the engine's core: settle, bisection, serialization, storage, the `DecayEngine` class, triage and autopsy.
+- **Kiro feature used**: running spec tasks from `tasks.md`, plus steering. Claude Code (in VS Code, inside WSL) ran every test and typecheck, and from task 9 on also wrote code.
+- **Why Claude Code joined**: Kiro's shell cannot run commands on this setup (Session 9), so Kiro wrote files and Claude Code ran the tests and pasted the results back. The first Claude Code chat, which held the per-task Kiro prompts, was lost; a new chat re-read the codebase and carried on. To save time I then asked Claude Code to write tasks 9-19 while Kiro did others, in separate files.
+- **What Kiro produced**:
+  - **Task 20:** the fake policy (34 tests).
+  - **Tasks 4-6:** `settle`, bisection and serialization (13 + 13 + 80 tests). Its summary said settle had 15 tests; the run showed 13, and nothing was missing.
+  - **Requirement 17.5 fix:** policy errors now name the function and the bad value (`Policy healthAt returned invalid health: NaN`). Also: a dead item with health above 0 is rejected when loading.
+  - **Task 8:** the storage interface, `InMemoryAdapter` (6 tests) and `LocalStorageAdapter` (18 tests). It reaches `localStorage` through `globalThis` so the rest of the engine still cannot use browser APIs. It added a 22nd error code, `STORAGE_UNAVAILABLE`, and updated the design and the error tests to match.
+  - **Task 24:** `checkPolicy` (12 tests), with two extra checks (`inputs`, `build-items`) so it never throws.
+- **What Claude Code produced**:
+  - **Tasks 9-19:** the `DecayEngine` class in `src/engine.ts`: constructor, `addItem`, `view`, `tick`, `tend`, `due`, `graveyard`, `history`, `remove`, `resurrect` and `edit`, with 238 tests. After each round it broke the code on purpose (for example: memory updated before the save, `applyEvent` given the stored item instead of the settled one) to check that a test fails.
+  - **Tasks 21-22, triage and autopsy:** these were planned as hand-written by me. Claude Code pointed out that the README and submission draft say so, and offered three options; I chose to have it write both and correct the claims. Triage uses an exact 0/1 knapsack. Its worked example shows greedy-by-value-per-minute picking a worse set (157 against 173). Autopsy reports facts only. 52 tests.
+  - **Authorship corrections:** README, submission draft, `authorship.md` and the task labels now say who wrote what. My hand-written part is the decay rules (each app's policy) and the app's cause-of-death sentences.
+- **What I changed by hand**: no code. Decisions: triage and autopsy by Claude Code; keep Kiro's extra `checkPolicy` checks; the fake policy is allowed to fail `checkPolicy`, because it deliberately does not clamp (engine tests need out-of-range values).
+- **What went wrong or surprised me**:
+  - **Spec conflict:** Requirement 4.3 says `view` must not change `lastEventAt` or `diedAt`, but the design says `view` returns the settled item. Following the design keeps every returned item valid. 4.3 still needs rewording so that "not change" clearly means storage.
+  - **Kiro's test-count predictions were off** whenever files it did not know about existed. It assumed its own files were the whole suite.
+  - **The scaffold-policy hook ran on every prompt,** even though its matcher is `scaffold.*policy`. Kiro skipped it each time because no app was named.
+  - **Working in parallel** only worked because Kiro and Claude Code never edited the same file in the same round.
+  - **Smaller choices left to confirm:** a bad `nextDueAt` value throws `INVALID_TIMESTAMP`; a malformed `resurrect` result counts as a failure; `edit` lists every field passed, even if unchanged.
+- **Credits used**: 15.11 for the 17.5 fix and tasks 8.1-8.3 (7 minutes 21 seconds); 14.81 for task 24 (7 minutes 47 seconds); about 47.7 for tasks 20, 4-6 and 8.4-8.5 together. That last figure is worked out, not read: the running total after task 24 (157.82) minus Sessions 1-9 (80.18 logged) and the two rounds above. The per-round figures were in a chat that was lost. At the end of the day: 38.34 of the 50 plan credits used, 157.82 of 4000 in total. Claude Code's work uses no Kiro credits.
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: tasks 1-22 and 24 done, 555 tests. Next: forecast and the property tests.
+
+---
+
+## Session 11: forecast, property tests and the finished engine, tasks 23-37 (Nov 18, 2026)
+
+- **Goal**: finish the engine spec.
+- **Kiro feature used**: spec tasks and steering. Kiro and Claude Code worked in parallel: Kiro on forecast and the docs, Claude Code on the property tests.
+- **What Kiro produced**:
+  - **Task 24 follow-up:** tests for its two extra checks (6 tests, 18 in that file).
+  - **Tasks 23 and 25:** `forecast` and `engine.forecast` (11 tests), plus integration tests for triage, autopsy and forecast together (37 tests). For an item whose `lastEventAt` is after `now`, it starts the search at `lastEventAt`, which keeps "`view(diesAt)` shows the item dead" true. It also flagged that a very large horizon could go past the largest valid timestamp.
+  - **Task 37:** checked the exports, added JSDoc to the public API (comments only; a comment-stripped comparison confirmed no code changed), wrote `packages/engine/README.md`, and turned the README's quick start into a test (17 tests), so the example cannot go out of date.
+- **What Claude Code produced**:
+  - **Task 27:** the generators (`tests/generators.ts`). The coverage check reaches about 36% alive, 17% weak and 47% dead items.
+  - **Tasks 28-35:** Properties 1-17 in 12 files, each with at least 100 runs. Property 8 uses `expect().toThrow()` instead of the design's `try/catch`, which the no-fake-tests steering forbids.
+  - **Task 32.3:** boundary tests (46): no clock reads, no browser globals outside the localStorage adapter, no imports from outside the engine, and no runtime dependencies. A temporary file that broke all three rules failed all three checks.
+  - **A gap the property tests had:** making bisection return the earlier end of its final minute passed every property. A new property (an item dead at `now` is already dead at its `diedAt` and not a minute earlier) now catches it.
+  - **Kiro's open point fixed:** forecast and triage now never search past `MAX_TIMESTAMP`. The constant moved to `types.ts` to avoid a circular import.
+  - **Tasks 26 and 36:** the checkpoints, including the coverage run.
+  - **Loose ends closed after the spec was done** (my decisions delegated to Claude Code):
+    - A new error code, `INVALID_POLICY_RESULT`: a bad `nextDueAt` value (it was `INVALID_TIMESTAMP`) and a malformed `resurrect` result (it was silently counted as a failed fight) now throw it and save nothing. A policy bug should not look like a lost fight.
+    - `edit` keeps listing every field passed, as the design says.
+    - Requirement 4.3 reworded: "not modified" now clearly means storage; design.md records why `view` returns the settled item.
+    - `MAX_TIMESTAMP` is now exported, for the time machine.
+    - The scaffold-policy hook is disabled until a new app needs it.
+    - 701 tests in 29 files.
+- **What I changed by hand**: no code.
+- **What went wrong or surprised me**:
+  - **The test command broke overnight.** Claude Code's shell started picking up the Windows Node (`/mnt/c/nvm4w`) instead of the Linux one, so `npx` failed with `ERR_INVALID_URL` and `tsc` looked for `typescript-win32-x64`. Fix: put `~/.nvm/versions/node/v26.13.1/bin` first on the PATH, or run `source ~/.nvm/nvm.sh`.
+  - **Kiro ran stray shell commands twice** despite the no-shell rule (`ls`/`grep`, then `true`). Both failed or did nothing, and it reported them.
+  - **Everything passed on the first run** except that one bisection gap. That is why the deliberate code-breaking checks mattered: they showed the properties were real.
+- **Credits used**: 8.39 for tasks 23 and 25 (4 minutes 18 seconds); 15.15 for task 37 (5 minutes 50 seconds); about 5.4 for the task 24 follow-up (worked out from the running total: 186.8 after task 37, minus 157.82, 8.39 and 15.15). About 29 for the session; 186.8 of 4000 in total.
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: engine spec complete: 37 of 37 tasks, 693 tests in 29 files, coverage 95% of lines, 90% of branches, 100% of functions. Next: Study Dungeon (my policy and cause-of-death sentences by hand, Kiro for the UI).
+
+---
+
+## Session 12: (date)
 
 - **Goal**:
 - **Kiro feature used**:

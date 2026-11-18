@@ -42,13 +42,21 @@ function getLocalStorage(operation: string): StorageLike {
   return storage
 }
 
+/** Keeps the snapshot in the browser's localStorage under `decay-engine:<namespace>`. */
 export class LocalStorageAdapter implements StorageAdapter {
   private readonly key: string
 
+  /** @param namespace - Keeps each app's data apart, for example "study-dungeon". */
   constructor(namespace: string) {
     this.key = `decay-engine:${namespace}`
   }
 
+  /**
+   * @returns The parsed snapshot, or null if the key is not set. Not validated here;
+   *   the engine validates it.
+   * @throws DecayEngineError STORAGE_UNAVAILABLE when localStorage is missing.
+   * @throws The SyntaxError from JSON.parse for stored text that is not JSON.
+   */
   load(): StoredSnapshot | null {
     const text = getLocalStorage("load").getItem(this.key)
     if (text === null) {
@@ -57,6 +65,11 @@ export class LocalStorageAdapter implements StorageAdapter {
     return JSON.parse(text) as StoredSnapshot
   }
 
+  /**
+   * @param snapshot - Written as one JSON string, replacing the previous one.
+   * @throws DecayEngineError STORAGE_UNAVAILABLE when localStorage is missing.
+   * @throws Errors from localStorage.setItem (for example quota exceeded), unchanged.
+   */
   save(snapshot: StoredSnapshot): void {
     getLocalStorage("save").setItem(this.key, JSON.stringify(snapshot))
   }

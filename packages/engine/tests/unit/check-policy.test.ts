@@ -129,6 +129,73 @@ describe("checkPolicy init-json", () => {
   })
 })
 
+// Calls checkPolicy, asserting that the call itself does not throw.
+function runCheck<PolicyData>(
+  policy: DecayPolicy<FakePayload, PolicyData, FakeEvent>,
+  payloads: FakePayload[],
+  events: FakeEvent[],
+  startTime: number
+): { passed: boolean; failures: string[] } {
+  let report: { passed: boolean; failures: string[] } | undefined
+  expect(() => {
+    report = checkPolicy(policy, payloads, events, startTime)
+  }).not.toThrow()
+  if (report === undefined) throw new Error("checkPolicy returned no report")
+  return report
+}
+
+describe("checkPolicy inputs", () => {
+  it("reports a missing policy without throwing", () => {
+    const missing = null as unknown as DecayPolicy<FakePayload, SimpleData, FakeEvent>
+    const report = runCheck(missing, PAYLOADS, EVENTS, T0)
+    expectOnlyFailures(report, "inputs")
+    expect(report.failures).toHaveLength(1)
+  })
+
+  it("reports a startTime that is not a finite number without throwing", () => {
+    const report = runCheck(new ClampedFakePolicy(), PAYLOADS, EVENTS, NaN)
+    expectOnlyFailures(report, "inputs")
+    expect(report.failures).toHaveLength(1)
+  })
+
+  it("reports empty samplePayloads without throwing", () => {
+    const report = runCheck(new ClampedFakePolicy(), [], EVENTS, T0)
+    expectOnlyFailures(report, "inputs")
+    expect(report.failures).toHaveLength(1)
+  })
+
+  it("reports sampleEvents that is not an array without throwing", () => {
+    const notArray = null as unknown as FakeEvent[]
+    const report = runCheck(new ClampedFakePolicy(), PAYLOADS, notArray, T0)
+    expectOnlyFailures(report, "inputs")
+    expect(report.failures).toHaveLength(1)
+  })
+
+  it("reports invalid thresholds (weak below dead) without throwing", () => {
+    const policy = {
+      ...makePolicy({ healthAt: () => 100 }),
+      thresholds: { weak: 20, dead: 50 },
+    }
+    const report = runCheck(policy, PAYLOADS, EVENTS, T0)
+    expectOnlyFailures(report, "inputs")
+    expect(report.failures).toHaveLength(1)
+  })
+})
+
+describe("checkPolicy build-items", () => {
+  it("reports applyEvent throwing while building items, without throwing", () => {
+    const policy: DecayPolicy<FakePayload, SimpleData, FakeEvent> = {
+      ...makePolicy({ healthAt: () => 100 }),
+      applyEvent: () => {
+        throw new Error("applyEvent exploded")
+      },
+    }
+    const report = runCheck(policy, [{ name: "Capital of Peru" }], [{ type: "boost", amount: 10 }], T0)
+    expectOnlyFailures(report, "build-items")
+    expect(report.failures).toHaveLength(1)
+  })
+})
+
 describe("checkPolicy is deterministic", () => {
   it("gives the same report for the same inputs", () => {
     const first = checkPolicy(new FakePolicy(), PAYLOADS, EVENTS, T0)

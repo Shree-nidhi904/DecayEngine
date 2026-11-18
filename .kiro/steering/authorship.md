@@ -17,6 +17,7 @@ The decay rules are **never generated**. They are the developer's creative work:
 Claude Code ran in WSL alongside Kiro, because Kiro's shell could not run commands on this setup. Besides running every test, it wrote:
 
 - The `DecayEngine` class (`src/engine.ts`, tasks 9-19) and its tests.
+- The property-test generators and all engine property tests (`tests/generators.ts`, `tests/properties/`, tasks 27-35) and the boundary test (`tests/unit/boundary.test.ts`, task 32.3), run in parallel with Kiro to save time.
 - **Triage selection** (`src/triage.ts`, task 21): implements the locked value rule from `product.md` with an exact 0/1 knapsack. Originally planned as hand-written; the developer chose to have Claude Code write it.
 - **Autopsy analysis** (`src/autopsy.ts`, task 22): a facts-only report read from the history log. Originally planned as hand-written; the developer chose to have Claude Code write it. Each app still writes its own cause-of-death sentences from the report.
 

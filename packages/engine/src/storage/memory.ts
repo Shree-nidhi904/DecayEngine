@@ -19,13 +19,16 @@ function deepCopy(snapshot: StoredSnapshot): StoredSnapshot {
   return JSON.parse(JSON.stringify(snapshot)) as StoredSnapshot
 }
 
+/** Keeps the snapshot in memory. For tests and demos; nothing survives a reload. */
 export class InMemoryAdapter implements StorageAdapter {
   private stored: StoredSnapshot | null = null
 
+  /** @returns A copy of the last saved snapshot, or null if nothing was saved. */
   load(): StoredSnapshot | null {
     return this.stored === null ? null : deepCopy(this.stored)
   }
 
+  /** @param snapshot - Stored as a copy, replacing the previous one. */
   save(snapshot: StoredSnapshot): void {
     // Copy fully before assigning, so a failed copy leaves the old snapshot intact.
     const copy = deepCopy(snapshot)
