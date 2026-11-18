@@ -81,16 +81,26 @@ import { DecayEngine, DecayPolicy, Item, StorageAdapter } from '@decay-engine/en
 type StudyDungeonPolicy = DecayPolicy<FactPayload, FactPolicyData, ReviewEvent>
 
 // Shell component props
+// The shell has a fixed set of colour and font roles. Every app fills them in
+// from its own palette; shell components never use an app's colour names.
 interface ThemeProps {
-  colors: Record<string, string>
-  fonts: Record<string, string>
+  colors: {
+    bg: string; panel: string; panelHi: string; line: string
+    text: string; textDim: string; accent: string
+    alive: string; weak: string; dead: string
+  }
+  fonts: { display: string; body: string; mono: string }
 }
 
 interface WordingProps {
   lists: { alive: string; weak: string; dead: string }
-  actions: { tend: string; resurrect: string }
+  actions: { tend: string; resurrect: string; edit: string; remove: string }
   states: { alive: string; weak: string; dead: string }
 }
+
+// One icon per state, supplied by the app (inline SVG using currentColor).
+// Always shown beside the state's words, never colour alone.
+type StateIcons = Record<"alive" | "weak" | "dead", ReactNode>
 
 interface CountersProps {
   alive: number
@@ -98,6 +108,7 @@ interface CountersProps {
   dead: number
   theme: ThemeProps
   wording: WordingProps
+  icons: StateIcons
 }
 
 interface ItemCardProps<Payload, PolicyData> {
@@ -105,7 +116,19 @@ interface ItemCardProps<Payload, PolicyData> {
   state: "alive" | "weak" | "dead"
   theme: ThemeProps
   wording: WordingProps
-  onAction?: () => void
+  icons: StateIcons
+  renderText: (item: Item<Payload, PolicyData>) => ReactNode    // the item's text
+  renderDetail?: (item: Item<Payload, PolicyData>) => ReactNode // wake-up time, health, epitaph
+  onAction?: () => void   // button label: wording.actions.tend, or .resurrect when dead
+  onEdit?: () => void     // button label: wording.actions.edit; the app opens its form
+  onRemove?: () => void   // button label: wording.actions.remove; the app confirms
+}
+
+interface HistoryLogViewerProps {
+  entries: HistoryEntry[]
+  theme: ThemeProps
+  describe: (entry: HistoryEntry) => string   // e.g. "Fought: knew it"; from the app
+  formatTimestamp: (ms: number) => string
 }
 
 interface TriagePanelProps<Payload, PolicyData> {
@@ -229,6 +252,24 @@ export const studyDungeonTheme = {
   }
 }
 
+// What shell components see: the palette mapped onto the shell's roles.
+export const studyDungeonShellTheme: ThemeProps = {
+  colors: {
+    bg: "#060509",       // bg
+    panel: "#110d17",    // stone
+    panelHi: "#1c1625",  // stoneHi
+    line: "#2b2235",     // line
+    text: "#f0e6cc",     // bone
+    textDim: "#b0a694",  // boneDim
+    accent: "#ff8a2b",   // pumpkin
+    alive: "#9cf26b",    // ecto
+    weak: "#ff8a2b",     // pumpkin
+    dead: "#a9bde0"      // slate
+  },
+  fonts: { display: "'Pirata One', cursive", body: "'Spectral', serif", mono: "'IBM Plex Mono', monospace" }
+}
+
+// wording.ts
 export const wording = {
   lists: {
     alive: "Crypt",
@@ -237,7 +278,9 @@ export const wording = {
   },
   actions: {
     tend: "Fight",
-    resurrect: "Challenge"
+    resurrect: "Challenge",
+    edit: "Edit",
+    remove: "Remove"
   },
   states: {
     alive: "sleeping",
@@ -458,7 +501,7 @@ User Action → App Component → DecayEngine Method → Storage Adapter → loc
   - Day 8: weak (health ≈ 57.4)
   - Day 33: still weak (health ≈ 10.2)
   - Day 34: dead (health ≈ 9.5, stored as 0)
-- Death timing: fact dies within 1 minute after 33.22 days (log2(10) ≈ 3.322 half-lives)
+- Death timing: fact dies within 1 minute after the crossing at 10 × log2(10) ≈ 33.219 days (log2(10) ≈ 3.322 half-lives)
 
 **Autopsy Sentences Tests** (`autopsy-sentences.test.ts`):
 - Test that generated sentences contain expected facts (dates, counts, half-life values)
@@ -510,9 +553,9 @@ Not applicable for Study Dungeon app-level code. The engine itself has property-
 - No external images or icon libraries
 
 ### Theme Application
-- CSS custom properties set at root: `--color-bg`, `--font-display`, etc.
-- Shell components reference custom properties
-- App sets custom properties from theme object
+- App styles: `global.css` sets the app's own palette at `:root` as `--color-bg`, `--color-stone`, `--font-display`, etc. Only app components use these.
+- Shell styles: each shell component sets `--shell-<role>` variables (for example `--shell-alive`, `--shell-panel-hi`, `--shell-font-display`) on its root element from its `theme` prop, and its CSS uses only those. The shell never contains an app's colour names or words; a boundary test in `packages/shell` checks this.
+- The app passes `studyDungeonShellTheme` (the palette mapped onto the roles) to every shell component.
 
 ## Performance Considerations
 

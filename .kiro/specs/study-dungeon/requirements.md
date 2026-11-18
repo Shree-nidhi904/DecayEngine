@@ -244,7 +244,7 @@ type ReviewEvent = {
 
 1. WHEN running tests, THE policy SHALL pass checkPolicy validation.
 2. WHERE a fact has half-life 10 days and no review, WHEN testing outcome scenarios in apps/study-dungeon/src/policy.test.ts, THE tests SHALL verify the fact is alive on day 7, weak on day 8, still weak on day 33, and dead on day 34.
-3. WHERE a fact has half-life 10 days and dies without review, WHEN testing death timing, THE test SHALL verify diedAt is within 1 minute after 33.22 days.
+3. WHERE a fact has half-life 10 days and dies without review, WHEN testing death timing, THE test SHALL verify diedAt is within 1 minute after the crossing at 10 × log2(10) ≈ 33.219 days.
 4. WHERE a fact receives a wrong answer, WHEN testing applyEvent, THE test SHALL verify health becomes 45 and the half-life halves, clamped to a minimum of 1 day.
 5. WHERE a fact receives a correct answer, WHEN testing applyEvent, THE test SHALL verify health becomes 100 and the half-life doubles, clamped to a maximum of 180 days.
 

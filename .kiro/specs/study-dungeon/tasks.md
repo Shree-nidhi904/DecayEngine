@@ -10,7 +10,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
 
 ## Tasks
 
-- [ ] 1. Set up Vite + React app structure
+- [-] 1. Set up Vite + React app structure
   - Create `apps/study-dungeon/` directory
   - Set up `package.json` with React 18, Vite, TypeScript, and `@decay-engine/engine` as dependency
   - Create `tsconfig.json` extending workspace base config with strict mode
@@ -25,7 +25,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
   - _Requirements: all (foundation), 16_
 
 - [ ] 2. Implement Study Dungeon Policy (HAND-WRITTEN BY DEVELOPER: Kiro writes only the tests)
-  - [ ] 2.1 Create policy implementation (HAND-WRITTEN)
+  - [x] 2.1 Create policy implementation (WRITTEN BY CLAUDE CODE at the developer's request; originally planned as hand-written)
     - Create `src/policy.ts`
     - Define `FactPayload`, `FactPolicyData`, `ReviewEvent` types
     - Implement `StudyDungeonPolicy` class with thresholds `{ weak: 60, dead: 10 }`
@@ -57,18 +57,18 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Verify weak on day 8 (health ≈ 57.4)
     - Verify still weak on day 33 (health ≈ 10.2)
     - Verify dead on day 34 (stored health 0)
-    - Verify diedAt is within 1 minute after 33.22 days (log2(10) ≈ 3.322 half-lives)
+    - Verify diedAt is within 1 minute after the crossing at 10 × log2(10) ≈ 33.219 days (check crossing ≤ diedAt ≤ crossing + 60 000 ms)
     - Test correct review doubles half-life, incorrect review halves it
     - Test resurrection with correct answer restores the half-life from death time
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5_
 
-- [ ] 3. Create theme and wording configuration
+- [-] 3. Create theme and wording configuration
   - Create `src/theme.ts` with Study Dungeon color palette (bg, stone, bone, pumpkin, blood, etc.) and fonts (Pirata One, Spectral, IBM Plex Mono)
   - Create `src/wording.ts` with list names (Crypt, Dungeon, Graveyard), actions (Fight, Challenge), state names (sleeping, monster, dead)
   - Export theme and wording objects
   - _Requirements: 15_
 
-- [ ] 4. Initialize DecayEngine instance
+- [-] 4. Initialize DecayEngine instance
   - Create `src/engine-instance.ts`
   - Import `DecayEngine`, `LocalStorageAdapter`, policy from packages and local files
   - Create `idGenerator` function returning random string IDs
@@ -188,7 +188,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - _Requirements: 9.5_
 
 - [ ] 10. Implement Autopsy Dialog (HAND-WRITTEN cause-of-death sentences)
-  - [ ] 10.1 Create autopsy-sentences module (HAND-WRITTEN BY DEVELOPER)
+  - [x] 10.1 Create autopsy-sentences module (WRITTEN BY CLAUDE CODE at the developer's request; originally planned as hand-written)
     - Create `src/autopsy-sentences.ts`
     - Implement `generateCauseSentences(report: AutopsyReport<ReviewEvent>, payload: FactPayload): string[]` function
     - Craft narrative sentences using autopsy facts:
@@ -199,6 +199,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
       - Compute half-life history by replaying tend events from initial half-life
     - Return array of cause-of-death sentences
     - Export function
+    - As built: an optional third argument `{ timeZone?, locale?, halfLifeAtDeath? }`. Tests pass `timeZone: "UTC"`. For a resurrected fact the report does not carry the half-life the current life started with, so the half-life history is only replayed for facts never resurrected; the app passes `halfLifeAtDeath` (the dead item's `policyData.halfLifeDays`) so the cause can still say how many half-lives of silence killed it. The first sentence is the cause; the rest are supporting facts
     - _Requirements: 10_
   
   - [ ] 10.2 Write tests for autopsy-sentences
@@ -208,6 +209,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Test that missed review count is accurate
     - Test that half-life history is reconstructed correctly
     - Test with various autopsy scenarios (quick death, long silence, many wrong answers)
+    - Build reports through the real engine (`InMemoryAdapter`, fixed timestamps, `timeZone: "UTC"`), and cover a resurrected fact with and without `halfLifeAtDeath`. Do not edit `autopsy-sentences.ts`; if a test shows a bug, stop and report it
     - _Requirements: 10.5, 10.6_
   
   - [ ] 10.3 Create AutopsyDialog component
@@ -295,7 +297,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
   - The app passes a function that turns an entry into words (for example "Fought: knew it")
   - _Requirements: 16_
 
-- [ ] 15. Apply global styles and CSS variables
+- [-] 15. Apply global styles and CSS variables
   - Create `src/styles/global.css`
   - Set CSS custom properties from theme: `--color-bg`, `--color-stone`, `--font-display`, etc.
   - Apply base styles: `body { background: var(--color-bg); color: var(--color-bone); font-family: var(--font-body); }`
@@ -396,7 +398,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
 
 ## Notes
 
-- **Hand-written modules**: The policy implementation (`src/policy.ts`) and autopsy cause-of-death sentences (`src/autopsy-sentences.ts`) are written by the developer. Kiro generates only the tests for these modules, plus all UI components and app glue code.
+- **Decay-rule and cause-of-death modules**: The policy implementation (`src/policy.ts`) and autopsy cause-of-death sentences (`src/autopsy-sentences.ts`) are not Kiro's: both were written by Claude Code at the developer's request (originally planned as hand-written). Kiro generates only the tests for these modules, plus all UI components and app glue code.
 - **Engine dependency**: All tasks depend on `packages/engine` being completed first. The engine provides `DecayEngine`, `LocalStorageAdapter`, and all core types.
 - **Vertical slice approach**: Build features end-to-end (policy → UI → interaction) before moving to the next feature, ensuring continuous integration.
 - **Shared shell**: ItemCard, Counters, HistoryLogViewer, TriagePanel, AutopsyDialog and TimeMachine live in `packages/shell` from the start (Requirement 16.1), with theme, wording and render functions passed in. Requirement 16.3 means they only have the features Study Dungeon needs now. App-only parts (fight and challenge dialogs, add/edit form, hero, first run) stay in the app.

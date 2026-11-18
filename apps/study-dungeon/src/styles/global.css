@@ -1,0 +1,77 @@
+/*
+ * Study Dungeon global styles.
+ * The :root variables must match `cssVariables` in src/theme.ts exactly
+ * (checked by global-css.test.ts). Component styles live in later tasks.
+ * Fonts are loaded by the <link> in index.html, not here.
+ */
+
+:root {
+  --color-bg: #060509;
+  --color-stone: #110d17;
+  --color-stone-hi: #1c1625;
+  --color-line: #2b2235;
+  --color-bone: #f0e6cc;
+  --color-bone-dim: #b0a694;
+  --color-ecto: #9cf26b;
+  --color-pumpkin: #ff8a2b;
+  --color-blood: #ff5f77;
+  --color-moon: #a8e6d6;
+  --color-slate: #a9bde0;
+  --font-display: 'Pirata One', cursive;
+  --font-body: 'Spectral', serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  margin: 0;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-bone);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+.sd-app {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: normal;
+}
+
+code,
+kbd,
+samp,
+.num {
+  font-family: var(--font-mono);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-pumpkin);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Set up Vite + React app structure": [
+      {
+        "executionId": "f44f1249-e79a-40a3-a7cc-33406c51c876",
+        "chatSessionId": "sess_f9d14109-4bd8-438d-a9bd-54e1a5503334",
+        "timestamp": 1795014125759
+      }
+    ],
+    "3. Create theme and wording configuration": [
+      {
+        "executionId": "f44f1249-e79a-40a3-a7cc-33406c51c876",
+        "chatSessionId": "sess_f9d14109-4bd8-438d-a9bd-54e1a5503334",
+        "timestamp": 1795014249277
+      }
+    ],
+    "4. Initialize DecayEngine instance": [
+      {
+        "executionId": "f44f1249-e79a-40a3-a7cc-33406c51c876",
+        "chatSessionId": "sess_f9d14109-4bd8-438d-a9bd-54e1a5503334",
+        "timestamp": 1795014249551
+      }
+    ],
+    "15. Apply global styles and CSS variables": [
+      {
+        "executionId": "f44f1249-e79a-40a3-a7cc-33406c51c876",
+        "chatSessionId": "sess_f9d14109-4bd8-438d-a9bd-54e1a5503334",
+        "timestamp": 1795014249802
+      }
+    ]
+  }
+}

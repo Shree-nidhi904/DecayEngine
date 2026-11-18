@@ -392,16 +392,179 @@ For each session, record:
   - **Everything passed on the first run** except that one bisection gap. That is why the deliberate code-breaking checks mattered: they showed the properties were real.
 - **Credits used**: 8.39 for tasks 23 and 25 (4 minutes 18 seconds); 15.15 for task 37 (5 minutes 50 seconds); about 5.4 for the task 24 follow-up (worked out from the running total: 186.8 after task 37, minus 157.82, 8.39 and 15.15). About 29 for the session; 186.8 of 4000 in total.
 - **Screenshot**: (add file names from `docs/screenshots/`)
-- **Status**: engine spec complete: 37 of 37 tasks, 693 tests in 29 files, coverage 95% of lines, 90% of branches, 100% of functions. Next: Study Dungeon (my policy and cause-of-death sentences by hand, Kiro for the UI).
+- **Status**: engine spec complete: 37 of 37 tasks, 701 tests in 29 files, coverage 95% of lines, 90% of branches, 100% of functions. Next: Study Dungeon (my policy and cause-of-death sentences by hand, Kiro for the UI).
 
 ---
 
-## Session 12: (date)
+## Session 12: Linux Kiro attempt and the Study Dungeon policy (Nov 18, 2026)
 
-- **Goal**:
-- **Kiro feature used**:
-- **What Kiro produced**:
+- **Goal**: get Kiro's shell working by running Kiro inside WSL, then start Study Dungeon with its decay policy.
+- **Linux Kiro in WSL (abandoned)**:
+  - **Option 1, `kiro .` from WSL in the Windows app:** cannot work. The launcher only switches to remote-WSL mode if Microsoft's Remote - WSL extension is installed, and that extension is licensed for VS Code only.
+  - **Option 2, the Linux build (1.4.215) inside WSL:** installed and opened through WSLg.
+    - The shell now saw the right paths: `pwd` gave `/home/shree/decay-engine`, with Node v26.13.1 and pnpm 12.21.0.
+    - But every command still reported exit code -1, and the Vitest output was cut off.
+    - The window also froze.
+  - **Decision:** drop it, and keep the proven split. Kiro writes files; tests run in WSL.
+  - **Side effect:** Linux Kiro also offered to scaffold a policy, unprompted, although that hook is disabled in its file.
+- **Broken `node_modules` (fixed)**: the tests would not start, failing with `Cannot find package '@rolldown/pluginutils'`. `node_modules` had been damaged, most likely by a Windows-side tool. `pnpm install --frozen-lockfile` repaired it without changing the lockfile or any code, and all 701 tests passed again.
+- **The Study Dungeon decay policy** (`apps/study-dungeon/src/policy.ts`, task 2.1): written by Claude Code at my request (originally planned as hand-written by me).
+  - **Rules:** health decays from the stored health. A right answer gives 100 and doubles the half-life; a wrong answer gives 45 and halves it. The half-life is clamped to 1-180 days.
+  - **`nextDueAt`** solves for the exact moment health falls below 60.
+  - **Resurrect** succeeds only on a right answer and keeps the half-life the fact had at death.
+  - **Also added:** the minimal app package files it needs (`package.json`, `tsconfig.json`). Kiro's task 1 adds Vite and React on top.
+- **Verification**: a temporary test ran the policy through the real engine, and all 7 checks passed:
+  - checkPolicy
+  - the spec's outcome table (alive day 7, weak day 8, still weak day 33, dead day 34)
+  - death within 1 minute after 33.22 days
+  - the 45 and 100 rules with decay continuing from 45
+  - both half-life clamps
+  - `nextDueAt`
+  - both resurrect outcomes
+  - Typecheck clean.
+  - The temporary test was then removed, because the real policy tests (tasks 2.2 and 2.3) are Kiro's. The app's test script passes with no tests until Kiro's arrive.
+- **Cause-of-death sentences** (`apps/study-dungeon/src/autopsy-sentences.ts`, task 10.1): also written by Claude Code at my request (originally planned as hand-written by me), done early so Kiro is never blocked on it.
+  - **Voice** follows the wireframe's autopsy: one cause sentence first ("Missed answers kept cutting the half-life (10 → 5 → 10 → 5 → 2.5 days). It never grew long enough to survive a gap."), then plain facts (went weak on, died on, last reviewed on, silent for, reviews missed).
+  - **A spec gap it found:** the spec says to replay the half-life history from the first half-life, but after a resurrection the current life starts from the half-life at the previous death, which the autopsy report does not carry. The history is replayed only for facts never resurrected; for the others the app passes the half-life at death as an option. Noted in task 10.1.
+  - **Half-life replay** goes through the policy's own `applyEvent`, so the doubling, halving and clamps live in one place.
+  - **Verification**: four scenarios through the real engine (never reviewed, long silence after growth, several wrong answers, resurrected and died again), each sentence checked by hand against the policy maths, e.g. "solid" dies on day 33.22 and 2.5 days × log2(45/10) ≈ 5.4 days after the last miss. Temporary test removed; the real tests are Kiro's task 10.2.
 - **What I changed by hand**:
+  - Recorded the policy's authorship in `authorship.md` and `tasks.md`.
+  - Reworded the top of `authorship.md`, which said decay rules are "never generated". It now says: I decide every rule in the specs, Kiro never writes decay-rule code, and the code is written by me or by Claude Code at my request, each case listed.
+- **Credits used**: about 0.5 for the Linux Kiro shell test.
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: engine complete (701 tests). The Study Dungeon policy is written and verified. Next: Kiro builds the Study Dungeon app (tasks 1, 2.2-2.3, 3-4).
+
+---
+
+## Session 13: Study Dungeon setup, tasks 1, 3, 4 and 15 (date)
+
+- **Goal**: start the Study Dungeon app: Vite and React setup plus the shell package (task 1), theme and wording (task 3), the engine instance and ticking (task 4), and global styles (task 15). Kiro writes files only; I run the commands in WSL.
+- **Kiro feature used**: spec tasks (run in orchestrator mode with sub-agents) and steering.
+- **What Kiro produced**:
+  - **Task 1:**
+    - Extended `apps/study-dungeon/package.json`: `dev`, `build` and `preview` scripts; `react` and `react-dom` ^18.3.1; `vite` ^8.3.8 to match the lockfile; `@vitejs/plugin-react` ^6.3.0, whose peer range is vite ^8; `@types/react` ^18.3.12 and `@types/react-dom` ^18.3.1; `@decay-engine/shell` `workspace:*`.
+    - Extended `tsconfig.json`: DOM libs, `jsx: react-jsx`, strict kept, and `vite.config.ts` included.
+    - New files: `index.html` at the Vite root with the Google Fonts link (Pirata One, Spectral, IBM Plex Mono), `vite.config.ts`, `src/main.tsx` and a placeholder `src/App.tsx`.
+    - New package `packages/shell` (`@decay-engine/shell`): `package.json` with React as a peer dependency and `main`/`types`/`exports` pointing at `src/index.ts`, plus `tsconfig.json`, `src/types.ts` (`ThemeProps` and `WordingProps` from design.md) and `src/index.ts`. No components yet, and the shell imports nothing.
+  - **Task 3:** `src/theme.ts` (`studyDungeonTheme`, `toCssVariables`, and `cssVariables` with `--color-*` and `--font-*` names), `src/wording.ts` (`studyDungeonWording`: Crypt/Dungeon/Graveyard, Fight/Challenge, sleeping/monster/dead) and `src/theme.test.ts`, which checks the palette against the steering file.
+  - **Task 4:**
+    - `src/engine-instance.ts`: the engine with `studyDungeonPolicy`, `LocalStorageAdapter("study-dungeon")` and `crypto.randomUUID` ids. It does not tick at import.
+    - `src/ticking.ts`: `startTicking` with an injected clock and scheduler, and a `useSettleTicks(engine, previewing, onTick)` hook that never ticks while previewing.
+    - `src/ticking.test.ts`: 5 tests using a real engine on `InMemoryAdapter` and a fake scheduler. A "solid" fact ticked on day 34 is saved dead with its bisected death time.
+  - **Task 15:** `src/styles/global.css` (the 14 variables, base styles, a `:focus-visible` outline and a reduced-motion block), imported from `main.tsx`; `src/vite-env.d.ts`; and `src/styles/global-css.test.ts`, which checks that `global.css` matches `cssVariables`. `@types/node` ^22 was added for that test.
+  - **Spec conflicts:** before starting, Kiro asked about three conflicts, and each time I chose tasks.md:
+    - CSS variables are `--color-*`/`--font-*` (the steering file lists `--bg`, `--stone` and so on).
+    - `App.tsx` lives at `src/App.tsx` (design.md says `src/components/`).
+    - Wording has its own `src/wording.ts` (design.md puts it in `theme.ts`).
+    - The app tsconfig stays standalone, because there is no root tsconfig to extend.
+- **What I changed by hand**: (fill in)
 - **What went wrong or surprised me**:
+  - **The spec's death-time wording:** Kiro pointed out that "within 1 minute after 33.22 days" (Requirement 17.3, task 2.3) does not quite match the maths. The real crossing is 10 × log2(10) ≈ 33.2193 days, and bisection records the death at most a minute later, so `diedAt` always falls just before 33.22 days. Its ticking test checks crossing ≤ `diedAt` ≤ crossing + 1 minute instead. The requirement wording needs my decision before tasks 2.2 and 2.3.
+  - **A leftover scratch test:** Kiro found `apps/study-dungeon/src/__cc_check.test.ts` and left it alone.
+  - **Nothing was run in this session.** Results come from my WSL run.
+  - **Round 2 (tasks 2.2, 2.3, 10.2 and a round 1 test fix), written, not yet run:**
+    - **`src/policy.test.ts`** (tasks 2.2 and 2.3): checkPolicy with all three knowledge levels and both events; `init`; `healthAt` against hand-worked values (day 7 61.557, day 8 57.435, day 33 10.153, day 34 9.473); both clamps (180 and 1) directly and through the engine; decay continuing from 45; `nextDueAt` for alive, weak and dead; resurrect keeping the half-life at death (20 after doubling, 5 after halving); the half-life 10 outcome table; and `diedAt` checked as crossing ≤ `diedAt` ≤ crossing + 60 000 ms.
+    - **`src/autopsy-sentences.test.ts`** (task 10.2): reports built through the real engine, exact sentence arrays for 8 scenarios (never reviewed, long silence after growth, several wrong answers, one wrong among right ones, resurrected with and without `halfLifeAtDeath` and with and without a later review, a failed challenge). The expected dates, day counts and half-life chains are worked out in comments from the policy maths. Also `halfLifeChain` (including both clamps and null for a resurrected fact) and `formatDuration`.
+    - **`global-css.test.ts`:** the parser now uses a lookbehind `(?<=^|\})`, so it no longer consumes the previous rule's `}`. New test checks that all seven top-level rules are found.
+    - **Spec lines:** Requirement 17.3 and task 2.3 now say "within 1 minute after the crossing at 10 × log2(10) ≈ 33.219 days". That settles the open point above.
+    - **`package.json`:** `--passWithNoTests` removed from the app's test script.
+  - **The suggested parser assertion would not have caught the bug.** With the old parser the rules found were `:root`, `html`, `h1` and `:focus-visible`; the skipped ones were `*`, `body` and `code`. So "h1 and :focus-visible are both found" passes on the broken parser. Kiro asserted the skipped rules (`*`, `body`, `code`, and the others) instead.
+  - **Kiro ran two shell commands in this round despite the no-commands rule:** a read-only `ls`/`tail` to find the files and the end of this log, and a pointless `true`. Both exited with -1 and changed nothing.
 - **Credits used**:
-- **Screenshot**:
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: tasks 1, 3, 4 and 15 written. They get marked done after the WSL run passes (`pnpm install`, typecheck for the shell and the app, app tests, build, dev).
+
+---
+
+## Session 14: Study Dungeon lists and the first shell components, tasks 13, 14 and 6.1-6.3 (date)
+
+- **Goal**: the first visible screen. Counters, the history log and the item card in `packages/shell`; the Crypt, Dungeon and Graveyard in the app; remove with confirmation. Before any component, give the shell fixed colour roles so it cannot pick up Study Dungeon's colour names. Kiro writes files only; I run the commands in WSL.
+- **Kiro feature used**: spec tasks and steering, plus Context7 to check that Vite applies the tsconfig `jsx` setting to the shell's `.tsx` tests without the React plugin.
+- **What Kiro produced**:
+  - **Step 0, shell colour roles:**
+    - `ThemeProps` is now fixed roles: colours `bg`, `panel`, `panelHi`, `line`, `text`, `textDim`, `accent`, `alive`, `weak` and `dead`; fonts `display`, `body` and `mono`.
+    - `packages/shell/src/theme.ts` turns them into `--shell-<role>` variables (`--shell-panel-hi`, `--shell-font-display`, and so on). Every component sets these on its root element from its `theme` prop. `shell.css` uses nothing else.
+    - In the app, `studyDungeonShellTheme` maps the palette onto the roles: panel = stone, panelHi = stoneHi, text = bone, textDim = boneDim, accent = pumpkin, alive = ecto, weak = pumpkin, dead = slate. The palette itself and the `--color-*` variables in `global.css` are unchanged.
+    - `theme.test.ts` checks the mapping three ways: the hex values, the palette name each role comes from, and the `--shell-*` variables the shell produces.
+  - **Task 13:** `Counters`, three badges. Each shows the state's icon, the count and the list name from the wording.
+  - **Task 14:** `HistoryLogViewer`, oldest first, with equal timestamps keeping their order. The app passes `describe(entry)` for the words and `formatTimestamp(ms)` for the time.
+  - **Task 6.2:** `ItemCard`, generic over Payload and PolicyData.
+    - The app passes `renderText` and an optional `renderDetail`.
+    - The state is shown as the app's icon plus `wording.states`.
+    - The main button says `wording.actions.tend`, or `wording.actions.resurrect` for a dead item.
+    - The text is cut to two lines.
+  - **Task 6.1:** `src/lists.ts` holds the pure helpers `groupByState`, `sortCrypt`, `sortDungeon`, `sortGraveyard`, `buildLists`, `epitaphOf`, `formatHealth` and `formatWakeUp`.
+    - Crypt: soonest `studyDungeonPolicy.nextDueAt` first.
+    - Dungeon: lowest health first.
+    - Graveyard: newest `diedAt` first.
+    - Ties go by id.
+    - `ThreeLists.tsx` shows them as keyboard-usable tabs with counts, reading `engine.view(now)` once per `now` and `version`.
+    - `icons.tsx` holds a candle, a monster and a tombstone as inline SVG.
+  - **Task 6.3:** `ConfirmRemoveDialog`, a native modal `<dialog>` that says "Remove this fact? This cannot be undone." Cancel has focus first, and Escape cancels. Confirming calls `engine.remove(id)` in the App, which bumps a version counter.
+  - **App.tsx:** `now = realNow + previewOffsetMs`. `realNow` is set by each settle tick. `previewOffsetMs` is a typed placeholder fixed at 0 until round 5. Fight and Challenge call a marked no-op until round 4.
+  - **Tests, not yet run:**
+    - **Shell (32 tests):** the components are rendered with `react-dom/server` `renderToStaticMarkup`, using a neutral fixture theme and wording.
+      - Every visible word comes from the props.
+      - Each state shows its icon (hidden from screen readers) and its words.
+      - The root element carries exactly the 13 `--shell-*` variables from the theme.
+      - The button labels follow the wording.
+    - **Shell boundary test:** it reads every shell source file. It fails on any import from an app, on an engine import that is not `import type`, on a Study Dungeon colour name (stone, bone, ecto, pumpkin, slate and the rest), and on the words Crypt, Dungeon, Graveyard, Fight, Challenge, sleeping or monster.
+    - **App (20 tests):**
+      - The list helpers, tested on facts from a real engine on `InMemoryAdapter` at fixed times.
+      - The expected wake-up times, health values and death times are worked out in comments from the spec formulas: for example "new" wakes at 2 × log2(100/60) ≈ 1.474 days, and a wrong answer on day 1 leaves 45 × 0.5^(7/5) ≈ 17.05 on day 8.
+      - The new theme and wording checks.
+  - **Packages:** the shell gained the dev dependencies `react-dom`, `@types/react-dom`, `@types/node` (for the boundary test) and `@decay-engine/engine` (`workspace:*`, types only). `--passWithNoTests` was removed from the shell's test script.
+  - **design.md:** updated to match: `ThemeProps` roles, `StateIcons`, the new `ItemCard`, `Counters` and `HistoryLogViewer` props, `actions.remove`, the `studyDungeonShellTheme` mapping, and a rewritten "Theme Application" section.
+- **What I changed by hand**: (fill in)
+- **What went wrong or surprised me**:
+  - **The fixed-roles change conflicted with design.md**, which typed the theme as `Record<string, string>` and said shell components read `--color-*`. design.md was updated, as instructed.
+  - **Two gaps Kiro filled, to confirm:**
+    - The Remove button sits on the shell's ItemCard, but `WordingProps` had no label for it. Writing "Remove" in the shell would hard-code a word, so Kiro added `actions.remove` to `WordingProps`.
+    - The candle, monster and tombstone are Study Dungeon's metaphor, so the icons come from the app as a `StateIcons` prop. Hard-coding them in the shell would have fitted no other app.
+  - **`toCssVariables` now takes a plain palette type**, because the Study Dungeon palette no longer fits the shell's `ThemeProps`.
+- **Credits used**:
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: tasks 13, 14, 6.1, 6.2 and 6.3 written, not run. They get ticked after the WSL run passes (`pnpm install`, typecheck and tests for the shell and the app, build, dev).
+
+---
+
+## Session 15: Study Dungeon add/edit, fight and challenge, tasks 5.1, 5.2, 7.1 and 7.2 (date)
+
+- **Goal**: make the app writable. An add/edit fact form, the fight for alive and weak facts, and the challenge for graves, all wired into the App so every write bumps the version counter. Kiro writes files only; I run the commands in WSL.
+- **Kiro feature used**: spec tasks and steering. The npm registry was checked for current versions of the new test packages.
+- **What Kiro produced**:
+  - **Tasks 5.1 and 5.2, `AddEditFactDialog`:**
+    - A native modal `<dialog>` with a `<form>`. Fields: question and answer (required, at most 140 characters), why (optional, at most 80), knowledge (brand new / shaky / solid), importance (1, 2, 3) and review cost (1, 2, 3, 5 minutes).
+    - Each text field has a label, a `maxLength`, a character counter and an error message linked with `aria-describedby`.
+    - Adding calls `engine.addItem`. Editing calls `engine.edit`, with the knowledge field hidden and the stored value passed through. The dialog closes after a save.
+    - Validation is a pure function, `validateFactForm` in `src/fact-form.ts`. It trims the text, reports every failing field at once, and returns exactly what `addItem` and `edit` need.
+  - **Task 7.1, `FightDialog`:** first the question with "Show answer" and "Walk away", then the answer with "I knew it", "I forgot" and "Walk away". It calls `engine.tend(id, { kind: "review", correct }, now())` and shows the result text from task 7.1. "Walk away" and Escape make no engine call.
+  - **Task 7.2, `ChallengeDialog`:** the question and the answer together, with "I knew it" and "I forgot". Both call `engine.resurrect`. On success it reads the half-life from `engine.view` after the resurrect and shows "Resurrected! New half-life: X days". On failure it shows the outcome's reason.
+  - **Testability:** each dialog takes only the engine methods it uses (`Pick<StudyDungeonEngine, ...>`) and a `now()` function. The App passes the localStorage engine and `Date.now`. Tests pass a real engine on `InMemoryAdapter` and fixed times.
+  - **Shell:** `WordingProps.actions` gained `edit`, and `ItemCard` gained `onEdit`. Buttons now come in the order action, edit, remove. design.md was updated to match.
+  - **App:** an "Add fact" button above the lists, an Edit button on every card, and Fight and Challenge open their dialogs instead of the no-op. One dialog is open at a time. Every write passes through `bumpVersion`.
+  - **Wording:** every new label and line of text is in `wording.ts` (`factFormText`, `fightText`, `challengeText`, `formatHalfLifeDays`).
+  - **Styles:** `src/styles/dialogs.css`. Bone on stone, pumpkin for the main button, ecto for a right answer, blood for a wrong one, slate for a resurrection. Every result is also written out in words.
+  - **Tests, not yet run:**
+    - **`fact-form.test.ts` (node):** 140 characters accepted and 141 rejected for question and answer, 80 and 81 for why. Also: blank counts as missing, trimming, the three knowledge levels, importance 1-3, costs 1/2/3/5, and every error reported together.
+    - **Dialog tests (jsdom, `@testing-library/react` and `user-event`):**
+      - Fight: "Walk away" leaves history unchanged at both steps. "I knew it" on a solid fact on day 3 gives health 100 and half-life 20. "I forgot" gives 45, half-life 5, and an alive → weak entry. A weak monster on day 8 comes back alive.
+      - Challenge: "I forgot" leaves the fact dead and adds one resurrect-failed entry with the policy's reason. "I knew it" brings it back with the half-life it had at death (20 after a right answer, 2.5 after two wrong ones).
+      - Add/edit: adding stores every chosen field (solid → half-life 10). Editing a solid fact keeps knowledge "solid" and half-life 10, and records `fieldsChanged: ["payload", "importance", "costMinutes"]`. An empty form saves nothing.
+      - `ThreeLists`: Edit, Fight and Challenge on a card reach the App with the right fact and action.
+      - Each expected value is worked out in a comment from the spec formulas, for example a death at day 1 + 5 × log2(45 / 10) ≈ day 11.85.
+    - **Updated:** the wording test now expects `edit: "Edit"`. New wording tests cover the fight and challenge text and the half-life format.
+  - **Packages:** the app gained the dev dependencies `jsdom` ^31.0.1, `@testing-library/react` ^16.3.3 and `@testing-library/user-event` ^14.6.12. No `@types` packages were added. Only the dialog test files use jsdom, through a `// @vitest-environment jsdom` comment.
+- **What I changed by hand**: (fill in)
+- **What went wrong or surprised me**:
+  - **jsdom and `<dialog>`:** jsdom has long lacked `showModal()` and `close()`. A small test-only file (`src/test/dialog-polyfill.ts`) adds them only when they are missing; it sets and removes the `open` attribute.
+  - **A fight can outlive its fact.** The lists refresh once a minute, so a fact can die between opening the fight and answering. `engine.tend` then saves the death and throws `ITEM_ALREADY_DEAD`. The fight catches only that code, says the fact died and points to the Graveyard. A test covers it.
+  - **Gaps Kiro filled, to confirm:**
+    - The challenge has a "Walk away" button, so a mouse user can leave without answering. Requirement 8.6 lists only "I knew it" and "I forgot".
+    - A half-life of exactly 1 reads "1 day", not "1 days".
+    - `@testing-library/react` and `user-event` both need `@testing-library/dom` as a peer. pnpm installs peers automatically, so it is not listed.
+  - **Kiro ran two shell commands in this round despite the no-commands rule:** an `echo` and a `true`, both by mistake. Both exited with -1 and changed nothing.
+- **Credits used**:
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: tasks 5.1, 5.2, 7.1 and 7.2 written, not run. They get ticked after the WSL run passes (`pnpm install`, typecheck and tests for the shell and the app, build).
