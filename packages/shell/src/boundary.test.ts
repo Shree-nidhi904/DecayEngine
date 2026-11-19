@@ -18,9 +18,24 @@ const files = readdirSync(SRC, { recursive: true, encoding: "utf8" })
 
 // Study Dungeon's palette names (theme-and-wording.md) and its list,
 // action and state words (src/wording.ts in the app). "lurking" is the
-// Triage heading for weak facts not picked (round 5).
+// Triage heading for weak facts not picked (round 5). Round 6 adds the
+// autopsy legend's "Forgot" and the hero's "souls banished" and
+// "weakening"; the autopsy dialog must take them from the wording.
 const APP_COLOUR_NAMES = ["stone", "stoneHi", "bone", "boneDim", "ecto", "pumpkin", "blood", "moon", "slate"];
-const APP_WORDS = ["Crypt", "Dungeon", "Graveyard", "Fight", "Challenge", "sleeping", "monster", "lurking"];
+const APP_WORDS = [
+  "Crypt",
+  "Dungeon",
+  "Graveyard",
+  "Fight",
+  "Challenge",
+  "sleeping",
+  "monster",
+  "lurking",
+  "forgot",
+  "souls",
+  "banished",
+  "weakening",
+];
 
 function importSpecifiers(text: string): string[] {
   return [...text.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g)].map((m) => m[1]!);
@@ -40,6 +55,7 @@ describe("shell boundary", () => {
         "components/TimeMachine.tsx",
         "components/PreviewBanner.tsx",
         "components/TriagePanel.tsx",
+        "components/AutopsyDialog.tsx",
       ])
     );
   });

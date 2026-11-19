@@ -25,16 +25,28 @@ apps/study-dungeon/
 │   ├── sample-data.ts               # Sample data generator via event replay
 │   ├── sample-data.test.ts          # Validation that sample data loads correctly
 │   ├── theme.ts                     # Color palette, fonts, CSS variables
-│   ├── wording.ts                   # List names, button labels, state names
+│   ├── wording.ts                   # List names, button labels, state names, every line of app text
+│   ├── engine-instance.ts           # createEngine(): the engine on LocalStorageAdapter("study-dungeon")
+│   ├── first-run.ts                 # First-run and tour flags, RESET_KEYS, resetAllData
+│   ├── storage-errors.ts            # classifyWriteError / classifyLoadError / createEngineSafely
+│   ├── write-guard.ts               # runWrite / reportWriteError: storage problems shown, bugs rethrown
+│   ├── sound.ts                     # Generated sound effects, off by default
+│   ├── App.tsx                      # The app: state, writes, dialogs, layout
+│   ├── Root.tsx                     # createEngineSafely + ErrorBoundary around App
 │   ├── components/
-│   │   ├── App.tsx                  # Root component with engine instance
 │   │   ├── HeroSection.tsx          # Stats and primary CTA
 │   │   ├── ThreeLists.tsx           # Crypt/Dungeon/Graveyard switcher
 │   │   ├── FightDialog.tsx          # Review interaction for alive/weak facts
 │   │   ├── ChallengeDialog.tsx      # Resurrection interaction for dead facts
 │   │   ├── AddEditFactDialog.tsx    # Add/edit fact form
-│   │   └── FirstRun.tsx             # Load sample data or start empty
-│   ├── main.tsx
+│   │   ├── FirstRun.tsx             # Load sample data or start empty
+│   │   ├── Tour.tsx                 # The four-step first-run tour
+│   │   ├── SoundToggle.tsx          # The sound switch beside "Reset all data"
+│   │   ├── ResetData.tsx            # "Reset all data" with confirmation
+│   │   ├── ErrorBoundary.tsx        # ErrorBoundary and ProblemScreen
+│   │   └── useModalDialog.ts        # Opens a modal <dialog>; gives focus back to its opener
+│   ├── styles/                      # global, app, dialogs, lists, hero, problem, animations, tour, layout
+│   ├── main.tsx                     # Renders Root
 │   └── index.html
 ├── package.json
 ├── tsconfig.json
@@ -95,7 +107,7 @@ interface ThemeProps {
 
 interface WordingProps {
   lists: { alive: string; weak: string; dead: string }
-  actions: { tend: string; resurrect: string; edit: string; remove: string }
+  actions: { tend: string; resurrect: string; edit: string; remove: string; autopsy: string }
   states: { alive: string; weak: string; dead: string }
   timeMachine: {
     title: string; slider: string
@@ -118,6 +130,21 @@ interface WordingProps {
     diesNever: string                                // diesAt null: not within 10 years
     startSession: string
   }
+  autopsy: {
+    title: string; epitaph: string; chartTitle: string
+    chartLabel: (summary: AutopsyChartSummary) => string  // the chart's aria-label, in words
+    weakBand: (threshold: number) => string               // legend: "Weak below 60"
+    deadBand: (threshold: number) => string               // legend: "Dead below 10"
+    markRight: string; markWrong: string                  // legend: "Knew it" (circle), "Forgot" (cross)
+    cause: string; close: string
+  }
+}
+
+// What the chart's aria-label is built from. Dates are formatted by the app.
+interface AutopsyChartSummary {
+  from: string; to: string           // first and last point (the death)
+  startHealth: number; endHealth: number
+  right: number; wrong: number       // tend marks within the chart's span
 }
 
 // One icon per state, supplied by the app (inline SVG using currentColor).
@@ -142,11 +169,13 @@ interface ItemCardProps<Payload, PolicyData> {
   renderText: (item: Item<Payload, PolicyData>) => ReactNode    // the item's text
   renderDetail?: (item: Item<Payload, PolicyData>) => ReactNode // wake-up time, health, epitaph
   onAction?: () => void   // button label: wording.actions.tend, or .resurrect when dead
+  onAutopsy?: () => void  // button label: wording.actions.autopsy; read-only, never disabled
   onEdit?: () => void     // button label: wording.actions.edit; the app opens its form
   onRemove?: () => void   // button label: wording.actions.remove; the app confirms
-  disabled?: boolean      // every button aria-disabled and ignoring clicks; still visible and focusable
+  disabled?: boolean      // every write button (action, edit, remove) aria-disabled and ignoring clicks; still visible and focusable
   disabledReason?: string // the buttons' title and part of their description while disabled
 }
+// Buttons appear in this order: action, autopsy, edit, remove.
 
 interface HistoryLogViewerProps {
   entries: HistoryEntry[]
@@ -170,11 +199,26 @@ interface TriagePanelProps<Payload, PolicyData> {
   startDisabledReason?: string
 }
 
-interface AutopsyDialogProps<Event> {   // generic: the shell never imports app types
-  report: AutopsyReport<Event>
-  epitaph?: string
+// A native modal <dialog>; Escape closes it. Read-only: only the optional
+// resurrect button writes, through the app. The chart is inline SVG: the
+// health line, shaded bands below thresholds.weak and thresholds.dead, and a
+// mark per tend (circle = right, cross = wrong) with a legend in words.
+// The app builds the points (see Autopsy Dialog below); the shell never
+// reads a report or a payload.
+interface AutopsyDialogProps {
   theme: ThemeProps
-  causeSentences: string[]  // Generated by autopsy-sentences.ts
+  wording: WordingProps
+  icons: StateIcons                         // icons.dead beside the title
+  epitaph?: string                          // not shown when missing or blank
+  causeSentences: readonly string[]         // from autopsy-sentences.ts, one paragraph each, in order
+  points: readonly { at: number; health: number }[]   // oldest first; two points at one time draw a tend's jump
+  tends: readonly { at: number; correct: boolean }[]  // only those within the points' span are drawn
+  thresholds: { weak: number; dead: number }
+  formatDate: (ms: number) => string        // axis dates and the summary
+  onClose: () => void
+  onResurrect?: () => void                  // button label: wording.actions.resurrect
+  resurrectDisabled?: boolean               // while previewing: aria-disabled, ignores clicks
+  resurrectDisabledReason?: string
 }
 
 // Slider from 0 to 60 days in one-hour steps, quick jumps +7/+14/+30 (always
@@ -226,7 +270,71 @@ App
 ├── TriagePanel (from shell)
 ├── AutopsyDialog (from shell)
 ├── TimeMachine (from shell)
-└── FirstRun
+├── FactAutopsy → AutopsyDialog (from shell)
+├── ResetData
+└── FirstRun (shown instead of everything above on first run)
+```
+
+As built in round 7 (tasks 11.5, 16, 17, 18, 20), with landmarks and the
+two-column layout:
+
+```
+Root
+└── ErrorBoundary                    (crash → ProblemScreen)
+    ├── ProblemScreen                (snapshot could not be loaded, or no storage)
+    └── App
+        ├── PreviewBanner (from shell, only while previewing)
+        ├── <header>                 h1 and tagline
+        └── <main>
+            ├── live region          polite: changes and storage problems
+            ├── FirstRun             (first run only, instead of everything below)
+            ├── HeroSection → Counters (from shell)
+            ├── .sd-layout
+            │   ├── main column: Add fact, session message,
+            │   │   ThreeLists (<nav> around the tabs; ItemCard[] from shell)
+            │   └── side column: TimeMachine, TriagePanel (from shell)
+            ├── ResetData            with SoundToggle beside it
+            ├── Tour                 (right after first run, once)
+            └── one dialog at a time: AddEditFactDialog, FightDialog,
+                ChallengeDialog, FactAutopsy → AutopsyDialog (from shell)
+```
+
+### Round 7 interfaces
+
+```typescript
+// Root.tsx: what main.tsx renders. createEngine is called once, through
+// createEngineSafely; a storage problem shows ProblemScreen with
+// storageProblemText[problem] ("corrupt" also offers Reset all data).
+interface RootProps {
+  createEngine: () => StudyDungeonEngine     // engine-instance.ts; no engine is built at import
+  storage: FlagStorage | null                // null when localStorage cannot be reached
+  reload?: () => void                        // default location.reload
+  log?: (error: unknown, info: ErrorInfo) => void   // ErrorBoundary; default console.error
+  appProps?: Omit<AppProps, "engine" | "storage" | "reload">
+}
+
+// AppProps gains one optional prop (the rest are unchanged):
+//   createAudioContext?: () => AudioContextLike | null   // default the browser's AudioContext
+
+// FightDialog, ChallengeDialog and AddEditFactDialog gain optional props:
+//   sound?: SoundPlayer                        // Fight and Challenge: the App's one player
+//   onResult?: (result) => void                // Fight: "correct" | "incorrect" | "died";
+//                                              // Challenge: { ok: true; halfLifeDays } | { ok: false; reason }
+//   onWriteError?: (error: unknown) => boolean // true when the App handled a storage problem
+// Sounds: Fight right → "right", wrong → "wrong"; Challenge won → "revive",
+// lost → "wrong". Nothing on Walk away, a failed save, or a death before the answer.
+
+// write-guard.ts
+function reportWriteError(error: unknown, onProblem: (p: WriteProblem) => void): boolean
+function runWrite(write: () => void, onProblem: (p: WriteProblem) => void): boolean  // rethrows non-storage errors
+
+// first-run.ts
+const TOUR_DONE_FLAG = "study-dungeon:tour-done"
+const RESET_KEYS = [ENGINE_STORAGE_KEY, STARTED_FLAG, TOUR_DONE_FLAG]  // the sound setting is kept
+
+interface TourProps { onDone: () => void }                   // finished or skipped
+interface SoundToggleProps { enabled: boolean; onChange: (enabled: boolean) => void }
+interface ResetDataProps { onConfirm: () => void; disabledReason?: string; children?: ReactNode }
 ```
 
 ## Data Models
@@ -383,9 +491,13 @@ User Action → App Component → DecayEngine Method → Storage Adapter → loc
 
 **Rendering**:
 - Eyebrow: "Your memory today"
-- If weak facts exist: "N facts are weakening" + button "Fight the weakest" → opens FightDialog with weakest fact
-- If no weak but alive exist: encouraging message
-- Stats: three cards showing alive, weak, dead counts
+- If weak facts exist: "N facts are weakening" ("1 fact is weakening") + button "Fight the weakest" → opens FightDialog with the lowest-health weak fact. Disabled while previewing, with the reason
+- If no weak but alive exist: "All quiet in the Crypt. Every fact is sleeping soundly."
+- If there are no facts: "No facts yet. Use Add fact to put your first one in the Crypt."
+- If only dead facts: "Nothing is weakening. Your graves are waiting in the Graveyard."
+- Stats: the shell's `Counters` for alive, weak and dead (icon, number in IBM Plex Mono, list name), then souls banished and the streak (icon, number, label), from `stats.ts`
+- Counts read `engine.view(now)`, so they follow the time machine. Souls and the streak are about the past, so they read `realNow`
+- The App's optional `timeZone` prop sets the streak's calendar days (tests pass "UTC")
 
 ### Three Lists (Crypt, Dungeon, Graveyard)
 
@@ -482,6 +594,17 @@ User Action → App Component → DecayEngine Method → Storage Adapter → loc
 - `autopsy-sentences.ts` is HAND-WRITTEN to craft narrative quality
 - Engine provides facts, developer writes sentences
 
+**Opening it**: graves get an Autopsy button (`ItemCard.onAutopsy`). It is read-only, so it works while previewing, including for a fact that is dead only on the previewed day (`engine.autopsy(id, now)` settles in memory). The dialog's Challenge button closes it and opens the ChallengeDialog; it is disabled while previewing, with the reason.
+
+**Chart points** (`src/autopsy-chart.ts`, pure): the report alone does not carry the half-life a resurrected fact's current life started with, so the whole history from `engine.history(id)` is replayed:
+- `created`: health from the entry, half-life from `studyDungeonPolicy.init` (the knowledge level)
+- `tended`: through `studyDungeonPolicy.applyEvent`
+- `resurrected`: health 100, half-life kept
+- other entries do not change the curve
+Health is then sampled with `studyDungeonPolicy.healthAt` over the current life only (`report.lifeStartedAt` to `report.diedAt`): 48 equal steps by default, plus the health just before and just after each review in that life.
+
+**Sentences**: `generateCauseSentences(report, payload, { halfLifeAtDeath: item.policyData.halfLifeDays })`, with the dead item read from `engine.view(now)`.
+
 ### Time Machine
 
 **UI Elements** (uses `TimeMachine` and `PreviewBanner` from shell):
@@ -511,8 +634,29 @@ User Action → App Component → DecayEngine Method → Storage Adapter → loc
 - Calls `engine.tick(Date.now())` to settle all items at current time
 - Results in facts distributed across alive, weak, and dead states
 
-**Optional Tour**:
-- 3-4 tooltips explaining Crypt, Dungeon, Fight (marked "Could" priority)
+**As built** (`src/first-run.ts`, `components/FirstRun.tsx`):
+- The flag is read and written through a storage object the App receives (`storage` prop, default `window.localStorage`), so tests use an in-memory fake
+- First run shows only when the flag is missing **and** the engine has no facts. Facts with a missing flag are data from before the flag existed: the App sets the flag and skips first run, so sample facts never land on real ones
+- "Load sample data" calls `loadSampleData(engine, clock())` (the real time) and bumps the version. "Start empty" goes to the main screen, where the empty lists ask for the first fact. Both set the flag
+
+**Tour** (task 11.5, `components/Tour.tsx`):
+- Four steps, in order: the Crypt, the Dungeon, Fight, the time machine. Each step outlines its part of the page (`data-tour-active` on the Crypt tab, the Dungeon tab, "Fight the weakest" or else the first Fight on a card, and the time machine); with no facts the Fight step is words only
+- Starts right after either first-run button, unless `study-dungeon:tour-done` is already in the App's `storage`. Never shown on a normal visit
+- A small panel in the corner (`<aside aria-label="Tour">`), not a modal. Focus starts on Next; Back, Next and "Skip tour" are buttons; Escape skips. Finishing or skipping saves the flag and moves focus to `<main>`
+- Scrolling to a step's target is instant: nothing moves on its own
+
+### Reset All Data
+
+- "Reset all data" asks "Reset all data? This cannot be undone." (Cancel first; Escape cancels)
+- Confirming removes exactly `decay-engine:study-dungeon`, `study-dungeon:started` and `study-dungeon:tour-done` (`RESET_KEYS` in `first-run.ts`), then calls the App's `reload` prop (default `window.location.reload`), which shows first run and the tour again. The sound setting (`study-dungeon:sound`) is a preference for this browser and is kept
+- The same reset is offered on the problem screen for a snapshot that cannot be read, and on the crash screen
+
+### Sound (task 20, Requirement 18)
+
+- A switch, "Sound effects", in the settings area beside "Reset all data". Off by default; `loadSoundEnabled(storage)` at mount, `saveSoundEnabled(storage, enabled)` on every change. It is a preference, so it also works while previewing
+- The App makes one `createSoundPlayer({ isEnabled })`, which reads the switch on every play, and passes it to FightDialog and ChallengeDialog
+- Fight: right → "right", wrong → "wrong". Challenge: won → "revive", lost → "wrong". Walk away, a failed save, or a fact that died before the answer play nothing
+- Disabled while previewing, with the reason
 
 ### Remove Fact
 
@@ -536,6 +680,13 @@ User Action → App Component → DecayEngine Method → Storage Adapter → loc
 ### Storage Errors
 - `LocalStorageAdapter` throws on quota exceeded: app catches and shows "Storage full" error
 - Failed save leaves storage and memory unchanged (engine guarantee)
+
+**As built** (task 18.3):
+- **At startup** (`Root.tsx`): `createEngineSafely(createEngine)`. "corrupt" (the snapshot cannot be read) shows `ProblemScreen` with `storageProblemText.corrupt`, Reload and Reset all data (`RESET_KEYS`, then reload). "unavailable" shows its sentence and Reload only. Errors that are not storage problems reach the ErrorBoundary. No engine is built at import any more, so a bad snapshot never leaves a blank page
+- **Crashes while rendering**: `ErrorBoundary` around the App logs the error and shows the crash screen, with Reload and Reset all data
+- **During writes** (`write-guard.ts`): addItem, edit, tend, resurrect, remove, loading the sample data and setting the first-run flag. `classifyWriteError` turns a quota error into "full" and `STORAGE_UNAVAILABLE` into "unavailable"; the App shows `storageProblemText[problem]` in its polite live region, closes the open dialog and any Triage session, and keeps working. The dialogs pass their engine errors to the App through `onWriteError`. Anything not classified is rethrown. Exception: the add/edit form handles a storage problem itself. It stays open with what was typed and shows the sentence inside the form (`role="alert"`), because the page behind a modal dialog is inert and the fix (remove a fact, try again) should not cost the user their text
+- **During settle ticks** (`ticking.ts`, `App.tsx`): `startTicking` and `useSettleTicks` take an `onError`. The App classifies the error; a storage problem is announced once, and again only after a tick has saved in between, so a full storage is not repeated every minute. The tick's time still becomes `realNow`, since reads settle in memory. Anything not classified is rethrown
+- **No loading state** (task 18.2): every engine call is synchronous, including loading the snapshot, so there is nothing to wait for and no skeleton
 
 ### Time Machine Constraints
 - Write operations blocked while `previewOffsetMs > 0`: buttons disabled, forms hidden
@@ -603,12 +754,25 @@ Not applicable for Study Dungeon app-level code. The engine itself has property-
 - ARIA labels for icon-only buttons
 - Live region announcements for state changes
 
+### As built (tasks 16.1, 16.2, 16.4)
+- **Focus**: every app dialog opens through `useModalDialog`, which remembers the focused element (the opener) and focuses it again when the dialog closes, if it is still on the page. A dialog opened from inside another (Autopsy → Challenge, the next fight of a session) takes over the first one's opener. FactAutopsy uses `useReturnFocus` for the shell's AutopsyDialog. Escape is the browser's `cancel` event on the modal `<dialog>`; each dialog turns it into its own close action
+- **Landmarks**: `<header>` (h1 and tagline), `<main>`, `<nav aria-label="Crypt, Dungeon and Graveyard">` around the list tabs. The tabs keep the WAI-ARIA pattern: only the selected tab is in the Tab order; arrow keys, Home and End move between them
+- **Live region**: one polite `aria-live` region at the top of `<main>`, always on the page. It says "Fact added to the Crypt.", "Fact saved.", "Fact removed.", the fight and challenge results with the list the fact is in afterwards (read from the engine), "12 sample facts loaded.", and storage problems. Its words are in `announceText` (wording.ts)
+- **Icon-only buttons**: there are none. Every icon sits in an `aria-hidden` wrapper beside words; a test checks that every button has a name in words
+- **Reduced motion**: CSS motion is in `animations.css`, and both it and `global.css` switch it off under `prefers-reduced-motion`. The only JS animation is the time machine's Play, which jumps straight to +60 days under reduced motion; a source test checks that nothing else uses `requestAnimationFrame`, `Element.animate`, smooth scrolling or an interval timer (apart from the settle tick)
+
+### Responsive layout (task 18.1, `styles/layout.css`)
+- Wide screens: the hero across the top, then two columns: the lists (`minmax(0, 1fr)`) and a side column with the time machine and Triage (`minmax(16rem, 22rem)`)
+- Below 640px (`max-width: 639.98px`): one column; the hero's stat cards stack; cards in one column; page padding 0.75rem; the app's dialogs are `calc(100vw - 1rem)` wide and at most `calc(100dvh - 1rem)` tall, scrolling inside; the tour spans the bottom of the screen
+- No fixed width, minimum width, flex basis or column minimum in the app's or the shell's CSS is wider than the 296px content box of a 320px screen (checked by `layout-css.test.ts`)
+
 ## Visual Rendering
 
 ### CSS-Only Visuals
 - Candle flame: CSS animation with `@keyframes flicker`
 - Monster shake: CSS `transform` on hover
 - Tombstone: SVG inline, styled via CSS
+- As built: `styles/animations.css`, imported by App.tsx, targets the `data-icon` attributes of the icons in `components/icons.tsx` (candle flame flickers wherever a candle is shown; a monster shakes once when its card is hovered or focused; the tombstone stays still). The same `studyDungeonIcons` are used by the counters, the cards and the autopsy title
 - No external images or icon libraries
 
 ### Theme Application

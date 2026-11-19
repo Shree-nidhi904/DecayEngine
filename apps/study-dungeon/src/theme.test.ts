@@ -4,7 +4,10 @@ import { studyDungeonTheme, studyDungeonShellTheme, cssVariables, toCssVariables
 import {
   challengeText,
   fightText,
+  firstRunText,
   formatHalfLifeDays,
+  heroText,
+  resetText,
   formatPreviewDate,
   previewBlockedText,
   removeCancelLabel,
@@ -148,12 +151,13 @@ describe("studyDungeonWording", () => {
     expect(studyDungeonWording.lists).toEqual({ alive: "Crypt", weak: "Dungeon", dead: "Graveyard" })
   })
 
-  it("names the actions Fight, Challenge, Edit and Remove", () => {
+  it("names the actions Fight, Challenge, Edit, Remove and Autopsy", () => {
     expect(studyDungeonWording.actions).toEqual({
       tend: "Fight",
       resurrect: "Challenge",
       edit: "Edit",
       remove: "Remove",
+      autopsy: "Autopsy",
     })
   })
 
@@ -235,6 +239,28 @@ describe("fight and challenge text", () => {
     expect(challengeText.resurrected(20)).toBe("Resurrected! New half-life: 20 days")
     expect(challengeText.resurrected(2.5)).toBe("Resurrected! New half-life: 2.5 days")
     expect(challengeText.resurrected(1)).toBe("Resurrected! New half-life: 1 day")
+  })
+
+  it("uses the reset confirmation of Requirement 13.6 and the hero words of Requirement 12", () => {
+    expect(resetText.confirm).toBe("Reset all data? This cannot be undone.")
+    expect(resetText.button).toBe("Reset all data")
+    expect(heroText.eyebrow).toBe("Your memory today")
+    expect(heroText.weakening(3)).toBe("3 facts are weakening")
+    expect(heroText.weakening(1)).toBe("1 fact is weakening")
+    expect(firstRunText.loadSample).toBe("Load sample data")
+    expect(firstRunText.startEmpty).toBe("Start empty")
+  })
+
+  it("sums up the autopsy chart in words, health rounded down", () => {
+    const label = studyDungeonWording.autopsy.chartLabel
+    expect(label({ from: "1 Oct 2026", to: "8 Oct 2026", startHealth: 100, endHealth: 9.99, right: 1, wrong: 2 })).toBe(
+      "Health from 1 Oct 2026 to 8 Oct 2026: it started at 100 and fell to 9. 1 right answer, 2 wrong answers."
+    )
+    expect(label({ from: "a", to: "b", startHealth: 100, endHealth: 9.5, right: 0, wrong: 0 })).toBe(
+      "Health from a to b: it started at 100 and fell to 9. No right answers, no wrong answers."
+    )
+    expect(studyDungeonWording.autopsy.weakBand(60)).toBe("Weak below 60")
+    expect(studyDungeonWording.autopsy.deadBand(10)).toBe("Dead below 10")
   })
 
   it("shows a half-life with at most two decimals", () => {

@@ -103,6 +103,26 @@ describe("startTicking", () => {
     expect(seen).toEqual([T0, T0 + 5 * TICK_INTERVAL_MS])
   })
 
+  it("hands a tick's error to onError, then still calls onTick (added after round 7)", () => {
+    const failing = { tick: () => { throw new Error("quota") } }
+    const fake = makeFakeScheduler()
+    let now = T0
+    const errors: Array<[string, number]> = []
+    const ticked: number[] = []
+    startTicking(failing, () => now, fake.scheduler, TICK_INTERVAL_MS, (t) => ticked.push(t), (e, t) =>
+      errors.push([(e as Error).message, t])
+    )
+    now = T0 + TICK_INTERVAL_MS
+    fake.fire()
+    expect(errors).toEqual([["quota", T0], ["quota", T0 + TICK_INTERVAL_MS]])
+    expect(ticked).toEqual([T0, T0 + TICK_INTERVAL_MS])
+  })
+
+  it("lets a tick's error propagate when there is no onError", () => {
+    const failing = { tick: () => { throw new Error("quota") } }
+    expect(() => startTicking(failing, () => T0, makeFakeScheduler().scheduler)).toThrow("quota")
+  })
+
   it("saves a solid fact's death with its bisected time when a tick runs past day 34", () => {
     const engine = makeEngine()
     const fake = makeFakeScheduler()

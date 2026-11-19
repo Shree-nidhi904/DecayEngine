@@ -4,11 +4,13 @@
 // "I knew it" / "I forgot" call engine.tend(id, { kind: "review", correct }, now()).
 // "Walk away" (and Escape) closes without calling the engine.
 // The time comes from the injected now(), so tests never read the clock.
+// The sound player and the error handler are injected too (tasks 20.2, 18.3).
 
 import { useRef, useState } from "react"
 import { DecayEngineError } from "@decay-engine/engine"
 import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
+import type { SoundPlayer } from "../sound"
 import { fightText, sessionText, studyDungeonWording } from "../wording"
 import { useModalDialog } from "./useModalDialog"
 import "../styles/dialogs.css"
@@ -29,11 +31,38 @@ export interface FightDialogProps {
    * "Fight N of M" and a "Stop session" button that ends the whole queue.
    */
   session?: { position: number; total: number; onStop: () => void }
+  /**
+   * Plays "right" after a right answer and "wrong" after a wrong one (task
+   * 20.2). The App passes its one player, which stays silent while sound is
+   * off; tests pass a fake. No sound when omitted.
+   */
+  sound?: SoundPlayer
+  /** Told how the fight ended, after the engine saved it; the App announces it. */
+  onResult?: (result: FightResult) => void
+  /**
+   * Given any error from engine.tend except a death before the answer. Returns
+   * true when the App handled it (a storage problem: the App shows it and
+   * closes the dialog); anything else is rethrown.
+   */
+  onWriteError?: (error: unknown) => boolean
 }
 
-type Step = "question" | "answer" | "correct" | "incorrect" | "died"
+/** How a fight ended: answered right, answered wrong, or the fact died first. */
+export type FightResult = "correct" | "incorrect" | "died"
 
-export function FightDialog({ engine, now, fact, onWrite, onClose, session }: FightDialogProps) {
+type Step = "question" | "answer" | FightResult
+
+export function FightDialog({
+  engine,
+  now,
+  fact,
+  onWrite,
+  onClose,
+  session,
+  sound,
+  onResult,
+  onWriteError,
+}: FightDialogProps) {
   const ref = useModalDialog()
   const [step, setStep] = useState<Step>("question")
   // Guards against a second answer before React re-renders.
@@ -50,12 +79,18 @@ export function FightDialog({ engine, now, fact, onWrite, onClose, session }: Fi
       if (error instanceof DecayEngineError && error.code === "ITEM_ALREADY_DEAD") {
         onWrite()
         setStep("died")
+        onResult?.("died")
         return
       }
+      // Nothing was saved (the engine guarantees it), so no sound and no result.
+      if (onWriteError?.(error) === true) return
       throw error
     }
     onWrite()
-    setStep(correct ? "correct" : "incorrect")
+    sound?.play(correct ? "right" : "wrong")
+    const result: FightResult = correct ? "correct" : "incorrect"
+    setStep(result)
+    onResult?.(result)
   }
 
   const done = step === "correct" || step === "incorrect" || step === "died"

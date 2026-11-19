@@ -24,21 +24,30 @@ const globalScheduler: Scheduler = {
 
 /**
  * Ticks the engine once now, then every intervalMs. Returns a function that
- * stops the interval. Tick errors (for example storage quota) propagate; a
- * later task adds "Storage full" handling.
+ * stops the interval.
  *
  * @param onTick - Called after each tick with the time used, so the caller can refresh.
+ *   Also called after a tick whose save failed and was handled by onError: reads
+ *   settle in memory, so the screen should still move on.
+ * @param onError - Given any error a tick throws (for example a full storage
+ *   quota when a death is saved). Without it, tick errors propagate.
  */
 export function startTicking(
   engine: Tickable,
   getNow: () => number,
   schedule: Scheduler = globalScheduler,
   intervalMs: number = TICK_INTERVAL_MS,
-  onTick?: (now: number) => void
+  onTick?: (now: number) => void,
+  onError?: (error: unknown, now: number) => void
 ): () => void {
   const runTick = () => {
     const now = getNow()
-    engine.tick(now)
+    try {
+      engine.tick(now)
+    } catch (error) {
+      if (onError === undefined) throw error
+      onError(error, now)
+    }
     onTick?.(now)
   }
   runTick()
@@ -57,6 +66,8 @@ export type SettleTickOptions = {
   getNow?: () => number
   /** Defaults to the global setInterval and clearInterval. */
   scheduler?: Scheduler
+  /** Given any error a tick throws. Without it, tick errors propagate. Read on every tick. */
+  onError?: (error: unknown, now: number) => void
 }
 
 /**
@@ -74,11 +85,24 @@ export function useSettleTicks(
   // Keep the latest callback without restarting the interval on every render.
   const onTickRef = useRef(onTick)
   onTickRef.current = onTick
+  const onErrorRef = useRef(options.onError)
+  onErrorRef.current = options.onError
   const getNow = options.getNow ?? Date.now
   const scheduler = options.scheduler ?? globalScheduler
 
   useEffect(() => {
     if (previewing) return
-    return startTicking(engine, getNow, scheduler, TICK_INTERVAL_MS, (now) => onTickRef.current?.(now))
+    return startTicking(
+      engine,
+      getNow,
+      scheduler,
+      TICK_INTERVAL_MS,
+      (now) => onTickRef.current?.(now),
+      (error, now) => {
+        const handle = onErrorRef.current
+        if (handle === undefined) throw error
+        handle(error, now)
+      }
+    )
   }, [engine, previewing, getNow, scheduler])
 }

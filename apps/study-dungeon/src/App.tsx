@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   PreviewBanner,
   TimeMachine,
@@ -11,24 +11,50 @@ import { useSettleTicks, type Scheduler } from "./ticking"
 import type { Fact, FactPayload, FactPolicyData } from "./policy"
 import { ThreeLists, type FactAction } from "./components/ThreeLists"
 import { AddEditFactDialog } from "./components/AddEditFactDialog"
-import { FightDialog } from "./components/FightDialog"
-import { ChallengeDialog } from "./components/ChallengeDialog"
+import { FightDialog, type FightResult } from "./components/FightDialog"
+import { ChallengeDialog, type ChallengeResult } from "./components/ChallengeDialog"
+import { FactAutopsy } from "./components/FactAutopsy"
+import { FirstRun } from "./components/FirstRun"
+import { HeroSection } from "./components/HeroSection"
+import { ResetData } from "./components/ResetData"
+import { SoundToggle } from "./components/SoundToggle"
+import { Tour } from "./components/Tour"
+import { loadSampleData } from "./sample-data"
+import {
+  hasStarted,
+  isTourDone,
+  markStarted,
+  markTourDone,
+  needsFirstRun,
+  resetAllData,
+  type FlagStorage,
+} from "./first-run"
+import { classifyWriteError, storageProblemText, type WriteProblem } from "./storage-errors"
+import { reportWriteError, runWrite } from "./write-guard"
+import { createSoundPlayer, loadSoundEnabled, saveSoundEnabled, type AudioContextLike } from "./sound"
 import { studyDungeonShellTheme } from "./theme"
 import {
+  announceText,
   factFormText,
   formatPreviewDate,
+  landmarkText,
   previewBlockedText,
   sessionText,
   studyDungeonWording,
 } from "./wording"
 import "./styles/dialogs.css"
 import "./styles/app.css"
+import "./styles/animations.css"
+import "./styles/layout.css"
 
 /** engine.triage accepts budgets from 1 to 1440 minutes (engine Requirement 17b). */
 export const TRIAGE_MAX_BUDGET_MINUTES = 1440
 
+/** The id of the polite live region that announces changes and storage problems (task 16.4). */
+export const ANNOUNCER_ID = "sd-announcer"
+
 export interface AppProps {
-  /** The app's engine. main.tsx passes the localStorage one; tests pass one on InMemoryAdapter. */
+  /** The app's engine. Root passes the localStorage one; tests pass one on InMemoryAdapter. */
   engine: StudyDungeonEngine
   /**
    * The real clock. Every write and every settle tick uses it, never the
@@ -45,6 +71,21 @@ export interface AppProps {
   prefersReducedMotion?: () => boolean
   /** Formats the previewed day. Defaults to "8 Oct 2026" in the viewer's time zone. */
   formatDate?: (ms: number) => string
+  /**
+   * Where the first-run and tour flags and the sound setting live, and what
+   * "Reset all data" clears. Defaults to window.localStorage; tests pass an
+   * in-memory fake.
+   */
+  storage?: FlagStorage
+  /** Reloads the page after a reset. Defaults to window.location.reload. */
+  reload?: () => void
+  /** Time zone for the streak's days and the autopsy's dates. Defaults to the viewer's. */
+  timeZone?: string
+  /**
+   * Makes the Web Audio context for sound effects, on the first sound played.
+   * Defaults to the browser's AudioContext; tests pass a fake that records tones.
+   */
+  createAudioContext?: () => AudioContextLike | null
 }
 
 /** The one dialog open at a time, if any. */
@@ -53,6 +94,7 @@ type OpenDialog =
   | { kind: "edit"; fact: Fact }
   | { kind: "fight"; fact: Fact }
   | { kind: "challenge"; fact: Fact }
+  | { kind: "autopsy"; factId: string }
 
 /** A fact queued by "Start the session", with its question for the completion message. */
 type SessionEntry = { id: string; question: string }
@@ -63,7 +105,11 @@ type Skipped = { question: string; reason: "died" | "removed" }
 /** The fight queue: the picks in triage order, and which one is being fought. */
 type Session = { entries: SessionEntry[]; position: number; skipped: Skipped[] }
 
+/** What the live region says. `id` changes every time, so the same words are read again. */
+type Announcement = { id: number; text: string; problem: boolean }
+
 const defaultFormatDate = (ms: number) => formatPreviewDate(ms)
+const browserReload = () => window.location.reload()
 
 export function App({
   engine,
@@ -73,6 +119,10 @@ export function App({
   frameClock,
   prefersReducedMotion,
   formatDate = defaultFormatDate,
+  storage = window.localStorage,
+  reload = browserReload,
+  timeZone,
+  createAudioContext,
 }: AppProps) {
   // Every write uses the real time (design.md, Normal Mode). The app may read
   // the clock; the engine never does.
@@ -98,18 +148,183 @@ export function App({
   // What the last finished session skipped; null when no message is shown.
   const [sessionDone, setSessionDone] = useState<Skipped[] | null>(null)
 
+  // The polite live region (task 16.4): state changes and storage problems.
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null)
+  const announce = useCallback(
+    (text: string, problem = false) => setAnnouncement((a) => ({ id: (a?.id ?? 0) + 1, text, problem })),
+    []
+  )
+
+  // Focused after the tour, which has no opener to go back to.
+  const mainRef = useRef<HTMLElement>(null)
+
+  // Sound effects (task 20): off by default, saved in storage. One player
+  // for the whole app; it reads the setting on every play.
+  const [soundOn, setSoundOn] = useState(() => loadSoundEnabled(storage))
+  const soundOnRef = useRef(soundOn)
+  soundOnRef.current = soundOn
+  const [sound] = useState(() =>
+    createSoundPlayer({
+      isEnabled: () => soundOnRef.current,
+      ...(createAudioContext === undefined ? {} : { createContext: createAudioContext }),
+    })
+  )
+  const changeSound = useCallback(
+    (enabled: boolean) => {
+      soundOnRef.current = enabled
+      setSoundOn(enabled)
+      saveSoundEnabled(storage, enabled)
+    },
+    [storage]
+  )
+
+  /**
+   * Every write's errors end up here (task 18.3, write-guard.ts). A storage
+   * problem (quota full, storage unavailable) is shown in the live region,
+   * and the open dialog and any Triage session are closed: the engine saved
+   * nothing and changed nothing, so the app keeps working. Any other error
+   * is rethrown by the caller.
+   */
+  const showWriteProblem = useCallback(
+    (problem: WriteProblem) => {
+      setSession(null)
+      setDialog(null)
+      announce(storageProblemText[problem], true)
+    },
+    [announce]
+  )
+
+  /** Given to the dialogs: true when the error was a storage problem and has been shown. */
+  const handleWriteError = useCallback(
+    (error: unknown): boolean => reportWriteError(error, showWriteProblem),
+    [showWriteProblem]
+  )
+
+  /** Runs one of the App's own writes; storage problems are shown, anything else is rethrown. */
+  const guardWrite = useCallback((write: () => void): boolean => runWrite(write, showWriteProblem), [showWriteProblem])
+
+  /** The name of the list a fact is in now, at the real time; undefined if it is gone. */
+  const listOf = useCallback(
+    (id: string) => {
+      const fact = engine.view(writeNow()).find((f) => f.id === id)
+      return fact === undefined ? undefined : studyDungeonWording.lists[fact.state]
+    },
+    [engine, writeNow]
+  )
+
   // Ticks on mount and every minute while not previewing; each tick's time
   // becomes the new realNow, so reads and saved settling use the same moment.
   // "Back to today" turns previewing off, which ticks again straight away.
-  useSettleTicks(engine, previewing, setRealNow, { getNow: clock, scheduler: tickScheduler })
+  // A tick saves deaths and weak crossings, so it can hit a full storage too
+  // (task 18.3). Say so once, not every minute; say it again only after a
+  // tick has saved successfully in between. Other errors are bugs: rethrown.
+  const tickProblemShown = useRef(false)
+  const tickFailed = useRef(false)
+  const handleTickError = useCallback(
+    (error: unknown) => {
+      const problem = classifyWriteError(error)
+      if (problem === null) throw error
+      tickFailed.current = true
+      if (tickProblemShown.current) return
+      tickProblemShown.current = true
+      announce(storageProblemText[problem], true)
+    },
+    [announce]
+  )
+  // Called after every tick, failed or not (startTicking calls onError first).
+  const handleTick = useCallback((now: number) => {
+    if (!tickFailed.current) tickProblemShown.current = false
+    tickFailed.current = false
+    setRealNow(now)
+  }, [])
+  useSettleTicks(engine, previewing, handleTick, {
+    getNow: clock,
+    scheduler: tickScheduler,
+    onError: handleTickError,
+  })
+
+  // First run (task 11.3): only when the started flag is missing and there
+  // are no facts. Decided once, at mount.
+  const [firstRun, setFirstRun] = useState(() => needsFirstRun(storage, engine.view(realNow).length))
+
+  // The tour (task 11.5): offered right after first run, once.
+  const [touring, setTouring] = useState(false)
+
+  // Facts from before the flag existed: set the flag and skip first run.
+  useEffect(() => {
+    if (!firstRun && !hasStarted(storage)) markStarted(storage)
+  }, [firstRun, storage])
+
+  /** Leaves first run and starts the tour unless it was done before. */
+  const finishFirstRun = useCallback(() => {
+    setFirstRun(false)
+    if (!isTourDone(storage)) setTouring(true)
+  }, [storage])
+
+  const loadSample = useCallback(() => {
+    const at = writeNow()
+    let count = 0
+    const ok = guardWrite(() => {
+      count = loadSampleData(engine, at).length
+      markStarted(storage)
+    })
+    // Whatever was replayed before a failure is saved; show it.
+    setRealNow(at)
+    bumpVersion()
+    if (!ok) return
+    finishFirstRun()
+    announce(announceText.sampleLoaded(count))
+  }, [engine, writeNow, storage, bumpVersion, guardWrite, finishFirstRun, announce])
+
+  const startEmpty = useCallback(() => {
+    if (!guardWrite(() => markStarted(storage))) return
+    finishFirstRun()
+  }, [storage, guardWrite, finishFirstRun])
+
+  const endTour = useCallback(() => {
+    setTouring(false)
+    // A preference: if it cannot be saved, the tour may simply show again.
+    try {
+      markTourDone(storage)
+    } catch (error) {
+      if (classifyWriteError(error) === null) throw error
+    }
+    mainRef.current?.focus()
+  }, [storage])
+
+  // Reset (task 11.4): blocked while previewing, like every write.
+  const reset = useCallback(() => {
+    if (previewing) return
+    resetAllData(storage, reload)
+  }, [previewing, storage, reload])
+
+  const openAutopsy = useCallback((fact: Fact) => setDialog({ kind: "autopsy", factId: fact.id }), [])
+
+  // Challenge from inside the autopsy: closes it and opens the challenge.
+  const challengeFromAutopsy = useCallback(
+    (fact: Fact) => {
+      if (previewing) return
+      setDialog({ kind: "challenge", fact })
+    },
+    [previewing]
+  )
+
+  const fightWeakest = useCallback(
+    (fact: Fact) => {
+      if (previewing) return
+      setDialog({ kind: "fight", fact })
+    },
+    [previewing]
+  )
 
   const handleRemove = useCallback(
     (id: string) => {
       if (previewing) return
-      engine.remove(id)
+      if (!guardWrite(() => engine.remove(id))) return
       bumpVersion()
+      announce(announceText.removed)
     },
-    [engine, previewing, bumpVersion]
+    [engine, previewing, bumpVersion, guardWrite, announce]
   )
 
   const handleAction = useCallback(
@@ -126,6 +341,38 @@ export function App({
       setDialog({ kind: "edit", fact })
     },
     [previewing]
+  )
+
+  const announceAdded = useCallback(
+    (id: string) => {
+      const list = listOf(id)
+      if (list !== undefined) announce(announceText.added(list))
+    },
+    [listOf, announce]
+  )
+
+  const announceFight = useCallback(
+    (id: string, result: FightResult) => {
+      const list = listOf(id)
+      if (list === undefined) return
+      announce(
+        result === "correct"
+          ? announceText.fightRight(list)
+          : result === "incorrect"
+            ? announceText.fightWrong(list)
+            : announceText.diedFirst(list)
+      )
+    },
+    [listOf, announce]
+  )
+
+  const announceChallenge = useCallback(
+    (id: string, result: ChallengeResult) => {
+      const list = listOf(id)
+      if (list === undefined) return
+      announce(result.ok ? announceText.resurrected(list) : announceText.staysDead(list))
+    },
+    [listOf, announce]
   )
 
   // Triage is a read, so it runs at `now`, preview included. version is a
@@ -197,77 +444,129 @@ export function App({
           onBackToToday={() => setPreviewOffsetMs(0)}
         />
       )}
-      <main className="sd-app">
+      <header className="sd-header">
         <h1>Study Dungeon</h1>
         <p>Facts you are forgetting come back as monsters.</p>
-
-        <TimeMachine
-          today={realNow}
-          offsetMs={previewOffsetMs}
-          onChange={setPreviewOffsetMs}
-          formatDate={formatDate}
-          theme={studyDungeonShellTheme}
-          wording={studyDungeonWording}
-          frames={frameScheduler}
-          clock={frameClock}
-          prefersReducedMotion={prefersReducedMotion}
-        />
-
-        <div className="sd-toolbar">
-          <button
-            type="button"
-            className="sd-button sd-button-primary"
-            aria-disabled={previewing ? true : undefined}
-            title={previewing ? previewBlockedText : undefined}
-            onClick={() => {
-              if (previewing) return
-              setDialog({ kind: "add" })
-            }}
-          >
-            {factFormText.addEntry}
-          </button>
+      </header>
+      <main ref={mainRef} className="sd-app" tabIndex={-1}>
+        {/* Always on the page, so screen readers hear every change. */}
+        <div
+          id={ANNOUNCER_ID}
+          className="sd-announcer"
+          aria-live="polite"
+          aria-atomic="true"
+          data-problem={announcement?.problem === true ? "" : undefined}
+        >
+          {announcement !== null && <p key={announcement.id}>{announcement.text}</p>}
         </div>
 
-        {sessionDone !== null && (
-          <section className="sd-session-done" aria-label={sessionText.done}>
-            <div role="status">
-              <p className="sd-session-done-title">{sessionText.done}</p>
-              {sessionDone.map((skip, index) => (
-                <p key={index} className="sd-session-skipped">
-                  {skip.reason === "died" ? sessionText.skippedDied(skip.question) : sessionText.skippedRemoved(skip.question)}
-                </p>
-              ))}
+        {firstRun ? (
+          <FirstRun onLoadSample={loadSample} onStartEmpty={startEmpty} />
+        ) : (
+          <>
+            <HeroSection
+              engine={engine}
+              now={now}
+              realNow={realNow}
+              version={version}
+              timeZone={timeZone}
+              onFight={fightWeakest}
+              fightDisabledReason={previewing ? previewBlockedText : undefined}
+            />
+
+            <div className="sd-layout">
+              <div className="sd-layout-main">
+                <div className="sd-toolbar">
+                  <button
+                    type="button"
+                    className="sd-button sd-button-primary"
+                    aria-disabled={previewing ? true : undefined}
+                    title={previewing ? previewBlockedText : undefined}
+                    onClick={() => {
+                      if (previewing) return
+                      setDialog({ kind: "add" })
+                    }}
+                  >
+                    {factFormText.addEntry}
+                  </button>
+                </div>
+
+                {sessionDone !== null && (
+                  <section className="sd-session-done" aria-label={sessionText.done}>
+                    <div role="status">
+                      <p className="sd-session-done-title">{sessionText.done}</p>
+                      {sessionDone.map((skip, index) => (
+                        <p key={index} className="sd-session-skipped">
+                          {skip.reason === "died"
+                            ? sessionText.skippedDied(skip.question)
+                            : sessionText.skippedRemoved(skip.question)}
+                        </p>
+                      ))}
+                    </div>
+                    <button type="button" className="sd-button sd-button-quiet" onClick={() => setSessionDone(null)}>
+                      {sessionText.dismiss}
+                    </button>
+                  </section>
+                )}
+
+                <ThreeLists
+                  engine={engine}
+                  now={now}
+                  version={version}
+                  onAction={handleAction}
+                  onEdit={handleEdit}
+                  onRemove={handleRemove}
+                  onAutopsy={openAutopsy}
+                  writesDisabledReason={previewing ? previewBlockedText : undefined}
+                />
+              </div>
+
+              <div className="sd-layout-side" role="group" aria-label={landmarkText.tools}>
+                <TimeMachine
+                  today={realNow}
+                  offsetMs={previewOffsetMs}
+                  onChange={setPreviewOffsetMs}
+                  formatDate={formatDate}
+                  theme={studyDungeonShellTheme}
+                  wording={studyDungeonWording}
+                  frames={frameScheduler}
+                  clock={frameClock}
+                  prefersReducedMotion={prefersReducedMotion}
+                />
+
+                <TriagePanel<FactPayload, FactPolicyData>
+                  theme={studyDungeonShellTheme}
+                  wording={studyDungeonWording}
+                  triage={runTriage}
+                  now={now}
+                  maxBudgetMinutes={TRIAGE_MAX_BUDGET_MINUTES}
+                  renderText={(item) => item.payload.question}
+                  onStartSession={startSession}
+                  startDisabled={previewing}
+                  startDisabledReason={previewing ? previewBlockedText : undefined}
+                />
+              </div>
             </div>
-            <button type="button" className="sd-button sd-button-quiet" onClick={() => setSessionDone(null)}>
-              {sessionText.dismiss}
-            </button>
-          </section>
+
+            <ResetData onConfirm={reset} disabledReason={previewing ? previewBlockedText : undefined}>
+              <SoundToggle enabled={soundOn} onChange={changeSound} />
+            </ResetData>
+          </>
         )}
 
-        <TriagePanel<FactPayload, FactPolicyData>
-          theme={studyDungeonShellTheme}
-          wording={studyDungeonWording}
-          triage={runTriage}
-          now={now}
-          maxBudgetMinutes={TRIAGE_MAX_BUDGET_MINUTES}
-          renderText={(item) => item.payload.question}
-          onStartSession={startSession}
-          startDisabled={previewing}
-          startDisabledReason={previewing ? previewBlockedText : undefined}
-        />
-
-        <ThreeLists
-          engine={engine}
-          now={now}
-          version={version}
-          onAction={handleAction}
-          onEdit={handleEdit}
-          onRemove={handleRemove}
-          writesDisabledReason={previewing ? previewBlockedText : undefined}
-        />
+        {touring && !firstRun && <Tour onDone={endTour} />}
 
         {dialog?.kind === "add" && (
-          <AddEditFactDialog engine={engine} now={writeNow} onSaved={bumpVersion} onClose={closeDialog} />
+          <AddEditFactDialog
+            engine={engine}
+            now={writeNow}
+            onSaved={(id) => {
+              bumpVersion()
+              announceAdded(id)
+            }}
+            onClose={closeDialog}
+            onWriteError={handleWriteError}
+          />
         )}
         {dialog?.kind === "edit" && (
           <AddEditFactDialog
@@ -275,8 +574,12 @@ export function App({
             engine={engine}
             now={writeNow}
             fact={dialog.fact}
-            onSaved={bumpVersion}
+            onSaved={() => {
+              bumpVersion()
+              announce(announceText.saved)
+            }}
             onClose={closeDialog}
+            onWriteError={handleWriteError}
           />
         )}
         {dialog?.kind === "fight" && (
@@ -292,6 +595,22 @@ export function App({
                 ? undefined
                 : { position: session.position + 1, total: session.entries.length, onStop: stopSession }
             }
+            sound={sound}
+            onResult={(result) => announceFight(dialog.fact.id, result)}
+            onWriteError={handleWriteError}
+          />
+        )}
+        {dialog?.kind === "autopsy" && (
+          <FactAutopsy
+            key={dialog.factId}
+            engine={engine}
+            factId={dialog.factId}
+            now={now}
+            formatDate={formatDate}
+            timeZone={timeZone}
+            onClose={closeDialog}
+            onChallenge={challengeFromAutopsy}
+            challengeDisabledReason={previewing ? previewBlockedText : undefined}
           />
         )}
         {dialog?.kind === "challenge" && (
@@ -302,6 +621,9 @@ export function App({
             fact={dialog.fact}
             onWrite={bumpVersion}
             onClose={closeDialog}
+            sound={sound}
+            onResult={(result) => announceChallenge(dialog.fact.id, result)}
+            onWriteError={handleWriteError}
           />
         )}
       </main>

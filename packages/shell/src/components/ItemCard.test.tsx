@@ -180,6 +180,46 @@ describe("ItemCard", () => {
     expect(html).not.toContain("Reason-Text");
   });
 
+  it("shows an autopsy button labelled wording.actions.autopsy only when onAutopsy is given", () => {
+    expect(buttons(render("dead", { onAutopsy: noop }))).toEqual(["Autopsy-Word"]);
+    expect(buttons(render("dead", { onAutopsy: noop, wording: otherWording }))).toEqual(["Inquest"]);
+    expect(buttons(render("dead", { onAction: noop }))).not.toContain("Autopsy-Word");
+  });
+
+  it("orders the buttons action, autopsy, edit, remove", () => {
+    expect(buttons(render("dead", { onAction: noop, onAutopsy: noop, onEdit: noop, onRemove: noop }))).toEqual([
+      "Revive-Word",
+      "Autopsy-Word",
+      "Edit-Word",
+      "Remove-Word",
+    ]);
+  });
+
+  it("disabled leaves the read-only autopsy button enabled while every write button is disabled", () => {
+    const html = render("dead", {
+      onAction: noop,
+      onAutopsy: noop,
+      onEdit: noop,
+      onRemove: noop,
+      disabled: true,
+      disabledReason: "Reason-Text",
+    });
+    const tags = [...html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)].map((m) => ({
+      label: textOf(m[1]!),
+      tag: m[0].slice(0, m[0].indexOf(">") + 1),
+    }));
+    expect(tags.map((t) => t.label)).toEqual(["Revive-Word", "Autopsy-Word", "Edit-Word", "Remove-Word"]);
+    for (const { label, tag } of tags) {
+      if (label === "Autopsy-Word") {
+        expect(tag).not.toContain("aria-disabled");
+        expect(tag).not.toContain("title=");
+      } else {
+        expect(tag, label).toContain('aria-disabled="true"');
+        expect(tag, label).toContain('title="Reason-Text"');
+      }
+    }
+  });
+
   it("sets exactly the --shell-* variables from the theme prop on its root", () => {
     expect(rootStyle(render("alive"))).toEqual(FIXTURE_VARIABLES);
     const other = rootStyle(render("dead", { theme: otherTheme }));

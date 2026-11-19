@@ -1,4 +1,6 @@
 export type {
+  AutopsyChartSummary,
+  AutopsyWording,
   ItemState,
   PreviewWording,
   StateIcons,
@@ -36,3 +38,6 @@ export type { PreviewBannerProps } from "./components/PreviewBanner";
 
 export { TriagePanel, TRIAGE_BUDGETS, daysUntil, parseBudget } from "./components/TriagePanel";
 export type { TriagePanelProps } from "./components/TriagePanel";
+
+export { AutopsyDialog, AUTOPSY_CHART_HEIGHT, AUTOPSY_CHART_WIDTH } from "./components/AutopsyDialog";
+export type { AutopsyChartPoint, AutopsyDialogProps, AutopsyTendMark } from "./components/AutopsyDialog";

@@ -3,7 +3,7 @@
 // List names come from .kiro/steering/theme-and-wording.md; dialog text comes
 // from .kiro/specs/study-dungeon (Requirements 5, 6 and 8, design.md).
 
-import type { WordingProps } from "@decay-engine/shell"
+import type { AutopsyChartSummary, WordingProps } from "@decay-engine/shell"
 import type { Knowledge } from "./policy"
 
 /** "1 day", "2 days". */
@@ -14,7 +14,7 @@ const twoDecimals = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 })
 
 export const studyDungeonWording = {
   lists: { alive: "Crypt", weak: "Dungeon", dead: "Graveyard" },
-  actions: { tend: "Fight", resurrect: "Challenge", edit: "Edit", remove: "Remove" },
+  actions: { tend: "Fight", resurrect: "Challenge", edit: "Edit", remove: "Remove", autopsy: "Autopsy" },
   states: { alive: "sleeping", weak: "monster", dead: "dead" },
   // The time machine (task 8.2, Requirement 11).
   timeMachine: {
@@ -49,7 +49,32 @@ export const studyDungeonWording = {
     diesNever: "not dying within 10 years",
     startSession: "Start the session",
   },
+  // The autopsy of a grave (task 10.3, Requirement 10).
+  autopsy: {
+    title: "Autopsy",
+    epitaph: "Why it mattered",
+    chartTitle: "Health over time",
+    chartLabel: (s: AutopsyChartSummary) =>
+      `Health from ${s.from} to ${s.to}: it started at ${Math.floor(s.startHealth)} and fell to ` +
+      `${Math.floor(s.endHealth)}. ${capitalise(countText(s.right, "right answer", "right answers"))}, ` +
+      `${countText(s.wrong, "wrong answer", "wrong answers")}.`,
+    weakBand: (threshold: number) => `Weak below ${threshold}`,
+    deadBand: (threshold: number) => `Dead below ${threshold}`,
+    markRight: "Knew it",
+    markWrong: "Forgot",
+    cause: "Cause of death",
+    close: "Close",
+  },
 } satisfies WordingProps
+
+/** "no right answers", "1 right answer", "3 right answers". */
+function countText(n: number, one: string, many: string): string {
+  return n === 0 ? `no ${many}` : `${n} ${n === 1 ? one : many}`
+}
+
+function capitalise(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
 
 /** Why a write button is disabled while previewing (Requirement 11.3). */
 export const previewBlockedText = "Nothing is saved in a future preview. Go back to today first."
@@ -134,6 +159,100 @@ export const fightText = {
 export function formatHalfLifeDays(days: number): string {
   return new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }).format(days)
 }
+
+/** The first-run welcome screen (task 11.3, Requirement 13.1-13.4). */
+export const firstRunText = {
+  title: "Welcome to the Study Dungeon",
+  intro: "Facts you are forgetting come back as monsters. Fight them to keep them alive.",
+  choose: "Try it with twelve sample facts, or start with an empty Crypt.",
+  loadSample: "Load sample data",
+  startEmpty: "Start empty",
+} as const
+
+/** Shown in an empty list when there are no facts at all (after "Start empty"). */
+export const emptyCryptPrompt = "Your Crypt has no facts yet. Use Add fact to put in your first one."
+
+/** "Reset all data" (task 11.4, Requirement 13.6). */
+export const resetText = {
+  button: "Reset all data",
+  confirm: "Reset all data? This cannot be undone.",
+  cancel: "Cancel",
+  confirmButton: "Reset",
+} as const
+
+/** The hero section (task 12.1, Requirement 12). */
+export const heroText = {
+  eyebrow: "Your memory today",
+  weakening: (n: number) => (n === 1 ? "1 fact is weakening" : `${n} facts are weakening`),
+  fightWeakest: "Fight the weakest",
+  allQuiet: "All quiet in the Crypt. Every fact is sleeping soundly.",
+  onlyDead: "Nothing is weakening. Your graves are waiting in the Graveyard.",
+  noFacts: "No facts yet. Use Add fact to put your first one in the Crypt.",
+  stats: "Your stats",
+  souls: (n: number) => (n === 1 ? "soul banished" : "souls banished"),
+  streak: (n: number) => (n === 1 ? "day in a row" : "days in a row"),
+} as const
+
+/**
+ * What the App's polite live region says after a change (task 16.4). The
+ * list is the one the fact is in afterwards, read from the engine
+ * (studyDungeonWording.lists). Storage problems use storageProblemText.
+ */
+export const announceText = {
+  added: (list: string) => `Fact added to the ${list}.`,
+  saved: "Fact saved.",
+  removed: "Fact removed.",
+  sampleLoaded: (count: number) => `${count} sample facts loaded.`,
+  fightRight: (list: string) => `You knew it. The fact is in the ${list}.`,
+  fightWrong: (list: string) => `You forgot it. The fact is in the ${list}.`,
+  diedFirst: (list: string) => `The fact died before you answered. It is in the ${list}.`,
+  resurrected: (list: string) => `Resurrected. The fact is back in the ${list}.`,
+  staysDead: (list: string) => `You got it wrong. The fact stays in the ${list}.`,
+} as const
+
+/** Landmark and region names (task 16.4). */
+export const landmarkText = {
+  /** The nav around the Crypt, Dungeon and Graveyard tabs. */
+  lists: "Crypt, Dungeon and Graveyard",
+  /** The side column: the time machine and Triage. */
+  tools: "Time machine and Triage",
+} as const
+
+/** The sound setting (task 20.1, Requirement 18.1). */
+export const soundText = {
+  toggle: "Sound effects",
+} as const
+
+/** One step of the first-run tour. */
+export type TourStepText = { title: string; body: string }
+
+/** The first-run tour (task 11.5, Requirement 13.5): four short steps. */
+export const tourText = {
+  label: "Tour",
+  progress: (step: number, total: number) => `Step ${step} of ${total}`,
+  steps: {
+    crypt: {
+      title: "The Crypt",
+      body: "Facts you know sleep here, each with a candle. The card says when it wakes up.",
+    },
+    dungeon: {
+      title: "The Dungeon",
+      body: "Facts you are forgetting turn into monsters. The weakest is at the top.",
+    },
+    fight: {
+      title: "Fight",
+      body: "Show the answer, then say if you knew it. A right answer puts the monster back to sleep.",
+    },
+    timeMachine: {
+      title: "The time machine",
+      body: "Slide ahead to see what dies next. Nothing is saved while you look.",
+    },
+  } satisfies Record<string, TourStepText>,
+  back: "Back",
+  next: "Next",
+  done: "Done",
+  skip: "Skip tour",
+} as const
 
 /** The challenge of a dead fact (Requirement 8.6-8.9, task 7.2). */
 export const challengeText = {

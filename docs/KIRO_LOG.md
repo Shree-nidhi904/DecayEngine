@@ -660,3 +660,136 @@ For each session, record:
 - **Verification (in WSL)**: app typecheck clean, app 221/221 (239/239 with round 5).
 - **Status**: tasks 11.1, 11.2 and 16.3 done and ticked after the round 5 run; 12.1's logic is ready for Kiro's HeroSection. For Kiro: the first-run screen (11.3) calls `loadSampleData(engine, Date.now())`, and the hero (12.1) uses `countSoulsBanished(allHistory(engine, now))` and `currentStreak(...)`.
 
+---
+
+## Session 17: Study Dungeon autopsy, first run, reset and hero, tasks 10.3, 11.3, 11.4, 12.1 and 12.2 (Nov 19, 2026)
+
+- **Goal**: the autopsy dialog for graves, the first-run screen, "Reset all data", and the hero section with its stat cards. Task 11.5 (the tour) is not in this round. Kiro writes files only; I run the commands in WSL.
+- **Kiro feature used**: spec tasks and steering.
+- **What Kiro produced**:
+  - **Task 10.3, `AutopsyDialog` (shell):**
+    - A native modal `<dialog>`: the dead icon and title, the epitaph under its label, a health-over-time chart, then the cause sentences as paragraphs, in order. Escape and Close call `onClose`.
+    - The chart is inline SVG. It draws the health line, shades the bands below the weak and dead thresholds it is given, and puts a mark per review in a row under the plot: a circle when right, a cross when wrong. A legend names both shapes and both bands in words. Its `aria-label` comes from `wording.autopsy.chartLabel` (for example "Health from 1 Oct 2026 to 7 Oct 2026: it started at 100 and fell to 9. No right answers, no wrong answers.").
+    - An optional resurrect button labelled `wording.actions.resurrect`, with `resurrectDisabled` and a reason, like the Triage start button.
+    - `WordingProps` gained `actions.autopsy` and an `autopsy` section; `ItemCard` gained `onAutopsy`. That button is read-only, so `disabled` leaves it enabled. Buttons now come in the order action, autopsy, edit, remove.
+  - **Task 10.3, chart points (`src/autopsy-chart.ts`):** `replayStretches` replays the whole history from creation: the first half-life from `studyDungeonPolicy.init`, each review through `applyEvent`, and a resurrection at health 100 with the half-life kept. `buildAutopsyChart` then samples `healthAt` over the current life only (48 steps by default), plus the health just before and just after each review in that life.
+  - **Task 10.3, App:** graves get an Autopsy button that works while previewing, including for a fact dead only on the previewed day. `FactAutopsy` reads `engine.autopsy(id, now)`, passes the dead fact's `policyData.halfLifeDays` as `halfLifeAtDeath`, and builds the chart. Its Challenge closes the autopsy and opens the challenge; it is disabled while previewing.
+  - **Task 11.3, first run (`src/first-run.ts`, `FirstRun.tsx`):** shown when `study-dungeon:started` is missing and there are no facts. "Load sample data" calls `loadSampleData(engine, clock())` and bumps the version; "Start empty" shows the main screen, where the empty lists ask for the first fact. Both set the flag. Facts with a missing flag set the flag and skip first run. The App takes the storage as a prop (default `window.localStorage`).
+  - **Task 11.4, `ResetData`:** "Reset all data?" confirmation in the words of Requirement 13.6. Confirming removes exactly `decay-engine:study-dungeon` and `study-dungeon:started` (`RESET_KEYS`), then calls an injected `reload`. Disabled while previewing.
+  - **Tasks 12.1 and 12.2, `HeroSection`:** "Your memory today", then "N facts are weakening" with "Fight the weakest" (the lowest-health weak fact; disabled while previewing), or the quiet-crypt message, or a line pointing to Add fact. Stat cards: the shell's `Counters` for the three counts, plus souls banished and the streak from `stats.ts`, each with an icon, a number in IBM Plex Mono and a label. Counts use `now`; souls and the streak use `realNow`.
+  - **Wording:** every new label is in `wording.ts` (`autopsy`, `firstRunText`, `resetText`, `heroText`, `emptyCryptPrompt`).
+  - **Tests, not yet run:**
+    - **Chart points:** a fact never reviewed (halfway 100 / √10 ≈ 31.62), a right and a wrong answer (70.71 before each, 100 and 45 after; halfway ≈ 35.68 on half-life 2), and a resurrected fact whose second life starts from half-life 10, not the 5 of "shaky" (halfway 31.62 instead of 10.0), checked while dead only on a previewed day.
+    - **Shell `AutopsyDialog`:** epitaph, sentences in order, line coordinates and mark positions worked out from the plot size, marks told apart by shape, bands following the thresholds, the `aria-label`, no words of its own, and the resurrect button enabled, disabled and clicked.
+    - **App:** first run with each button and the 4/4/4 sample; existing facts with no flag; reset confirm, cancel and preview; the hero's messages, counts, souls 3 and streak 3 for a worked history, "Fight the weakest" opening the weakest fact, and counts changing at +30 days while souls and streak stay; the autopsy's epitaph, chart label, sentences and Challenge, today and in preview.
+  - **Changed existing tests (requirement changes, not loosened checks):** the App preview test now expects `Graveyard:Autopsy` among the grave's buttons and checks it is not disabled instead of clicking it; `theme.test.ts` expects `autopsy: "Autopsy"` in the actions.
+  - **Boundary test:** "forgot", "souls", "banished" and "weakening" added to the forbidden words; `AutopsyDialog.tsx` added to the files it must find.
+  - **design.md:** `WordingProps`, `AutopsyChartSummary`, `ItemCardProps` and `AutopsyDialogProps` updated, plus the hero, autopsy, first run and reset sections.
+  - **Packages:** none added; tsconfig `types` fields unchanged.
+- **What I changed by hand**: no code. Kiro's six choices are kept: `onResurrect` instead of `onChallenge` in the shell ("Challenge" is a Study Dungeon word), first run only with no flag and no facts, the App taking storage, reload and time zone, an extra hero message when every fact is dead, review marks in a row under the chart with a legend, and the extra empty-list line after "Start empty".
+- **What went wrong or surprised me**:
+  - **Gaps Kiro filled, to confirm:**
+    - The shell prop is `onResurrect`, not `onChallenge`: "Challenge" is a Study Dungeon word, and the boundary test forbids it in the shell.
+    - First run needs both a missing flag and no facts, as asked; the flag is set in an effect after mount, so showing first run writes nothing.
+    - A hero message for "only dead facts" ("Nothing is weakening. Your graves are waiting in the Graveyard."), which the spec does not cover.
+    - Review marks sit in a row under the plot, with a dashed guide up to the line, rather than on the line.
+    - The empty-lists prompt is an extra line under "The X is empty.", shown only when there are no facts at all.
+  - **Kiro ran two shell commands in this round despite the no-commands rule:** an `echo` and a `true`. Both exited with -1 and changed nothing.
+- **Verification (in WSL)**, with `scripts/check.sh`: install OK, shell and app typecheck clean, engine 701/701, shell 103/103, app 309/309 (including the files written alongside), build OK. Everything passed on the first run.
+  - **Deliberate breaks:** 7 changes. Caught: a resurrection restarting the chart's half-life from the knowledge level (the trap this round's prompt warned about), a resurrected life starting at 45 instead of 100, first run shown over existing facts (14 tests failed), reset keeping the "started" flag.
+  - **Three got through, and none is a gap.** The streak reading the preview time survived only because the `useMemo` dependency list does not include `now`; the realistic form of that bug (adding `now` to the list too) fails the test. Souls reading the preview time makes no difference, because the history is the same whatever time is passed. A reset that also removes other keys could not run against the test's fake storage, which has no `key()`; the test does check that other apps' keys survive a reset.
+- **Credits used**: 74.74 (24 minutes 5 seconds), the most for one round so far.
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: tasks 10.3, 11.3, 11.4, 12.1 and 12.2 done and ticked. Next: round 7, the last build round.
+
+---
+
+## Alongside Session 17: storage errors, crash screen, animations, sound and the check script (Nov 19, 2026)
+
+- **Goal**: finish the self-contained parts of the last tasks outside Kiro, in new files only, while Kiro does round 6 (autopsy dialog, first run, reset, hero). Kiro wires them in during round 7.
+- **Kiro feature used**: none. Written by Claude Opus 5.5 at my request; no Kiro credits.
+- **What was produced**:
+  - **Storage problems** (`src/storage-errors.ts`, task 18.3):
+    - `classifyWriteError` turns a failed save into "full" (the browser's quota error, under each browser's name) or "unavailable", and returns null for anything else, so real bugs are rethrown, not hidden.
+    - `classifyLoadError` and `createEngineSafely` handle a snapshot that cannot be read at startup. Today that throws while `engine-instance.ts` is imported and leaves a blank page.
+    - The "corrupt" list holds only the three codes the engine's snapshot parser actually throws. A first draft listed nine; checking `serialization.ts` cut it down, so a bug elsewhere is never reported as corrupt data.
+    - `storageProblemText` gives one plain sentence per problem, starting with "Storage full." as the design asks.
+    - 13 tests through the real engine and `LocalStorageAdapter` over a fake localStorage. A quota error during `addItem` is classified "full", and storage and memory are unchanged afterwards. Bad JSON, an unknown schema version and a damaged item are all "corrupt"; missing storage is "unavailable"; other errors are rethrown.
+  - **Crash screen** (`src/components/ErrorBoundary.tsx`, `src/styles/problem.css`, task 18.3): `ErrorBoundary` catches render errors, logs them and shows `ProblemScreen`, which offers Reload and, when the app passes one, Reset all data with a confirmation step. Reload and logging are injected. 5 tests (jsdom), including keyboard-only use.
+  - **Animations** (`src/styles/animations.css`, tasks 17.1 and 17.2): the candle's flame flickers; a monster shakes once when its card is hovered or focused (so keyboard users see it too, and a full Dungeon is not all moving). The tombstone stays still. All of it is off under reduced motion.
+    - 5 tests. The selectors are read from the CSS and run against the real icons from `icons.tsx`, so renaming a `data-icon` attribute breaks a test instead of silently stopping the animation.
+  - **Sound** (`src/sound.ts`, task 20): a slash for a right answer, a low growl for a wrong one and a rising C major chime for a resurrection, generated with Web Audio in code: no audio files, nothing to license (Requirement 18.2). Off by default and saved under `study-dungeon:sound`. `play` never throws, does nothing when sound is off, and gives up quietly when the browser has no Web Audio. 14 tests with a fake audio context that records every tone's wave, pitch, timing and fade.
+  - **`scripts/check.sh`**: install, both typechecks, the engine, shell and app tests, and the build, with a one-line result per step. It picks the Linux Node from nvm (the Session 11 problem). Its first run caught a real failure in Kiro's round 6, then in progress: `actions.autopsy` had been added to the wording but not to `theme.test.ts`.
+- **What I changed by hand**: no code.
+- **What went wrong or surprised me**:
+  - **Reading a CSS file in a jsdom test** took three tries. Vitest blanks CSS imports, even `?raw`, and jsdom replaces the global `URL`, so `fileURLToPath(new URL(...))` fails. `import.meta.dirname` works.
+  - **Deliberate breaks:** 15 changes across the four pieces. 14 were caught, among them a quota error only recognised under Chrome's name, a bug reported as corrupt data, a reset without confirmation, a monster shaking forever, animation left on under reduced motion, no shake for keyboard users, sound playing while off and sound on by default. The one not caught makes no difference: without `autoFocus`, focus still lands on Cancel, because React reuses the "Reset all data" button for it. `autoFocus` stays as a safeguard.
+- **Verification (in WSL)**: the four new test files pass (37 tests); app typecheck clean.
+- **Status**: code for 17.1, 17.2, 18.3 and 20 written; the tasks get ticked after Kiro wires them in (round 7) and the run passes. 17.3 (the tombstone) was already drawn by Kiro in `icons.tsx`.
+
+---
+
+## Session 18: Study Dungeon round 7, the last build round: tasks 11.5, 16.1, 16.2, 16.4, 17.1-17.3, 18.1-18.3 and 20.1-20.3 (Nov 19, 2026)
+
+- **Goal**: wire in the pieces written alongside Session 17 (storage errors, crash screen, animations, sound) without editing them, and finish accessibility, the first-run tour, the responsive layout and sound. Kiro writes files only; I run the commands in WSL. Task 19 (final checkpoint) is done outside Kiro afterwards.
+- **Kiro feature used**: spec tasks and steering.
+- **What Kiro produced**:
+  - **Task 18.3, error handling:**
+    - `engine-instance.ts` now exports `createEngine()` instead of building the engine at import, which is what left a blank page on a damaged snapshot.
+    - New `Root.tsx`: builds the engine once through `createEngineSafely`. "Corrupt" shows `ProblemScreen` with `storageProblemText.corrupt`, Reload and Reset all data; "unavailable" shows its sentence and Reload only. The App sits inside `ErrorBoundary`, which also offers the reset. `main.tsx` renders `Root` with `window.localStorage` (or null when reading it throws).
+    - New `write-guard.ts` (`runWrite`, `reportWriteError`): a storage problem is reported, anything else is rethrown. The App uses it for remove, loading the sample data and setting the first-run flag. The add/edit, fight and challenge dialogs gained an optional `onWriteError` and hand their engine errors to the App. On a storage problem the App shows the sentence in its live region, closes the dialog and any Triage session, and keeps working.
+  - **Tasks 17.1-17.3, visuals:** App.tsx imports `animations.css`. The counters, the cards and the autopsy title already use the same `studyDungeonIcons`, so every candle, monster and tombstone carries its `data-icon`. No icon code changed.
+  - **Tasks 16.1, 16.2, 16.4, accessibility:**
+    - `useModalDialog` remembers the opener and focuses it again when the dialog closes. A dialog opened from inside another (Autopsy → Challenge, the next fight of a session) takes over the first one's opener. `ConfirmRemoveDialog` now uses the hook, and `FactAutopsy` uses `useReturnFocus` for the shell's dialog.
+    - Landmarks: `<header>` for the title, `<main>`, and a `<nav>` around the list tabs.
+    - One polite `aria-live` region at the top of `<main>`: "Fact added to the Crypt.", "Fact saved.", "Fact removed.", fight and challenge results with the list the fact ends up in (read from the engine), "12 sample facts loaded.", and storage problems. The dialogs gained an optional `onResult` for this.
+    - No button was icon-only, so no `aria-label` was needed; a test checks that every button has a name in words.
+  - **Task 11.5, tour:** `Tour.tsx`, four steps (the Crypt, the Dungeon, Fight, the time machine) right after either first-run button, unless `study-dungeon:tour-done` is set. It is a small non-modal panel. Each step outlines its target. Focus starts on Next, Escape skips, and finishing moves focus to `<main>`. `TOUR_DONE_FLAG` joined `RESET_KEYS`.
+  - **Tasks 18.1 and 18.2, layout:** new `layout.css`. Wide screens get two columns (lists, and a side column with the time machine and Triage). Below 640px everything stacks, the dialogs and the tour fit the screen, and the page padding drops to 0.75rem. 18.2 needs no loading state, because the engine is synchronous; this is recorded in tasks.md.
+  - **Tasks 20.1-20.3, sound:** `SoundToggle.tsx`, a "Sound effects" switch beside "Reset all data" (through a new `children` prop on `ResetData`). It is off by default and saved with `saveSoundEnabled`. The App makes one `createSoundPlayer` and passes it to the fight and the challenge. The App takes `createAudioContext` so tests can record tones.
+  - **Wording:** `announceText`, `landmarkText`, `soundText` and `tourText` in `wording.ts`.
+  - **Tests, not yet run:**
+    - `Root.test.tsx`: two kinds of damaged snapshot, read by the real `LocalStorageAdapter` from jsdom's localStorage, show the problem screen. Reset removes exactly the snapshot, the first-run flag and the tour flag, and keeps the sound setting and another app's key. Also: Reload, unavailable storage, a render crash and a constructor bug.
+    - `App.storage-errors.test.tsx`: a quota error during addItem, tend, remove, resurrect and Load sample data. Each shows the sentence, changes nothing and leaves the app working; then the same action works.
+    - `App.accessibility.test.tsx`: Escape and the focus return for all nine dialog openers, including Autopsy → Challenge; the live region after add, fight (right and wrong), challenge (won and lost) and remove; landmarks; button names; Tab reach; Enter and Space.
+    - `App.tour.test.tsx`: the four steps walked with Enter and Space alone, Back, Escape, "Skip tour" reached with Shift+Tab, shown once, and the reset keys.
+    - `App.sound.test.tsx` and `components/dialog-sound.test.tsx`: off by default, the choice saved as on or off, and right, wrong and revive played through one real player with a fake audio context. Nothing plays while sound is off, on Walk away, on a failed save, or for a fact that died first.
+    - `layout-css.test.ts`: the new rules, plus a check across every app and shell stylesheet that no fixed width or column minimum is wider than a 320px screen's 296px content box.
+    - `motion.test.ts`: the time machine's Play is the only `requestAnimationFrame` in the app and shell sources; there is no `Element.animate`, no smooth scrolling, and no interval timer apart from the settle tick.
+    - `App.visuals.test.tsx`: the icons in the counters, the lists and the autopsy.
+    - `write-guard.test.ts`.
+  - **Test helpers:** `test/round7-helpers.ts` (a failing adapter, the live region, a fake audio context). `app-kit.tsx` gained optional `adapter` and `createAudioContext` options. The dialog polyfill now turns Escape into the browser's `cancel` event, so tests press Escape instead of faking `cancel`.
+  - **design.md:** the file list, the hierarchy as built, the round 7 interfaces, the tour, the reset keys, sound, storage errors, accessibility and the responsive layout.
+  - **Packages:** none added; the tsconfig `types` fields are unchanged.
+- **What I changed by hand**: no code. Kiro's choices are kept: the tour only right after first run, reset keeping the sound setting, and two columns on wide screens. One was changed after the run (see the next entry): on a storage problem, the add/edit form now stays open with what was typed instead of closing.
+- **What went wrong or surprised me**:
+  - **Choices Kiro made, to confirm:**
+    - The tour starts only right after first run, not for existing users who never saw it.
+    - Reset keeps the sound setting, since it is a preference for this browser, not data.
+    - On a storage problem, the add/edit form closes, and the typed text is lost.
+    - The layout now has two columns on wide screens, which moved the time machine and Triage after the lists in the Tab order.
+  - **Not covered:** a failing save during a settle tick (`engine.tick`) is still not caught. At mount it reaches the crash screen; in the minute interval it is uncaught. It is noted in design.md.
+  - **Unknown files:** without the shell, Kiro could not list folders. If any file other than `main.tsx` imported `engine` or `adapter` from `engine-instance.ts`, the typecheck will name it.
+  - **Kiro ran two shell commands in this round despite the no-commands rule:** an `echo` and a `true`, both by mistake. Both exited with -1 and changed nothing.
+- **Verification (in WSL)**, with `scripts/check.sh`: install OK, shell and app typecheck clean, engine 701/701, shell 103/103, app 398/398, build OK. Everything passed on the first run.
+  - **Wiring checked by reading:** the engine is built through `createEngineSafely` in `Root.tsx`, so a bad snapshot shows the problem screen; reset everywhere goes through `resetAllData` and `RESET_KEYS`, which now includes the tour flag; writes are classified or rethrown; one sound player, used by both dialogs.
+  - **Deliberate breaks:** 10 changes, all caught: reset keeping the tour flag, the tour shown every time or never marked done, Escape not skipping the tour, focus not returned to a dialog's opener, a wrong answer playing the slash, no chime on a resurrection, the lists' nav landmark removed, no reset offered for corrupt data, the wrong storage message. (The nav check first looked caught only because the change was a syntax error; done properly, the accessibility test fails.)
+- **Credits used**: 105.44 (31 minutes 54 seconds), the most for one round. Rounds 1-7 together: about 362 credits.
+- **Screenshot**: (add file names from `docs/screenshots/`)
+- **Status**: all round 7 tasks done and ticked. With the final checkpoint (next entry), Study Dungeon's spec is complete: 58 of 58.
+
+---
+
+## Alongside Session 18: two fixes and the final checkpoint, task 19 (Nov 19, 2026)
+
+- **Goal**: close the gaps round 7 left, then run task 19.
+- **Kiro feature used**: none. Done by Claude Opus 5.5 at my request; no Kiro credits.
+- **What was changed**:
+  - **A full storage during a settle tick** (the gap Kiro reported): before, at load it showed the crash screen instead of "Storage full", and in the minute interval the error went nowhere. `startTicking` and `useSettleTicks` now take an `onError`; the App classifies the error, announces a storage problem once (and again only after a tick has saved in between, so it does not repeat every minute), still moves `realNow` on, and rethrows anything else. Tests: two in `ticking.test.ts`, three in `App.storage-errors.test.tsx` (load on day 40 with a death to save: no crash, said once, the grave still shown; said once across failing ticks, again after a save worked; a real bug rethrown). `app-kit.tsx` gained `fireTick`.
+  - **The add/edit form on a storage problem**: it used to close and lose what was typed, and its message went to a live region behind a modal dialog, where the page is inert. The form now stays open with the text and shows the sentence inside it (`role="alert"`); pressing the button again works once there is room. Kiro's add test was updated to this behaviour and an edit test added.
+  - **design.md** updated for both.
+  - Removing any of the four fixes fails a test.
+- **Task 19, final checkpoint**: `scripts/check.sh`: install OK, typechecks clean, engine 701/701, shell 103/103, app 404/404 (1,208 tests in all), build OK. The dev server and the production preview were started and served the page and the built script.
+- **What I changed by hand**: no code.
+- **Status**: Study Dungeon's spec is complete: 58 of 58. Still to do outside the spec: a manual pass in a browser (keyboard only, a phone width, sound on), screenshots for this log, and deployment.
+

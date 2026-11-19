@@ -61,7 +61,13 @@ export const otherTheme: ThemeProps = {
 
 export const fixtureWording: WordingProps = {
   lists: { alive: "List-A", weak: "List-W", dead: "List-D" },
-  actions: { tend: "Tend-Word", resurrect: "Revive-Word", edit: "Edit-Word", remove: "Remove-Word" },
+  actions: {
+    tend: "Tend-Word",
+    resurrect: "Revive-Word",
+    edit: "Edit-Word",
+    remove: "Remove-Word",
+    autopsy: "Autopsy-Word",
+  },
   states: { alive: "State-A", weak: "State-W", dead: "State-D" },
   timeMachine: {
     title: "TM-Title",
@@ -90,11 +96,23 @@ export const fixtureWording: WordingProps = {
     diesNever: "TR-DiesNever",
     startSession: "TR-Start",
   },
+  autopsy: {
+    title: "AU-Title",
+    epitaph: "AU-Epitaph",
+    chartTitle: "AU-Chart",
+    chartLabel: (s) => `AU-Label[${s.from}|${s.to}|${s.startHealth}|${s.endHealth}|${s.right}|${s.wrong}]`,
+    weakBand: (threshold) => `AU-Weak[${threshold}]`,
+    deadBand: (threshold) => `AU-Dead[${threshold}]`,
+    markRight: "AU-Right",
+    markWrong: "AU-Wrong",
+    cause: "AU-Cause",
+    close: "AU-Close",
+  },
 };
 
 export const otherWording: WordingProps = {
   lists: { alive: "Lit", weak: "Dim", dead: "Dark" },
-  actions: { tend: "Call", resurrect: "Rekindle", edit: "Rewrite", remove: "Forget" },
+  actions: { tend: "Call", resurrect: "Rekindle", edit: "Rewrite", remove: "Forget", autopsy: "Inquest" },
   states: { alive: "glowing", weak: "flickering", dead: "out" },
   timeMachine: {
     title: "Look ahead",
@@ -122,6 +140,18 @@ export const otherWording: WordingProps = {
     diesIn: (days) => `gone in ${days}`,
     diesNever: "stays",
     startSession: "Go",
+  },
+  autopsy: {
+    title: "Inquest",
+    epitaph: "In memory",
+    chartTitle: "Brightness",
+    chartLabel: (s) => `From ${s.from} to ${s.to}`,
+    weakBand: (threshold) => `dim under ${threshold}`,
+    deadBand: (threshold) => `dark under ${threshold}`,
+    markRight: "Answered",
+    markWrong: "Missed",
+    cause: "Why it went out",
+    close: "Done",
   },
 };
 

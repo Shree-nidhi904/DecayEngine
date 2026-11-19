@@ -187,7 +187,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - When queue empty, show completion message
     - _Requirements: 9.5_
 
-- [ ] 10. Implement Autopsy Dialog (HAND-WRITTEN cause-of-death sentences)
+- [x] 10. Implement Autopsy Dialog (HAND-WRITTEN cause-of-death sentences)
   - [x] 10.1 Create autopsy-sentences module (WRITTEN BY THE DEVELOPER; originally planned as hand-written)
     - Create `src/autopsy-sentences.ts`
     - Implement `generateCauseSentences(report: AutopsyReport<ReviewEvent>, payload: FactPayload): string[]` function
@@ -212,7 +212,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Build reports through the real engine (`InMemoryAdapter`, fixed timestamps, `timeZone: "UTC"`), and cover a resurrected fact with and without `halfLifeAtDeath`. Do not edit `autopsy-sentences.ts`; if a test shows a bug, stop and report it
     - _Requirements: 10.5, 10.6_
   
-  - [ ] 10.3 Create AutopsyDialog component
+  - [x] 10.3 Create AutopsyDialog component
     - Create `packages/shell/src/components/AutopsyDialog.tsx` (shared layout: epitaph, chart, sentences). It receives the report, the epitaph, the chart points and the cause sentences as props; the app calls `engine.autopsy(id, now)` and `generateCauseSentences`
     - Accept the report props and onClose callback
     - Show epitaph (`payload.why`) if present at top
@@ -221,7 +221,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Style with graveyard theme (slate text, tombstone icon)
     - _Requirements: 10_
 
-- [ ] 11. Implement First Run and Reset
+- [x] 11. Implement First Run and Reset
   - [x] 11.1 Create sample data generator
     - Create `src/sample-data.ts`
     - Implement `loadSampleData(engine: DecayEngine)` function
@@ -240,7 +240,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Test all sample facts have valid payloads (questions, answers)
     - _Requirements: 13.3_
   
-  - [ ] 11.3 Create FirstRun component
+  - [x] 11.3 Create FirstRun component
     - Create `src/components/FirstRun.tsx`
     - Detect first run: the localStorage flag `study-dungeon:started` is missing (checking for zero items would show first run again forever after "Start empty"). Both buttons set the flag
     - Show "Load sample data" and "Start empty" buttons
@@ -249,19 +249,19 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Style as a welcome screen (pumpkin accent, centered layout)
     - _Requirements: 13.1, 13.2, 13.4_
   
-  - [ ] 11.4 Add data reset feature
+  - [x] 11.4 Add data reset feature
     - Add "Reset all data" button in app settings/menu
     - On click, show confirmation: "Reset all data? This cannot be undone."
     - On confirm, clear this app's storage key and the `study-dungeon:started` flag, then reload to show first run
     - _Requirements: 13.6_
 
-  - [ ] 11.5 Add the first-run tour
+  - [x] 11.5 Add the first-run tour
     - 3-4 short tooltips after first run: the Crypt, the Dungeon, Fight, the time machine
     - Skippable, keyboard accessible, shown once (flag in localStorage)
     - _Requirements: 13.5_
 
-- [ ] 12. Implement Hero Section and Stats
-  - [ ] 12.1 Create HeroSection component
+- [x] 12. Implement Hero Section and Stats
+  - [x] 12.1 Create HeroSection component
     - Create `src/components/HeroSection.tsx`
     - Show eyebrow text: "Your memory today"
     - If weak facts exist: "N facts are weakening" + primary button "Fight the weakest" → opens FightDialog with weakest fact
@@ -272,7 +272,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Style with hero layout (centered, large text, Pirata One font for counts)
     - _Requirements: 12_
   
-  - [ ] 12.2 Style stat cards
+  - [x] 12.2 Style stat cards
     - Each card shows icon + number + label
     - Alive: candle icon, ecto accent
     - Weak: monster icon, pumpkin accent
@@ -304,15 +304,15 @@ The implementation follows the authorship rules: the policy functions (init, hea
   - Import Google Fonts in `index.html`: Pirata One, Spectral, IBM Plex Mono
   - _Requirements: 15.1_
 
-- [ ] 16. Implement accessibility features
-  - [ ] 16.1 Add keyboard navigation
+- [x] 16. Implement accessibility features
+  - [x] 16.1 Add keyboard navigation
     - Ensure all interactive elements reachable via Tab
     - Ensure Enter/Space activates buttons
     - Ensure Escape dismisses dialogs
     - Test keyboard-only navigation through entire app
     - _Requirements: 15.4_
   
-  - [ ] 16.2 Add prefers-reduced-motion support
+  - [x] 16.2 Add prefers-reduced-motion support
     - Query `prefers-reduced-motion` media feature
     - Disable all animations (candle flicker, monster shake) when enabled
     - Use static icons instead of animated ones
@@ -324,53 +324,54 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Fix any failing combinations
     - _Requirements: 15.3_
   
-  - [ ] 16.4 Add ARIA labels and semantic HTML
+  - [x] 16.4 Add ARIA labels and semantic HTML
     - Use `<button>`, `<dialog>`, `<nav>`, `<main>` semantic elements
     - Add ARIA labels for icon-only buttons (e.g., `aria-label="Remove fact"`)
     - Add live region announcements for state changes (e.g., "Fact added to Crypt")
     - _Requirements: 15.4_
 
-- [ ] 17. Add CSS-only visual elements
-  - [ ] 17.1 Create candle flame animation
+- [x] 17. Add CSS-only visual elements
+  - [x] 17.1 Create candle flame animation
     - Create `src/styles/animations.css`
     - Define `@keyframes flicker` for candle flame
     - Apply to alive fact icon
     - Respect `prefers-reduced-motion` (static when enabled)
     - _Requirements: 15.5_
   
-  - [ ] 17.2 Create monster shake effect
+  - [x] 17.2 Create monster shake effect
     - Add `@keyframes shake` for monster icon on hover
     - Apply to weak fact icon
     - Respect `prefers-reduced-motion`
     - _Requirements: 15.5_
   
-  - [ ] 17.3 Create tombstone SVG
+  - [x] 17.3 Create tombstone SVG
     - Design inline SVG for tombstone icon
     - Style via CSS (stone fill, bone outline)
     - Use in Graveyard list and dead item cards
     - _Requirements: 15.5_
 
-- [ ] 18. Polish and responsive layout
-  - [ ] 18.1 Make layout responsive
+- [x] 18. Polish and responsive layout
+  - [x] 18.1 Make layout responsive
     - Add mobile breakpoints (< 640px)
     - Stack hero and lists vertically on mobile
     - Adjust dialog widths for mobile
     - Test on various screen sizes
     - _Requirements: 15_
   
-  - [ ] 18.2 Add loading states
+  - [x] 18.2 Add loading states
     - Show skeleton loaders while engine loads from storage
     - (No async operations: every engine call is synchronous)
     - Style with bone-dim color
+    - As built: no loading state. The engine loads its snapshot synchronously when it is built (inside `Root`, before the first render), and every other engine call is synchronous too, so there is never anything to wait for. A skeleton would only flash for no reason; none is added. A snapshot that cannot be loaded shows the problem screen instead (task 18.3)
     - _Requirements: general polish_
   
-  - [ ] 18.3 Add error boundaries
+  - [x] 18.3 Add error boundaries
     - Wrap app in React error boundary
     - Show friendly error message on crash
     - Log errors to console
     - _Requirements: general robustness_
 
-- [ ] 19. Final checkpoint - Ensure all tests pass
+- [x] 19. Final checkpoint - Ensure all tests pass
   - Run `pnpm test` in apps/study-dungeon
   - Verify all policy tests pass
   - Verify sample data loads correctly
@@ -378,19 +379,20 @@ The implementation follows the authorship rules: the policy functions (init, hea
   - Run `pnpm dev` and manually test all features
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. Add sound effects (Could priority: last task, cut first if time is short)
-  - [ ] 20.1 Create sound toggle
+- [x] 20. Add sound effects (Could priority: last task, cut first if time is short)
+  - [x] 20.1 Create sound toggle
     - Add sound toggle in app settings, default to off
     - Store preference in localStorage
     - _Requirements: 18.1_
   
-  - [ ] 20.2 Add sound effects
+  - [x] 20.2 Add sound effects
     - Find CC0-licensed audio: sword slash (correct), monster growl (wrong), resurrection chime
     - Play sounds on tend/resurrect actions when enabled
     - Preload audio files for instant playback
+    - As built: no audio files. `src/sound.ts` generates the three sounds with Web Audio (original, nothing to license or preload). The App makes one player and passes it to FightDialog and ChallengeDialog: right → "right", wrong → "wrong", a won challenge → "revive", a lost one → "wrong"
     - _Requirements: 18.2_
   
-  - [ ] 20.3 Test sound implementation
+  - [x] 20.3 Test sound implementation
     - Verify sounds play on correct events
     - Verify toggle works
     - Verify no errors when sound disabled

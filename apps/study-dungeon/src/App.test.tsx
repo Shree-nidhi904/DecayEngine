@@ -196,6 +196,12 @@ describe("time machine: writes are blocked while previewing", () => {
       expect(buttons.length, list).toBeGreaterThan(0)
       for (const b of buttons) {
         seen.push(`${list}:${b.textContent}`)
+        if (b.textContent === "Autopsy") {
+          // Read-only (task 10.3), so it stays enabled while previewing;
+          // the autopsy tests below open it.
+          expect(b.hasAttribute("aria-disabled")).toBe(false)
+          continue
+        }
         expectBlocked(b)
         fireEvent.click(b)
         expect(dialogs(), `${list}: ${b.textContent}`).toEqual([])
@@ -206,7 +212,7 @@ describe("time machine: writes are blocked while previewing", () => {
       "Crypt:Fight", "Crypt:Edit", "Crypt:Remove",
       "Dungeon:Fight", "Dungeon:Edit", "Dungeon:Remove",
       "Dungeon:Fight", "Dungeon:Edit", "Dungeon:Remove",
-      "Graveyard:Challenge", "Graveyard:Edit", "Graveyard:Remove",
+      "Graveyard:Challenge", "Graveyard:Autopsy", "Graveyard:Edit", "Graveyard:Remove",
     ])
 
     expect(kit.adapter.load()).toEqual(before.snapshot)

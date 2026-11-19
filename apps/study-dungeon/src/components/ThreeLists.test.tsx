@@ -41,6 +41,66 @@ describe("ThreeLists card buttons", () => {
     expect(onAction.mock.calls[0]![1]).toBe("tend")
   })
 
+  it("only graves get an Autopsy button, and it hands that fact to onAutopsy", async () => {
+    const kit = makeEngine()
+    kit.add("weak-1", "solid", day(0))
+    kit.add("dead-1", "new", day(0))
+    const onAutopsy = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ThreeLists engine={kit.engine} now={day(8)} version={0} onAction={vi.fn()} onEdit={vi.fn()} onRemove={vi.fn()} onAutopsy={onAutopsy} />
+    )
+    // Dungeon first: no Autopsy on a weak fact.
+    expect(screen.queryByRole("button", { name: "Autopsy" })).toBeNull()
+    await user.click(screen.getByRole("tab", { name: /Graveyard/ }))
+    await user.click(screen.getByRole("button", { name: "Autopsy" }))
+    expect(onAutopsy).toHaveBeenCalledTimes(1)
+    expect(onAutopsy.mock.calls[0]![0].id).toBe("dead-1")
+  })
+
+  it("keeps Autopsy enabled and working while writes are disabled", async () => {
+    const kit = makeEngine()
+    kit.add("dead-1", "new", day(0))
+    const onAction = vi.fn()
+    const onAutopsy = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ThreeLists
+        engine={kit.engine}
+        now={day(8)}
+        version={0}
+        onAction={onAction}
+        onEdit={vi.fn()}
+        onRemove={vi.fn()}
+        onAutopsy={onAutopsy}
+        writesDisabledReason="Reason-Text"
+      />
+    )
+    await user.click(screen.getByRole("tab", { name: /Graveyard/ }))
+    const autopsy = screen.getByRole("button", { name: "Autopsy" })
+    expect(autopsy.hasAttribute("aria-disabled")).toBe(false)
+    expect(screen.getByRole("button", { name: "Challenge" }).getAttribute("aria-disabled")).toBe("true")
+    await user.click(autopsy)
+    await user.click(screen.getByRole("button", { name: "Challenge" }))
+    expect(onAutopsy).toHaveBeenCalledTimes(1)
+    expect(onAction).not.toHaveBeenCalled()
+  })
+
+  it("asks for the first fact when there are no facts at all", () => {
+    const kit = makeEngine()
+    render(<ThreeLists engine={kit.engine} now={day(0)} version={0} onAction={vi.fn()} onEdit={vi.fn()} onRemove={vi.fn()} />)
+    expect(screen.getByText("Your Crypt has no facts yet. Use Add fact to put in your first one.")).toBeTruthy()
+  })
+
+  it("does not ask for a first fact when another list has facts", () => {
+    const kit = makeEngine()
+    kit.add("dead-1", "new", day(0))
+    render(<ThreeLists engine={kit.engine} now={day(8)} version={0} onAction={vi.fn()} onEdit={vi.fn()} onRemove={vi.fn()} />)
+    // The Dungeon is empty, but the Graveyard is not.
+    expect(screen.getByText("The Dungeon is empty.")).toBeTruthy()
+    expect(screen.queryByText(/Use Add fact/)).toBeNull()
+  })
+
   it("Challenge on a grave asks for a resurrect", async () => {
     const { user, onAction } = setup()
     await user.click(screen.getByRole("tab", { name: /Graveyard/ }))

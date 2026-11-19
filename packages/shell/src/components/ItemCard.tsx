@@ -17,14 +17,20 @@ export interface ItemCardProps<Payload, PolicyData> {
   renderDetail?: (item: Item<Payload, PolicyData>) => ReactNode;
   /** Tend (alive or weak) or resurrect (dead). No button when omitted. */
   onAction?: () => void;
+  /**
+   * Open the item's autopsy (for dead items). No button when omitted.
+   * Read-only, so `disabled` never disables it.
+   */
+  onAutopsy?: () => void;
   /** Edit the item. No button when omitted. The app opens its own form. */
   onEdit?: () => void;
   /** Remove the item. No button when omitted. The app asks for confirmation. */
   onRemove?: () => void;
   /**
-   * Disables every button (for example while the app previews the future).
-   * The buttons stay visible and focusable, are marked aria-disabled, and
-   * ignore clicks.
+   * Disables every write button: action, edit and remove (for example while
+   * the app previews the future). The buttons stay visible and focusable, are
+   * marked aria-disabled, and ignore clicks. The autopsy button is read-only
+   * and stays enabled.
    */
   disabled?: boolean;
   /** Why the buttons are disabled: shown as their title and read as their description. */
@@ -35,7 +41,7 @@ export interface ItemCardProps<Payload, PolicyData> {
  * One item in a list. The state is shown by its icon and its words from the
  * wording, never by colour alone. The action button says wording.actions.tend
  * for alive and weak items and wording.actions.resurrect for dead ones.
- * Buttons appear in this order: action, edit, remove.
+ * Buttons appear in this order: action, autopsy, edit, remove.
  */
 export function ItemCard<Payload, PolicyData>({
   item,
@@ -46,6 +52,7 @@ export function ItemCard<Payload, PolicyData>({
   renderText,
   renderDetail,
   onAction,
+  onAutopsy,
   onEdit,
   onRemove,
   disabled = false,
@@ -55,8 +62,21 @@ export function ItemCard<Payload, PolicyData>({
   const reasonId = useId();
   const actionLabel = state === "dead" ? wording.actions.resurrect : wording.actions.tend;
   const detail = renderDetail?.(item);
-  const hasActions = onAction !== undefined || onEdit !== undefined || onRemove !== undefined;
+  const hasActions =
+    onAction !== undefined || onAutopsy !== undefined || onEdit !== undefined || onRemove !== undefined;
   const showReason = disabled && disabledReason !== undefined;
+
+  // Read-only, so never disabled.
+  const autopsyButton = (onClick: () => void) => (
+    <button
+      type="button"
+      className="shell-button shell-button-quiet"
+      aria-describedby={textId}
+      onClick={onClick}
+    >
+      {wording.actions.autopsy}
+    </button>
+  );
 
   // A disabled button keeps its place and label, but its click does nothing.
   const button = (label: string, className: string, onClick: () => void) => (
@@ -94,6 +114,7 @@ export function ItemCard<Payload, PolicyData>({
       {hasActions && (
         <div className="shell-item-actions">
           {onAction !== undefined && button(actionLabel, "shell-button shell-button-primary", onAction)}
+          {onAutopsy !== undefined && autopsyButton(onAutopsy)}
           {onEdit !== undefined && button(wording.actions.edit, "shell-button shell-button-quiet", onEdit)}
           {onRemove !== undefined && button(wording.actions.remove, "shell-button shell-button-quiet", onRemove)}
           {showReason && (

@@ -9,6 +9,7 @@
 import { useRef, useState } from "react"
 import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
+import type { SoundPlayer } from "../sound"
 import { challengeText, studyDungeonWording } from "../wording"
 import { useModalDialog } from "./useModalDialog"
 import "../styles/dialogs.css"
@@ -24,13 +25,37 @@ export interface ChallengeDialogProps {
   onWrite: () => void
   /** Closes the dialog (Walk away, Close and Escape). */
   onClose: () => void
+  /**
+   * Plays "revive" after a successful challenge and "wrong" after a failed
+   * one (task 20.2). The App passes its one player, which stays silent while
+   * sound is off; tests pass a fake. No sound when omitted.
+   */
+  sound?: SoundPlayer
+  /** Told how the challenge ended, after the engine saved it; the App announces it. */
+  onResult?: (result: ChallengeResult) => void
+  /**
+   * Given any error from engine.resurrect. Returns true when the App handled
+   * it (a storage problem: the App shows it and closes the dialog); anything
+   * else is rethrown.
+   */
+  onWriteError?: (error: unknown) => boolean
 }
 
-type Result = { ok: true; halfLifeDays: number } | { ok: false; reason: string }
+/** How a challenge ended: back with this half-life, or still dead and why. */
+export type ChallengeResult = { ok: true; halfLifeDays: number } | { ok: false; reason: string }
 
-export function ChallengeDialog({ engine, now, fact, onWrite, onClose }: ChallengeDialogProps) {
+export function ChallengeDialog({
+  engine,
+  now,
+  fact,
+  onWrite,
+  onClose,
+  sound,
+  onResult,
+  onWriteError,
+}: ChallengeDialogProps) {
   const ref = useModalDialog()
-  const [result, setResult] = useState<Result | null>(null)
+  const [result, setResult] = useState<ChallengeResult | null>(null)
   // Guards against a second answer before React re-renders.
   const answered = useRef(false)
 
@@ -38,17 +63,30 @@ export function ChallengeDialog({ engine, now, fact, onWrite, onClose }: Challen
     if (answered.current) return
     answered.current = true
     const at = now()
-    const outcome = engine.resurrect(fact.id, { kind: "review", correct }, at)
+    let outcome: ReturnType<ChallengeDialogProps["engine"]["resurrect"]>
+    try {
+      outcome = engine.resurrect(fact.id, { kind: "review", correct }, at)
+    } catch (error) {
+      // Nothing was saved (the engine guarantees it), so no sound and no result.
+      if (onWriteError?.(error) === true) return
+      throw error
+    }
     onWrite()
     if (!outcome.ok) {
-      setResult({ ok: false, reason: outcome.reason })
+      sound?.play("wrong")
+      const failed: ChallengeResult = { ok: false, reason: outcome.reason }
+      setResult(failed)
+      onResult?.(failed)
       return
     }
     const revived = engine.view(at).find((item) => item.id === fact.id)
     if (revived === undefined) {
       throw new Error(`ChallengeDialog: fact ${fact.id} is missing right after its resurrect`)
     }
-    setResult({ ok: true, halfLifeDays: revived.policyData.halfLifeDays })
+    sound?.play("revive")
+    const back: ChallengeResult = { ok: true, halfLifeDays: revived.policyData.halfLifeDays }
+    setResult(back)
+    onResult?.(back)
   }
 
   return (

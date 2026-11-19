@@ -239,8 +239,8 @@ The decay rules (each app's policy) are written by hand. Kiro wrote most of the 
 
 - [x] Engine spec: requirements, design, tasks
 - [x] Steering and hooks
-- [ ] Engine and tests
-- [ ] Study Dungeon
+- [x] Engine and tests
+- [x] Study Dungeon
 - [ ] Ghosted
 - [ ] Expiry Reaper
 - [ ] Deployed site with sample data
@@ -249,7 +249,23 @@ The decay rules (each app's policy) are written by hand. Kiro wrote most of the 
 
 ## Running it
 
-Setup instructions will be added when the first code lands.
+You need Node 20.19 or later (22.12+ recommended) and pnpm.
+
+```bash
+pnpm install
+
+# Study Dungeon, with hot reload: open the address it prints (http://localhost:5173)
+pnpm --filter @decay-engine/study-dungeon dev
+
+# Or the production build, served locally (http://localhost:4173)
+pnpm --filter @decay-engine/study-dungeon build
+pnpm --filter @decay-engine/study-dungeon preview
+
+# Every check: install, typechecks, the engine, shell and app tests, and the build
+bash scripts/check.sh
+```
+
+On first open, Study Dungeon offers **Load sample data** (12 facts: 4 alive, 4 weak, 4 dead) or **Start empty**. Everything is saved in this browser's local storage; **Reset all data** clears it.
 
 ## Licence
 

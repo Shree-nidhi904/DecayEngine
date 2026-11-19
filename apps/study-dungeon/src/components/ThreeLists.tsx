@@ -1,5 +1,6 @@
-// The Crypt, the Dungeon and the Graveyard (task 6.1), with remove (task 6.3)
-// and the Edit button for the add/edit form (task 5.1).
+// The Crypt, the Dungeon and the Graveyard (task 6.1), with remove (task 6.3),
+// the Edit button for the add/edit form (task 5.1) and, on graves, the
+// Autopsy button (task 10.3).
 // Reads everything through engine.view(now); grouping and sorting live in
 // ../lists.ts so they can be tested without a browser.
 
@@ -9,7 +10,7 @@ import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
 import { buildLists, epitaphOf, formatHealth, formatWakeUp, type FactState } from "../lists"
 import { studyDungeonShellTheme } from "../theme"
-import { studyDungeonWording } from "../wording"
+import { emptyCryptPrompt, landmarkText, studyDungeonWording } from "../wording"
 import { studyDungeonIcons } from "./icons"
 import { ConfirmRemoveDialog } from "./ConfirmRemoveDialog"
 import "../styles/lists.css"
@@ -30,6 +31,11 @@ export interface ThreeListsProps {
   /** Called after the user confirms removal. */
   onRemove: (id: string) => void
   /**
+   * Opens a grave's autopsy. Graves get an Autopsy button only when given.
+   * Read-only, so it stays enabled while writes are disabled.
+   */
+  onAutopsy?: (fact: Fact) => void
+  /**
    * When set, every card's buttons are disabled with this reason (the time
    * machine is previewing). They stay visible and say why.
    */
@@ -45,6 +51,7 @@ export function ThreeLists({
   onAction,
   onEdit,
   onRemove,
+  onAutopsy,
   writesDisabledReason,
 }: ThreeListsProps) {
   const writesDisabled = writesDisabledReason !== undefined
@@ -88,6 +95,7 @@ export function ThreeLists({
         renderText={(f) => f.payload.question}
         renderDetail={() => detail}
         onAction={() => onAction(fact, fact.state === "dead" ? "resurrect" : "tend")}
+        onAutopsy={fact.state === "dead" && onAutopsy !== undefined ? () => onAutopsy(fact) : undefined}
         onEdit={() => onEdit(fact)}
         onRemove={() => setRemoving(fact)}
         disabled={writesDisabled}
@@ -108,28 +116,31 @@ export function ThreeLists({
 
   return (
     <section className="sd-lists" aria-label="Your facts">
-      <div role="tablist" aria-label="Lists" className="sd-tabs" onKeyDown={onTabKeyDown}>
-        {TABS.map((state) => (
-          <button
-            key={state}
-            ref={(el) => {
-              tabRefs.current[state] = el
-            }}
-            type="button"
-            role="tab"
-            id={`sd-tab-${state}`}
-            aria-selected={selected === state}
-            aria-controls={`sd-panel-${state}`}
-            tabIndex={selected === state ? 0 : -1}
-            className="sd-tab"
-            data-state={state}
-            onClick={() => setSelected(state)}
-          >
-            {studyDungeonWording.lists[state]}
-            <span className="sd-tab-count num">{counts[state]}</span>
-          </button>
-        ))}
-      </div>
+      {/* Landmark for the list tabs (task 16.4). */}
+      <nav aria-label={landmarkText.lists}>
+        <div role="tablist" aria-label="Lists" className="sd-tabs" onKeyDown={onTabKeyDown}>
+          {TABS.map((state) => (
+            <button
+              key={state}
+              ref={(el) => {
+                tabRefs.current[state] = el
+              }}
+              type="button"
+              role="tab"
+              id={`sd-tab-${state}`}
+              aria-selected={selected === state}
+              aria-controls={`sd-panel-${state}`}
+              tabIndex={selected === state ? 0 : -1}
+              className="sd-tab"
+              data-state={state}
+              onClick={() => setSelected(state)}
+            >
+              {studyDungeonWording.lists[state]}
+              <span className="sd-tab-count num">{counts[state]}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
       <div
         role="tabpanel"
@@ -139,7 +150,10 @@ export function ThreeLists({
         tabIndex={0}
       >
         {items.length === 0 ? (
-          <p className="sd-empty">The {studyDungeonWording.lists[selected]} is empty.</p>
+          <>
+            <p className="sd-empty">The {studyDungeonWording.lists[selected]} is empty.</p>
+            {counts.alive + counts.weak + counts.dead === 0 && <p className="sd-empty">{emptyCryptPrompt}</p>}
+          </>
         ) : (
           <ul className="sd-cards">{items}</ul>
         )}

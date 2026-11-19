@@ -21,6 +21,7 @@ import {
   type FactFormValues,
 } from "../fact-form"
 import { factFormText } from "../wording"
+import { classifyWriteError, storageProblemText } from "../storage-errors"
 import { useModalDialog } from "./useModalDialog"
 import "../styles/dialogs.css"
 
@@ -35,6 +36,12 @@ export interface AddEditFactDialogProps {
   onSaved: (id: string) => void
   /** Closes the dialog (after a save, on Cancel and on Escape). */
   onClose: () => void
+  /**
+   * Given any error from engine.addItem or engine.edit. Returns true when the
+   * App handled it (a storage problem: the App shows it and closes the
+   * dialog); anything else is rethrown.
+   */
+  onWriteError?: (error: unknown) => boolean
 }
 
 const NEW_FACT: FactFormValues = {
@@ -57,12 +64,17 @@ function valuesOf(fact: Fact): FactFormValues {
   }
 }
 
-export function AddEditFactDialog({ engine, now, fact, onSaved, onClose }: AddEditFactDialogProps) {
+export function AddEditFactDialog({ engine, now, fact, onSaved, onClose, onWriteError }: AddEditFactDialogProps) {
   const ref = useModalDialog()
   const id = useId()
   const editing = fact !== undefined
   const [values, setValues] = useState<FactFormValues>(() => (fact !== undefined ? valuesOf(fact) : NEW_FACT))
   const [errors, setErrors] = useState<FactFormErrors>({})
+  // A storage problem on save (task 18.3). Shown inside the form, which stays
+  // open with what was typed: the page behind a modal dialog is inert, so an
+  // announcement there may not be heard, and the fix ("remove a fact, try
+  // again") should not cost the user their text.
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const fieldId = (field: FactFormField) => `${id}-${field}`
   const errorId = (field: FactFormField) => `${id}-${field}-error`
@@ -77,12 +89,26 @@ export function AddEditFactDialog({ engine, now, fact, onSaved, onClose }: AddEd
       setErrors(checked.errors)
       return
     }
-    if (fact !== undefined) {
-      engine.edit(fact.id, checked.fact, now())
-      onSaved(fact.id)
-    } else {
-      onSaved(engine.addItem(checked.fact, now()))
+    setSaveError(null)
+    let savedId: string
+    try {
+      if (fact !== undefined) {
+        engine.edit(fact.id, checked.fact, now())
+        savedId = fact.id
+      } else {
+        savedId = engine.addItem(checked.fact, now())
+      }
+    } catch (error) {
+      // Nothing was saved (the engine guarantees it).
+      const problem = classifyWriteError(error)
+      if (problem !== null) {
+        setSaveError(storageProblemText[problem])
+        return
+      }
+      if (onWriteError?.(error) === true) return
+      throw error
     }
+    onSaved(savedId)
     onClose()
   }
 
@@ -192,6 +218,12 @@ export function AddEditFactDialog({ engine, now, fact, onSaved, onClose }: AddEd
             {errorText("costMinutes")}
           </div>
         </div>
+
+        {saveError !== null && (
+          <p className="sd-field-error sd-save-error" role="alert">
+            {saveError}
+          </p>
+        )}
 
         <div className="sd-dialog-actions">
           <button type="button" className="sd-button sd-button-quiet" onClick={onClose}>

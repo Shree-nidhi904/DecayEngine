@@ -1,8 +1,8 @@
 // Confirmation before a fact is removed (task 6.3, Requirement 6).
 // A native modal <dialog>: focus stays inside it, and Escape cancels.
 
-import { useEffect, useRef } from "react"
 import { removeCancelLabel, removeConfirmText, studyDungeonWording } from "../wording"
+import { useModalDialog } from "./useModalDialog"
 
 export interface ConfirmRemoveDialogProps {
   /** The fact's question, shown so the user knows what is being removed. */
@@ -12,15 +12,8 @@ export interface ConfirmRemoveDialogProps {
 }
 
 export function ConfirmRemoveDialog({ question, onConfirm, onCancel }: ConfirmRemoveDialogProps) {
-  const ref = useRef<HTMLDialogElement>(null)
-
-  useEffect(() => {
-    const dialog = ref.current
-    if (dialog === null) return
-    if (!dialog.open) dialog.showModal()
-    // close() fires "close", not "cancel", so this does not call onCancel.
-    return () => dialog.close()
-  }, [])
+  // Opens as a modal; on close, focus goes back to the Remove button.
+  const ref = useModalDialog()
 
   return (
     <dialog

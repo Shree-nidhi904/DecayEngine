@@ -58,8 +58,11 @@ export interface ThemeProps {
 export interface WordingProps {
   /** Names of the alive, weak and dead lists. */
   lists: { alive: string; weak: string; dead: string };
-  /** Button labels for tending, resurrecting, editing and removing an item. */
-  actions: { tend: string; resurrect: string; edit: string; remove: string };
+  /**
+   * Button labels for tending, resurrecting, editing and removing an item,
+   * and for opening a dead item's autopsy.
+   */
+  actions: { tend: string; resurrect: string; edit: string; remove: string; autopsy: string };
   /** Labels for each lifecycle state. */
   states: { alive: string; weak: string; dead: string };
   /** The time machine (TimeMachine). */
@@ -68,6 +71,48 @@ export interface WordingProps {
   preview: PreviewWording;
   /** The Triage panel (TriagePanel). */
   triage: TriageWording;
+  /** The autopsy of a dead item (AutopsyDialog). */
+  autopsy: AutopsyWording;
+}
+
+/** What the autopsy chart's accessible summary is built from. */
+export interface AutopsyChartSummary {
+  /** The first point's time, formatted by the app. */
+  from: string;
+  /** The last point's time (the death), formatted by the app. */
+  to: string;
+  /** Health at the first point. */
+  startHealth: number;
+  /** Health at the last point. */
+  endHealth: number;
+  /** How many tends in the chart were marked right. */
+  right: number;
+  /** How many tends in the chart were marked wrong. */
+  wrong: number;
+}
+
+/** Labels for the autopsy dialog. */
+export interface AutopsyWording {
+  /** Heading and accessible name of the dialog. */
+  title: string;
+  /** Label above the epitaph. */
+  epitaph: string;
+  /** Heading of the chart. */
+  chartTitle: string;
+  /** The chart's aria-label: the whole chart summed up in words. */
+  chartLabel: (summary: AutopsyChartSummary) => string;
+  /** Legend and in-chart label of the weak band (below the weak threshold). */
+  weakBand: (threshold: number) => string;
+  /** Legend and in-chart label of the dead band (below the dead threshold). */
+  deadBand: (threshold: number) => string;
+  /** Legend label of a tend marked right. */
+  markRight: string;
+  /** Legend label of a tend marked wrong. */
+  markWrong: string;
+  /** Heading of the cause-of-death sentences. */
+  cause: string;
+  /** The button that closes the dialog. */
+  close: string;
 }
 
 /** Labels for the time machine. */

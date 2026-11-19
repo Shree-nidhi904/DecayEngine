@@ -32,6 +32,11 @@ Written at the developer's request, in new files, while Kiro worked on round 5 (
 - **First-run sample data** (`apps/study-dungeon/src/sample-data.ts` and its test, Study Dungeon tasks 11.1 and 11.2).
 - **Hero stats logic** (`apps/study-dungeon/src/stats.ts` and its test, the souls and streak part of task 12.1). The HeroSection component itself is Kiro's.
 - **Contrast check** (`apps/study-dungeon/src/contrast.test.ts`, task 16.3).
+- **Storage problems and the crash screen** (`src/storage-errors.ts`, `src/components/ErrorBoundary.tsx`, `src/styles/problem.css` and their tests, task 18.3). Kiro wires them into `main.tsx` and `App.tsx`.
+- **Candle and monster animations** (`src/styles/animations.css` and its test, tasks 17.1 and 17.2). The icons themselves (17.3) are Kiro's, from `icons.tsx`.
+- **Sound effects** (`src/sound.ts` and its test, task 20). The toggle and the calls from the dialogs are Kiro's.
+- **The check script** (`scripts/check.sh`): install, typechecks, all tests and the build in one command.
+- **After round 7:** catching a full storage during a settle tick (`ticking.ts` and the handler in `App.tsx`), and keeping the add/edit form open on a storage problem (`AddEditFactDialog.tsx`), with their tests.
 
 ## What Kiro writes (generated)
 

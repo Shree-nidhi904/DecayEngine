@@ -1,0 +1,70 @@
+/* Study Dungeon motion (tasks 17.1 and 17.2): the candle flame flickers on
+   alive facts, and a monster shakes when you point at or focus its card.
+   Targets the data-icon attributes in components/icons.tsx, so it works
+   wherever those icons are used (cards, hero, counters).
+   The tombstone (17.3) is the inline SVG in icons.tsx and stays still.
+   Everything here is switched off under prefers-reduced-motion.
+   Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md. */
+
+/* 17.1 Candle flame: the first path of the candle icon is the flame. */
+[data-icon="candle"] > path:first-child {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sd-flicker 2.4s ease-in-out infinite;
+}
+
+@keyframes sd-flicker {
+  0%,
+  100% {
+    transform: scale(1, 1) rotate(0deg);
+    opacity: 1;
+  }
+  20% {
+    transform: scale(0.94, 1.06) rotate(-3deg);
+    opacity: 0.92;
+  }
+  45% {
+    transform: scale(1.04, 0.95) rotate(2deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.97, 1.04) rotate(-1deg);
+    opacity: 0.85;
+  }
+}
+
+/* 17.2 Monster shake: only on the card you point at or move focus into,
+   so a Dungeon full of monsters is not all moving at once. */
+.shell-item-card:hover [data-icon="monster"],
+.shell-item-card:focus-within [data-icon="monster"] {
+  animation: sd-shake 0.45s ease-in-out 1;
+}
+
+@keyframes sd-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-2px) rotate(-6deg);
+  }
+  40% {
+    transform: translateX(2px) rotate(5deg);
+  }
+  60% {
+    transform: translateX(-1px) rotate(-3deg);
+  }
+  80% {
+    transform: translateX(1px) rotate(2deg);
+  }
+}
+
+/* Reduced motion: still icons. global.css also turns off all animation,
+   but this file must be safe on its own. */
+@media (prefers-reduced-motion: reduce) {
+  [data-icon="candle"] > path:first-child,
+  .shell-item-card:hover [data-icon="monster"],
+  .shell-item-card:focus-within [data-icon="monster"] {
+    animation: none;
+  }
+}
