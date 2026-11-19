@@ -216,7 +216,50 @@
   font-family: var(--font-mono);
 }
 
+.sd-dock-toggle {
+  display: none;
+}
+
 @media (max-width: 520px) {
+  .sd-dock {
+    padding-top: 12px;
+  }
+
+  .sd-dock-toggle {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: var(--color-stone-hi);
+    border: 1px solid #4a3858;
+    border-radius: 50%;
+    color: var(--color-pumpkin);
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .sd-dock-in {
+    position: relative;
+  }
+
+  .sd-dock:not([data-open]) .shell-time-machine-slider,
+  .sd-dock:not([data-open]) .sd-timeline,
+  .sd-dock:not([data-open]) .shell-time-machine-controls {
+    display: none;
+  }
+
+  .sd-dock:not([data-open]) .sd-candle {
+    height: 44px;
+  }
+
+  .sd-dock .shell-time-machine {
+    padding-right: 44px;
+  }
+
   .sd-dock-in {
     grid-template-columns: 40px minmax(0, 1fr);
     gap: 2px 12px;

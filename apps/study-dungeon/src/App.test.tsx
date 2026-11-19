@@ -88,6 +88,7 @@ function makeKit() {
         frameClock={() => 0}
         prefersReducedMotion={() => false}
         formatDate={(ms) => new Date(ms).toISOString().slice(0, 10)}
+        defaultAnswerCheck="self"
       />
     )
   }

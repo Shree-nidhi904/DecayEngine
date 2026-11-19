@@ -201,6 +201,114 @@
   }
 }
 
+
+@keyframes sd-ember-rise {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(var(--dx), -320px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes sd-wander {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.15;
+  }
+  30% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate(var(--dx), -14px);
+    opacity: 0.4;
+  }
+  70% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes sd-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes sd-glow {
+  0%,
+  100% {
+    opacity: calc(1 - var(--age) * 0.7);
+  }
+  40% {
+    opacity: calc(0.75 - var(--age) * 0.5);
+  }
+  60% {
+    opacity: calc(0.95 - var(--age) * 0.7);
+  }
+}
+
+@keyframes sd-burst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes sd-text-pop {
+  0% {
+    transform: translateY(10px) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    transform: translateY(0) scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-26px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes sd-stamp {
+  0% {
+    transform: rotate(6deg) scale(2.2);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(6deg) scale(0.92);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(6deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sd-bubble-in {
+  from {
+    transform: translateY(6px) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   /* Flames: the candle icon's first path, and every torch and candle flame. */
   [data-icon="candle"] > path:first-child,
@@ -322,6 +430,78 @@
   .sd-dialog[data-result="stays-dead"] {
     animation: sd-hit 0.4s 1;
   }
+  /* Particles: embers rise from the dungeon floor, fireflies and dust wander. */
+  .sd-ember {
+    animation: sd-ember-rise var(--t) linear var(--d) infinite;
+  }
+
+  .sd-firefly,
+  .sd-mote {
+    animation: sd-wander var(--t) ease-in-out var(--d) infinite;
+  }
+
+  .sd-scene-glow {
+    animation: sd-glow 3.2s ease-in-out infinite;
+  }
+
+  /* The boss floats on its pedestal and talks. */
+  .sd-boss-figure {
+    animation: sd-float 3s ease-in-out infinite;
+  }
+
+  .sd-bubble {
+    animation: sd-bubble-in 0.5s ease-out 0.4s both;
+  }
+
+  .sd-zz {
+    animation: sd-zz 2.6s ease-in-out infinite;
+  }
+
+  .sd-zz-2 {
+    animation: sd-zz 2.6s ease-in-out 1.3s infinite;
+  }
+
+  /* Combat: sparks on a win, a stamped combo, a red Miss! */
+  .sd-sparks i {
+    animation: sd-burst 0.9s ease-out 0.15s forwards;
+  }
+
+  .sd-combo {
+    animation: sd-stamp 0.45s ease-out both;
+  }
+
+  .sd-damage {
+    animation: sd-text-pop 1.1s ease-out forwards;
+  }
+
+  .sd-choice-option[data-mark="right"] {
+    animation: sd-popin 0.4s cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+
+  .sd-choice-option[data-mark="wrong"] {
+    animation: sd-hit 0.4s 1;
+  }
+
+  .sd-world .sd-choice-option {
+    transition: transform 0.15s, border-color 0.15s;
+  }
+
+  .sd-world .sd-choice-option:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  /* The entrance doors swing open. */
+  .sd-door-leaf {
+    transition: transform 1.5s cubic-bezier(0.6, 0, 0.2, 1);
+  }
+
+  .sd-door-ui {
+    transition: opacity 0.5s;
+  }
+
+  .sd-door {
+    transition: background 1s;
+  }
 }
 
 /* Second guard: still under reduced motion even if a rule above leaks. */
@@ -345,8 +525,26 @@
   .sd-foe[data-fx="rise"] .sd-foe-art,
   .sd-foe[data-fx="lunge"] .sd-foe-art,
   .sd-dialog[data-result="incorrect"],
-  .sd-dialog[data-result="stays-dead"] {
+  .sd-dialog[data-result="stays-dead"],
+  .sd-ember,
+  .sd-firefly,
+  .sd-mote,
+  .sd-scene-glow,
+  .sd-boss-figure,
+  .sd-bubble,
+  .sd-zz,
+  .sd-zz-2,
+  .sd-sparks i,
+  .sd-combo,
+  .sd-damage,
+  .sd-choice-option[data-mark="right"],
+  .sd-choice-option[data-mark="wrong"] {
     animation: none;
+  }
+
+  .sd-sparks,
+  .sd-damage {
+    display: none;
   }
 
   .sd-bat {

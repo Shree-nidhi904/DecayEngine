@@ -61,6 +61,11 @@ export type AppKitOptions = {
   adapter?: StorageAdapter
   /** Passed to the App: the fake Web Audio context for sound tests. */
   createAudioContext?: AppProps["createAudioContext"]
+  /**
+   * How fights check answers. Defaults to "self" (Show answer, then I knew
+   * it / I forgot), which the tests written before answer checking use.
+   */
+  answerCheck?: AppProps["defaultAnswerCheck"]
 }
 
 export function makeAppKit(
@@ -98,6 +103,7 @@ export function makeAppKit(
         reload={reload}
         timeZone="UTC"
         createAudioContext={options.createAudioContext}
+        defaultAnswerCheck={options.answerCheck ?? "self"}
       />
     )
   }

@@ -11,9 +11,12 @@ import { DecayEngineError } from "@decay-engine/engine"
 import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
 import type { SoundPlayer } from "../sound"
-import { fightText, sessionText, studyDungeonWording } from "../wording"
+import { comboText, fightText, sessionText, studyDungeonWording } from "../wording"
+import { Sparks } from "./art/Particles"
 import { useModalDialog } from "./useModalDialog"
 import { DialogFoe } from "./DialogFoe"
+import { AnswerPanel } from "./AnswerPanel"
+import type { AnswerCheck } from "../answer-check"
 import { moodOf, quipOf } from "../creatures"
 import "../styles/dialogs.css"
 
@@ -47,6 +50,18 @@ export interface FightDialogProps {
    * closes the dialog); anything else is rethrown.
    */
   onWriteError?: (error: unknown) => boolean
+  /**
+   * How the answer is checked (answer-check.ts). "self" (the default here)
+   * is the honour system: Show answer, then I knew it or I forgot. The App
+   * passes the user's setting.
+   */
+  check?: AnswerCheck
+  /** The options when check is "choices"; null or omitted means type the answer. */
+  choices?: string[] | null
+  /** After a right answer: a line saying when the fact wakes again, e.g. "It sleeps until 25 Nov 2026." */
+  sleepsUntil?: () => string | null
+  /** Right answers in a row in this Triage session, counting this one once answered. */
+  combo?: number
 }
 
 /** How a fight ended: answered right, answered wrong, or the fact died first. */
@@ -64,9 +79,15 @@ export function FightDialog({
   sound,
   onResult,
   onWriteError,
+  check = "self",
+  choices = null,
+  sleepsUntil,
+  combo = 0,
 }: FightDialogProps) {
   const ref = useModalDialog()
   const [step, setStep] = useState<Step>("question")
+  const [sleepLine, setSleepLine] = useState<string | null>(null)
+  const checked = check !== "self"
   // Guards against a second answer before React re-renders.
   const answered = useRef(false)
 
@@ -91,6 +112,7 @@ export function FightDialog({
     onWrite()
     sound?.play(correct ? "right" : "wrong")
     const result: FightResult = correct ? "correct" : "incorrect"
+    if (correct) setSleepLine(sleepsUntil?.() ?? null)
     setStep(result)
     onResult?.(result)
   }
@@ -136,7 +158,16 @@ export function FightDialog({
       <p className="sd-dialog-label">{fightText.question}</p>
       <p className="sd-dialog-question">{fact.payload.question}</p>
 
-      {step !== "question" && (
+      {checked && step !== "answer" && (
+        <AnswerPanel
+          choices={check === "choices" ? choices : null}
+          answer={fact.payload.answer}
+          answered={done}
+          onAnswer={answer}
+        />
+      )}
+
+      {step !== "question" && !(checked && check === "choices" && choices !== null) && (
         <>
           <p className="sd-dialog-label">{fightText.answer}</p>
           <p className="sd-dialog-answer">{fact.payload.answer}</p>
@@ -146,6 +177,14 @@ export function FightDialog({
       <p role="status" className="sd-result" data-result={done ? step : undefined}>
         {done ? resultText : ""}
       </p>
+      {step === "correct" && sleepLine !== null && <p className="sd-result-more">{sleepLine}</p>}
+      {step === "correct" && combo >= 2 && <p className="sd-combo">{comboText(combo)}</p>}
+      {step === "correct" && <Sparks color="#ff8a2b" />}
+      {step === "incorrect" && (
+        <p className="sd-damage" aria-hidden="true">
+          Miss!
+        </p>
+      )}
 
       <div className="sd-dialog-actions">
         {session !== undefined && (
@@ -158,9 +197,11 @@ export function FightDialog({
             <button type="button" className="sd-button sd-button-quiet" onClick={onClose}>
               {fightText.walkAway}
             </button>
-            <button type="button" className="sd-button sd-button-primary" onClick={() => setStep("answer")}>
-              {fightText.showAnswer}
-            </button>
+            {!checked && (
+              <button type="button" className="sd-button sd-button-primary" onClick={() => setStep("answer")}>
+                {fightText.showAnswer}
+              </button>
+            )}
           </>
         )}
         {step === "answer" && (

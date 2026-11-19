@@ -13,6 +13,9 @@ import type { SoundPlayer } from "../sound"
 import { challengeText, studyDungeonWording } from "../wording"
 import { useModalDialog } from "./useModalDialog"
 import { DialogFoe } from "./DialogFoe"
+import { AnswerPanel } from "./AnswerPanel"
+import { Sparks } from "./art/Particles"
+import type { AnswerCheck } from "../answer-check"
 import "../styles/dialogs.css"
 
 export interface ChallengeDialogProps {
@@ -40,6 +43,10 @@ export interface ChallengeDialogProps {
    * else is rethrown.
    */
   onWriteError?: (error: unknown) => boolean
+  /** How the answer is checked (answer-check.ts). "self" (the default here) shows the answer and asks. */
+  check?: AnswerCheck
+  /** The options when check is "choices"; null or omitted means type the answer. */
+  choices?: string[] | null
 }
 
 /** How a challenge ended: back with this half-life, or still dead and why. */
@@ -54,7 +61,10 @@ export function ChallengeDialog({
   sound,
   onResult,
   onWriteError,
+  check = "self",
+  choices = null,
 }: ChallengeDialogProps) {
+  const checked = check !== "self"
   const ref = useModalDialog()
   const [result, setResult] = useState<ChallengeResult | null>(null)
   // Guards against a second answer before React re-renders.
@@ -121,8 +131,20 @@ export function ChallengeDialog({
 
       <p className="sd-dialog-label">{challengeText.question}</p>
       <p className="sd-dialog-question">{fact.payload.question}</p>
-      <p className="sd-dialog-label">{challengeText.answer}</p>
-      <p className="sd-dialog-answer">{fact.payload.answer}</p>
+      {checked && (
+        <AnswerPanel
+          choices={check === "choices" ? choices : null}
+          answer={fact.payload.answer}
+          answered={result !== null}
+          onAnswer={answer}
+        />
+      )}
+      {(!checked || (result !== null && !(check === "choices" && choices !== null))) && (
+        <>
+          <p className="sd-dialog-label">{challengeText.answer}</p>
+          <p className="sd-dialog-answer">{fact.payload.answer}</p>
+        </>
+      )}
 
       <p
         role="status"
@@ -131,6 +153,7 @@ export function ChallengeDialog({
       >
         {result === null ? "" : result.ok ? challengeText.resurrected(result.halfLifeDays) : result.reason}
       </p>
+      {result?.ok === true && <Sparks color="#9cf26b" />}
 
       <div className="sd-dialog-actions">
         {result === null ? (
@@ -138,12 +161,16 @@ export function ChallengeDialog({
             <button type="button" className="sd-button sd-button-quiet" onClick={onClose}>
               {challengeText.walkAway}
             </button>
-            <button type="button" className="sd-button sd-button-wrong" onClick={() => answer(false)}>
-              {challengeText.forgot}
-            </button>
-            <button type="button" className="sd-button sd-button-revive" onClick={() => answer(true)}>
-              {challengeText.knewIt}
-            </button>
+            {!checked && (
+              <>
+                <button type="button" className="sd-button sd-button-wrong" onClick={() => answer(false)}>
+                  {challengeText.forgot}
+                </button>
+                <button type="button" className="sd-button sd-button-revive" onClick={() => answer(true)}>
+                  {challengeText.knewIt}
+                </button>
+              </>
+            )}
           </>
         ) : (
           <button type="button" className="sd-button sd-button-primary" autoFocus onClick={onClose}>

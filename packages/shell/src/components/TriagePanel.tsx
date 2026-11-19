@@ -37,6 +37,11 @@ export interface TriagePanelProps<Payload, PolicyData> {
   startDisabled?: boolean;
   /** Why the start button is disabled: shown as its title and read as its description. */
   startDisabledReason?: string;
+  /**
+   * Run straight away with this budget (it should be one of TRIAGE_BUDGETS),
+   * so the panel is never empty. Omitted: nothing runs until the user asks.
+   */
+  initialBudget?: number;
 }
 
 /** Whole days from `now` to `diesAt`, rounded up, never below 0. */
@@ -69,6 +74,7 @@ export function TriagePanel<Payload, PolicyData>({
   onStartSession,
   startDisabled = false,
   startDisabledReason,
+  initialBudget,
 }: TriagePanelProps<Payload, PolicyData>) {
   const text = wording.triage;
   const ids = {
@@ -79,11 +85,13 @@ export function TriagePanel<Payload, PolicyData>({
     others: useId(),
     reason: useId(),
   };
-  const [choice, setChoice] = useState<Choice>(TRIAGE_BUDGETS[1]!);
+  const [choice, setChoice] = useState<Choice>(
+    initialBudget !== undefined && TRIAGE_BUDGETS.includes(initialBudget) ? initialBudget : TRIAGE_BUDGETS[1]!
+  );
   const [customText, setCustomText] = useState("");
   const [invalid, setInvalid] = useState(false);
   // The budget of the last valid run, or null before the first one.
-  const [budget, setBudget] = useState<number | null>(null);
+  const [budget, setBudget] = useState<number | null>(initialBudget ?? null);
 
   const result = useMemo(() => (budget === null ? null : triage(budget)), [triage, budget]);
 

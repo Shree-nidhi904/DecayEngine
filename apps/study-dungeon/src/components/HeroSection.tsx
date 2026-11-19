@@ -18,6 +18,8 @@ import { allHistory, countSoulsBanished, currentStreak } from "../stats"
 import { studyDungeonShellTheme } from "../theme"
 import { formatHealth } from "../lists"
 import { creatureOf } from "../creatures"
+import { rankOf } from "../ranks"
+import { HeroBoss } from "./HeroBoss"
 import { heroExtraText, heroText, studyDungeonWording } from "../wording"
 import { studyDungeonIcons } from "./icons"
 import "../styles/hero.css"
@@ -176,6 +178,7 @@ export function HeroSection({
         {message}
         {forecast !== null && <p className="sd-hero-sub sd-hero-forecast">{heroExtraText.forecast(forecast.weaken, forecast.die)}</p>}
       </div>
+      <HeroBoss boss={weakest} />
       <div className="sd-hero-stats" role="group" aria-label={heroText.stats}>
         <Counters
           alive={groups.alive.length}
@@ -201,7 +204,31 @@ export function HeroSection({
             <span className="sd-stat-label">{heroText.streak(past.streak)}</span>
           </li>
         </ul>
+        <RankPlaque souls={past.souls} />
       </div>
     </section>
+  )
+}
+
+/** The hunter's rank from souls banished, with progress to the next one. */
+function RankPlaque({ souls }: { souls: number }) {
+  const { rank, next, progress, toNext } = rankOf(souls)
+  return (
+    <div className="sd-rank">
+      <p className="sd-rank-title">
+        <span className="sd-rank-label">{heroExtraText.rank}</span> {rank.title}
+      </p>
+      <div
+        className="sd-rank-bar"
+        role="progressbar"
+        aria-label={heroExtraText.rankProgress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progress * 100)}
+      >
+        <i style={{ width: `${Math.round(progress * 100)}%` }} />
+      </div>
+      <p className="sd-rank-next">{next === null ? heroExtraText.topRank : heroExtraText.nextRank(toNext, next.title)}</p>
+    </div>
   )
 }

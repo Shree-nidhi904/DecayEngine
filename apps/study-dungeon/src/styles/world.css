@@ -419,3 +419,15 @@
   font-family: var(--font-mono);
   font-size: 13px;
 }
+
+/* Keyboard focus never lands under the fixed time dock: the browser keeps
+   this much room at the bottom when it scrolls a focused element into view. */
+html {
+  scroll-padding-bottom: 250px;
+}
+
+@media (max-width: 520px) {
+  html {
+    scroll-padding-bottom: 130px;
+  }
+}

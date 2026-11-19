@@ -810,3 +810,36 @@ For each session, record:
 - **Steering**: `theme-and-wording.md` said "not as a health bar"; it now allows a bar beside the world, always with the weak and dead marks.
 - **Tests**: new `creatures.test.ts` (mood rule, urgency, stable identity), `components/art/art.test.tsx` (every creature in every mood, HealthBar marks and lost part, the candle melting), `timeline.test.ts`; `styles/animations-css.test.tsx` rewritten for the new motion rules. One real bug found on the way: a card read the history of a fact removed mid-session; the base health is now read with the lists.
 - **What I changed by hand**: no code.
+
+---
+
+## After the spec: visual pass 2 and answer checking (Nov 19, 2026)
+
+- **Kiro feature used**: none. Done by Claude Opus 5.5 at my request; no Kiro credits.
+- **Why**: the first pass worked but felt like a standard UI with empty space, and "I knew it" could be clicked without knowing the answer.
+- **What was changed**:
+  - **Layout**: one full-width column. The hero has a boss stage in the middle (the weakest monster in a spotlight on a pedestal, with a health ring and a speech bubble; a sleeping dragon when nothing is weak). Triage became a full-width "raid planner" with a three-step explanation beside it. Scenes are full width (three cards a row).
+  - **Atmosphere**: rising embers in the Dungeon, dust in the Crypt, fireflies in the Graveyard, a breathing torchlight glow; an entrance with two doors that swing open (once per tab, skipped under reduced motion; rendered in `main.tsx`, outside the App).
+  - **Answer checking** (`answer-check.ts`, `AnswerPanel.tsx`): a fight or challenge now asks you to pick from four options (the wrong ones are your other facts' answers, the most alike first) or to type the answer (checked with slack for case, punctuation, articles and small typos). The old "Show answer / I knew it" stays as a third choice. Setting "Answer by" beside Sound; default is picking. Tests written before this select the old mode through `defaultAnswerCheck` / the app-kit's `answerCheck`.
+  - **Features**: hunter ranks from souls banished with progress to the next (`ranks.ts`); a combo counter in Triage sessions; sparks on a win, "Miss!" on a wrong answer; after a right answer the fight says when the fact wakes again.
+- **Tests**: new `answer-check.test.ts`, `ranks.test.ts`, `components/FightDialog.checked.test.tsx`, `App.answers.test.tsx`; `layout-css.test.ts` now expects one column and checks the new CSS files fit a 320px screen. App 451/451, shell 103/103, typechecks clean.
+- **What I changed by hand**: no code.
+
+---
+
+## After the spec: extras, checks and the next apps' briefs (Nov 19, 2026)
+
+- **Kiro feature used**: none. Done by Claude Opus 5.5 at my request; no Kiro credits.
+- **What was added**:
+  - **Unique creature names** (`nameCreatures` in `creatures.ts`): larger name pools; facts are named oldest first, so names never repeat and never change when facts are added.
+  - **Triage shows a result at once** (shell `TriagePanel` gained an optional `initialBudget`; the app passes 10 minutes).
+  - **Today's 5-minute raid**: one click runs Triage for 5 minutes and starts the session.
+  - **Import facts** (`import-facts.ts`, `ImportFactsDialog.tsx`): paste `question | answer | why` lines, tabs or CSV; bad lines are listed with their reason.
+  - **Back up and restore** (`backup.ts`, `BackupControls.tsx`): download your facts as JSON; a restore is checked by loading it into a real engine, then confirmed before it replaces anything.
+  - **Phone**: the time dock folds to one row with a button to open it. **Empty Graveyard**: a flower meadow instead of a blank panel.
+- **Keyboard and phone check** (scripted in a real browser, Playwright with Chromium): every control has a visible focus ring; dialogs trap and return focus; nothing scrolls sideways at 390px. It found two real problems, both fixed: focused buttons could sit under the fixed dock (fixed with `scroll-padding-bottom`), and a stray Enter answered a fight because focus started on option A (focus now starts on the options group; A to D or 1 to 4 pick).
+- **Decided against**: stacking the three scenes (a very long page, and it would undo the tab pattern); topic tags for answer options (needs a new field in the developer's `policy.ts`).
+- **Kept on purpose**: local-first. No accounts and no database, as `tech.md` says; backup and restore cover moving or losing a browser. Cloud sync is the next step the storage adapter allows.
+- **Briefs for the next apps**: `docs/design/ghosted-visual-brief.md` (with `ghosted-wireframe.html`) and `docs/design/expiry-reaper-visual-brief.md`, written before Kiro builds them, so the look is in their specs from day one.
+- **Tests**: app 465/465, shell 104/104, typechecks clean.
+- **What I changed by hand**: no code.

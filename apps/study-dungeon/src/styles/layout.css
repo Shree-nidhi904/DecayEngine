@@ -23,9 +23,11 @@ main.sd-app:focus {
   outline: none;
 }
 
+/* One column: the raid planner (Triage) across the page, then the scenes
+   at full width, so the cards get room and nothing sits beside empty space. */
 .sd-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 20px;
 }

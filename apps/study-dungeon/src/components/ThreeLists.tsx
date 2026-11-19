@@ -12,6 +12,8 @@ import { emptyCryptPrompt, landmarkText, sceneText, studyDungeonWording } from "
 import { ConfirmRemoveDialog } from "./ConfirmRemoveDialog"
 import { FactCard } from "./FactCard"
 import { Torch, Tree } from "./art/Scenery"
+import { Embers, Fireflies, Motes } from "./art/Particles"
+import { PeacefulYard } from "./art/Scenery"
 import "../styles/lists.css"
 
 /** What a card's main button asks for: Fight (tend) or Challenge (resurrect). */
@@ -174,15 +176,18 @@ export function ThreeLists({
           </>
         )}
         {selected === "dead" && <Tree />}
+        {selected === "weak" ? <Embers /> : selected === "alive" ? <Motes /> : <Fireflies />}
+        <div className="sd-scene-glow" aria-hidden="true" />
         <h2 className="sd-scene-title">{scene.title}</h2>
         <p className="sd-scene-sub">{scene.sub}</p>
         {items.length === 0 ? (
           <div className="sd-scene-empty">
             <p className="sd-empty">The {studyDungeonWording.lists[selected]} is empty.</p>
             {counts.alive + counts.weak + counts.dead === 0 && <p className="sd-empty">{emptyCryptPrompt}</p>}
-            {selected === "weak" && counts.alive + counts.weak + counts.dead > 0 && (
+            {counts.alive + counts.weak + counts.dead > 0 && (
               <p className="sd-empty sd-empty-hint">{scene.emptyHint}</p>
             )}
+            {selected === "dead" && <PeacefulYard />}
           </div>
         ) : (
           <ul className="sd-cards" data-scene={selected}>

@@ -6,7 +6,7 @@
 //
 // Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { TimeMachine, TIME_MACHINE_MAX_DAYS, type FrameScheduler } from "@decay-engine/shell"
 import type { StudyDungeonEngine } from "../engine-instance"
 import { DAY_MS } from "../policy"
@@ -44,6 +44,8 @@ export function TimeDock({
       timelineEvents(engine.view(realNow), engine.forecast(realNow, TIME_MACHINE_MAX_DAYS * DAY_MS), realNow, TIME_MACHINE_MAX_DAYS),
     [engine, realNow, version]
   )
+  // On phones the dock starts folded to one row (CSS); this opens it.
+  const [open, setOpen] = useState(false)
   const shownDay = Math.floor(offsetMs / DAY_MS)
   const next = upcoming(events, shownDay)
   const age = offsetMs / (TIME_MACHINE_MAX_DAYS * DAY_MS)
@@ -108,9 +110,18 @@ export function TimeDock({
   )
 
   return (
-    <div className="sd-dock" data-previewing={offsetMs > 0 ? "" : undefined}>
+    <div className="sd-dock" data-previewing={offsetMs > 0 ? "" : undefined} data-open={open ? "" : undefined}>
       <div className="sd-dock-in">
         <Candle age={age} />
+        <button
+          type="button"
+          className="sd-dock-toggle"
+          aria-expanded={open}
+          aria-label={open ? timelineText.fold : timelineText.unfold}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span aria-hidden="true">{open ? "▾" : "▴"}</span>
+        </button>
         <TimeMachine
           today={realNow}
           offsetMs={offsetMs}

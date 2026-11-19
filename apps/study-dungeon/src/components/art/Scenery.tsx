@@ -139,3 +139,23 @@ export function StateGlyph({ state }: { state: "alive" | "weak" | "dead" }) {
     </svg>
   )
 }
+
+/** The empty graveyard: grass, flowers in every creature colour, no stones. */
+export function PeacefulYard() {
+  const flowers = [
+    [30, "#9cf26b"], [70, "#b48cff"], [115, "#ff8a2b"], [160, "#4fd8e8"], [205, "#9cf26b"], [250, "#b48cff"],
+  ] as const
+  return (
+    <svg className="sd-yard-art" viewBox="0 0 280 70" aria-hidden="true" focusable="false">
+      <path d="M0 60q35-10 70 0t70 0 70 0 70 0v10H0z" fill="#12361c" />
+      {flowers.map(([x, color]) => (
+        <g key={x} className="sd-flower">
+          <path d={`M${x} 60v-18`} stroke="#1d5a28" strokeWidth="2" />
+          <path d={`M${x - 6} 52q6-6 6 0M${x + 6} 50q-6-6-6 0`} fill="#1d5a28" />
+          <circle cx={x} cy="40" r="5" fill={color} />
+          <circle cx={x} cy="40" r="2" fill="#fff6c8" />
+        </g>
+      ))}
+    </svg>
+  )
+}

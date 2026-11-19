@@ -52,6 +52,9 @@ export function useModalDialog() {
     const dialog = ref.current
     if (dialog === null) return
     if (!dialog.open) dialog.showModal()
+    // A part of the dialog can ask to be focused first (data-autofocus), for
+    // example the answer options, so a stray Enter does not press a button.
+    dialog.querySelector<HTMLElement>("[data-autofocus]")?.focus()
     // close() fires "close", not "cancel", so this never calls onCancel.
     return () => dialog.close()
   }, [])

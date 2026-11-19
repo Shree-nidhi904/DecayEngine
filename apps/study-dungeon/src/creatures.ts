@@ -23,10 +23,22 @@ export type Mood = "sleep" | "worried" | "feral" | "happy"
 export const CREATURE_KINDS: readonly CreatureKind[] = ["slime", "bat", "imp", "eye"]
 
 export const CREATURES: Record<CreatureKind, { color: string; names: readonly string[] }> = {
-  slime: { color: "#9cf26b", names: ["Gloop", "Squelch", "Blorp", "Ooze"] },
-  bat: { color: "#b48cff", names: ["Batsy", "Flitter", "Nibbles", "Wisp"] },
-  imp: { color: "#ff8a2b", names: ["Skulky", "Rattle", "Gnash", "Cinder"] },
-  eye: { color: "#4fd8e8", names: ["Peeper", "Gawk", "Blink", "Squint"] },
+  slime: {
+    color: "#9cf26b",
+    names: ["Gloop", "Squelch", "Blorp", "Ooze", "Gunk", "Splodge", "Wobble", "Sludgy", "Drool", "Burble", "Mucky", "Glorp"],
+  },
+  bat: {
+    color: "#b48cff",
+    names: ["Batsy", "Flitter", "Nibbles", "Wisp", "Fang", "Echo", "Dusk", "Flap", "Squeak", "Vesper", "Nyx", "Morsel"],
+  },
+  imp: {
+    color: "#ff8a2b",
+    names: ["Skulky", "Rattle", "Gnash", "Cinder", "Grub", "Snik", "Pyre", "Mischief", "Scorch", "Grizzle", "Smudge", "Krik"],
+  },
+  eye: {
+    color: "#4fd8e8",
+    names: ["Peeper", "Gawk", "Blink", "Squint", "Ogle", "Glint", "Stare", "Lurk", "Iris", "Gaze", "Wink", "Leer"],
+  },
 }
 
 /** Below this health a weak creature turns feral. */
@@ -44,13 +56,50 @@ function hash(text: string): number {
 
 export type CreatureIdentity = { kind: CreatureKind; name: string; color: string }
 
+// Names given out so far, so no two facts share one (see nameCreatures).
+let registry = new Map<string, string>()
+
 /** The creature that stands for a fact: its kind, name and colour. */
 export function creatureOf(id: string): CreatureIdentity {
   const h = hash(id)
   const kind = CREATURE_KINDS[h % CREATURE_KINDS.length]!
   const { color, names } = CREATURES[kind]
-  const name = names[Math.floor(h / CREATURE_KINDS.length) % names.length]!
+  const name = registry.get(id) ?? names[Math.floor(h / CREATURE_KINDS.length) % names.length]!
   return { kind, name, color }
+}
+
+const ROMAN = ["", " II", " III", " IV", " V", " VI", " VII", " VIII", " IX", " X"]
+
+/**
+ * Gives every fact a different name. Facts are named oldest first (then by
+ * id), each taking its usual name or, when that is taken, the next free one
+ * of its kind; when a kind runs out, names repeat with II, III and so on.
+ * The same facts always get the same names, and a fact keeps its name when
+ * newer facts are added. Returns the names; creatureOf reads them.
+ */
+export function nameCreatures(facts: readonly { id: string; createdAt: number }[]): Map<string, string> {
+  const taken = new Set<string>()
+  const names = new Map<string, string>()
+  const order = [...facts].sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  for (const fact of order) {
+    const h = hash(fact.id)
+    const pool = CREATURES[CREATURE_KINDS[h % CREATURE_KINDS.length]!].names
+    const start = Math.floor(h / CREATURE_KINDS.length) % pool.length
+    let chosen: string | undefined
+    for (let round = 0; chosen === undefined; round++) {
+      for (let i = 0; i < pool.length; i++) {
+        const candidate = pool[(start + i) % pool.length]! + (ROMAN[round] ?? ` ${round + 1}`)
+        if (!taken.has(candidate)) {
+          chosen = candidate
+          break
+        }
+      }
+    }
+    taken.add(chosen)
+    names.set(fact.id, chosen)
+  }
+  registry = names
+  return names
 }
 
 /** The mood rule from the brief: alive sleeps; weak is worried, or feral below 35; dead rises feral. */

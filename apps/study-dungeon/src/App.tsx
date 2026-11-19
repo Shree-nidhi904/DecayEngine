@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import {
   PreviewBanner,
   TIME_MACHINE_MAX_OFFSET_MS,
@@ -22,7 +22,14 @@ import { Tour } from "./components/Tour"
 import { TimeDock } from "./components/TimeDock"
 import { Creature } from "./components/art/Creature"
 import { Atmosphere, Bats, Torch } from "./components/art/Scenery"
-import { creatureOf, moodOf } from "./creatures"
+import { creatureOf, moodOf, nameCreatures } from "./creatures"
+import { AnswerCheckSetting } from "./components/AnswerCheckSetting"
+import { RaidIntro } from "./components/RaidIntro"
+import { ImportFactsDialog } from "./components/ImportFactsDialog"
+import { BackupControls } from "./components/BackupControls"
+import { buildChoices, loadAnswerCheck, saveAnswerCheck, type AnswerCheck } from "./answer-check"
+import { answerText, dailyRaidText, importText } from "./wording"
+import { studyDungeonPolicy } from "./policy"
 import { loadSampleData } from "./sample-data"
 import {
   hasStarted,
@@ -51,6 +58,7 @@ import "./styles/dialogs.css"
 import "./styles/app.css"
 import "./styles/world.css"
 import "./styles/dock.css"
+import "./styles/fx.css"
 import "./styles/animations.css"
 import "./styles/layout.css"
 
@@ -93,11 +101,17 @@ export interface AppProps {
    * Defaults to the browser's AudioContext; tests pass a fake that records tones.
    */
   createAudioContext?: () => AudioContextLike | null
+  /**
+   * How fights check answers until the user picks a setting (answer-check.ts).
+   * Defaults to "choices". Tests of other behaviour pass "self".
+   */
+  defaultAnswerCheck?: AnswerCheck
 }
 
 /** The one dialog open at a time, if any. */
 type OpenDialog =
   | { kind: "add" }
+  | { kind: "import" }
   | { kind: "edit"; fact: Fact }
   | { kind: "fight"; fact: Fact }
   | { kind: "challenge"; fact: Fact }
@@ -130,6 +144,7 @@ export function App({
   reload = browserReload,
   timeZone,
   createAudioContext,
+  defaultAnswerCheck,
 }: AppProps) {
   // Every write uses the real time (design.md, Normal Mode). The app may read
   // the clock; the engine never does.
@@ -176,6 +191,34 @@ export function App({
       ...(createAudioContext === undefined ? {} : { createContext: createAudioContext }),
     })
   )
+  // How fights check the answer (answer-check.ts): a preference, like sound.
+  const [answerCheck, setAnswerCheck] = useState<AnswerCheck>(() => loadAnswerCheck(storage, defaultAnswerCheck))
+  const changeAnswerCheck = useCallback(
+    (check: AnswerCheck) => {
+      setAnswerCheck(check)
+      saveAnswerCheck(storage, check)
+    },
+    [storage]
+  )
+  /** The options for a fight or challenge: other facts' answers as the wrong ones. */
+  const choicesFor = useCallback(
+    (fact: Fact) => (answerCheck === "choices" ? buildChoices(fact, engine.view(writeNow())) : null),
+    [answerCheck, engine, writeNow]
+  )
+  /** After a right answer: when the fact wakes again, in words. */
+  const sleepsUntilFor = useCallback(
+    (id: string) => () => {
+      const at = writeNow()
+      const fact = engine.view(at).find((f) => f.id === id)
+      if (fact === undefined) return null
+      const wake = studyDungeonPolicy.nextDueAt(fact, at)
+      return wake === null ? null : answerText.sleepsUntil(formatDate(wake))
+    },
+    [engine, writeNow, formatDate]
+  )
+  // Right answers in a row during a Triage session.
+  const [combo, setCombo] = useState(0)
+
   const changeSound = useCallback(
     (enabled: boolean) => {
       soundOnRef.current = enabled
@@ -422,11 +465,23 @@ export function App({
     (picks: TriageCandidate<FactPayload, FactPolicyData>[]) => {
       if (previewing) return
       setSessionDone(null)
+      setCombo(0)
       const entries = picks.map((pick) => ({ id: pick.item.id, question: pick.item.payload.question }))
       openSessionFight(entries, 0, [])
     },
     [previewing, openSessionFight]
   )
+
+  /** "Today's raid": Triage for 5 minutes, then the session, in one click. */
+  const dailyRaid = useCallback(() => {
+    if (previewing) return
+    const { picks } = engine.triage(5, writeNow())
+    if (picks.length === 0) {
+      announce(dailyRaidText.nothing)
+      return
+    }
+    startSession(picks)
+  }, [previewing, engine, writeNow, startSession, announce])
 
   const stopSession = useCallback(() => {
     setSession(null)
@@ -441,6 +496,10 @@ export function App({
     }
     openSessionFight(session.entries, session.position + 1, session.skipped)
   }, [session, openSessionFight])
+
+  // Every fact's creature gets its own name, before the children render.
+  // Only adding or removing facts changes the names (version), not time.
+  useMemo(() => nameCreatures(engine.view(realNow)), [engine, version])
 
   // 0 today, 1 at +60 days: ages the room (torches dim, fog and cobwebs).
   const age = Math.min(1, previewOffsetMs / TIME_MACHINE_MAX_OFFSET_MS)
@@ -493,8 +552,35 @@ export function App({
             />
 
             <div className="sd-layout">
+              <div className="sd-layout-side sd-raid" role="group" aria-label={landmarkText.tools}>
+                <RaidIntro
+                  onDailyRaid={dailyRaid}
+                  disabledReason={previewing ? previewBlockedText : undefined}
+                />
+                <TriagePanel<FactPayload, FactPolicyData>
+                  theme={studyDungeonShellTheme}
+                  wording={studyDungeonWording}
+                  triage={runTriage}
+                  now={now}
+                  maxBudgetMinutes={TRIAGE_MAX_BUDGET_MINUTES}
+                  renderText={(item) => {
+                    const creature = creatureOf(item.id)
+                    return (
+                      <>
+                        <Creature kind={creature.kind} mood={moodOf(item.state, item.health)} className="sd-art-xs" />
+                        {item.payload.question}
+                      </>
+                    )
+                  }}
+                  onStartSession={startSession}
+                  startDisabled={previewing}
+                  startDisabledReason={previewing ? previewBlockedText : undefined}
+                  initialBudget={10}
+                />
+              </div>
               <div className="sd-layout-main">
                 <div className="sd-toolbar">
+                  <p className="sd-toolbar-hint">{factFormText.addHint}</p>
                   <button
                     type="button"
                     className="sd-button sd-button-add"
@@ -506,6 +592,18 @@ export function App({
                     }}
                   >
                     {factFormText.addEntry}
+                  </button>
+                  <button
+                    type="button"
+                    className="sd-button sd-button-quiet sd-button-import"
+                    aria-disabled={previewing ? true : undefined}
+                    title={previewing ? previewBlockedText : undefined}
+                    onClick={() => {
+                      if (previewing) return
+                      setDialog({ kind: "import" })
+                    }}
+                  >
+                    {importText.button}
                   </button>
                 </div>
 
@@ -540,31 +638,18 @@ export function App({
                 />
               </div>
 
-              <div className="sd-layout-side" role="group" aria-label={landmarkText.tools}>
-                <TriagePanel<FactPayload, FactPolicyData>
-                  theme={studyDungeonShellTheme}
-                  wording={studyDungeonWording}
-                  triage={runTriage}
-                  now={now}
-                  maxBudgetMinutes={TRIAGE_MAX_BUDGET_MINUTES}
-                  renderText={(item) => {
-                    const creature = creatureOf(item.id)
-                    return (
-                      <>
-                        <Creature kind={creature.kind} mood={moodOf(item.state, item.health)} className="sd-art-xs" />
-                        {item.payload.question}
-                      </>
-                    )
-                  }}
-                  onStartSession={startSession}
-                  startDisabled={previewing}
-                  startDisabledReason={previewing ? previewBlockedText : undefined}
-                />
-              </div>
             </div>
 
             <ResetData onConfirm={reset} disabledReason={previewing ? previewBlockedText : undefined}>
+              <AnswerCheckSetting value={answerCheck} onChange={changeAnswerCheck} />
               <SoundToggle enabled={soundOn} onChange={changeSound} />
+              <BackupControls
+                storage={storage}
+                reload={reload}
+                announce={announce}
+                restoreDisabledReason={previewing ? previewBlockedText : undefined}
+                today={() => new Date(writeNow())}
+              />
             </ResetData>
           </>
         )}
@@ -578,6 +663,18 @@ export function App({
             onSaved={(id) => {
               bumpVersion()
               announceAdded(id)
+            }}
+            onClose={closeDialog}
+            onWriteError={handleWriteError}
+          />
+        )}
+        {dialog?.kind === "import" && (
+          <ImportFactsDialog
+            engine={engine}
+            now={writeNow}
+            onImported={(count) => {
+              bumpVersion()
+              announce(importText.done(count))
             }}
             onClose={closeDialog}
             onWriteError={handleWriteError}
@@ -611,8 +708,15 @@ export function App({
                 : { position: session.position + 1, total: session.entries.length, onStop: stopSession }
             }
             sound={sound}
-            onResult={(result) => announceFight(dialog.fact.id, result)}
+            onResult={(result) => {
+              if (session !== null) setCombo((c) => (result === "correct" ? c + 1 : 0))
+              announceFight(dialog.fact.id, result)
+            }}
             onWriteError={handleWriteError}
+            check={answerCheck}
+            choices={choicesFor(dialog.fact)}
+            sleepsUntil={sleepsUntilFor(dialog.fact.id)}
+            combo={session === null ? 0 : combo}
           />
         )}
         {dialog?.kind === "autopsy" && (
@@ -639,6 +743,8 @@ export function App({
             sound={sound}
             onResult={(result) => announceChallenge(dialog.fact.id, result)}
             onWriteError={handleWriteError}
+            check={answerCheck}
+            choices={choicesFor(dialog.fact)}
           />
         )}
       </main>

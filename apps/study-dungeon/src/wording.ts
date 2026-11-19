@@ -112,6 +112,8 @@ export const removeCancelLabel = "Cancel"
 export const factFormText = {
   /** The button that opens the form for a new fact. */
   addEntry: "Add fact",
+  /** Beside the Add fact button. */
+  addHint: "Every fact you add becomes a creature. Forget it and it comes for you.",
   addTitle: "Add a fact",
   editTitle: "Edit fact",
   question: "Question",
@@ -278,12 +280,12 @@ export const sceneText = {
   alive: {
     title: "The Crypt",
     sub: "Healthy facts, asleep. Each shows when it will wake.",
-    emptyHint: "",
+    emptyHint: "No one sleeps here yet. Win a fight and the creature comes here to rest.",
   },
   dead: {
     title: "The Graveyard",
     sub: "Forgotten for too long. Challenge a grave to bring it back.",
-    emptyHint: "",
+    emptyHint: "Not a single grave. Nothing has been forgotten for good. Keep it that way.",
   },
 } as const
 
@@ -310,6 +312,10 @@ export const heroExtraText = {
   },
   /** Under "N facts are weakening" today. */
   startWith: (name: string, health: string) => `Start with ${name}. It has ${health} health left.`,
+  rank: "Rank",
+  rankProgress: "Progress to the next rank",
+  nextRank: (souls: number, title: string) => `${souls} more ${souls === 1 ? "soul" : "souls"} to ${title}`,
+  topRank: "The highest rank. The dungeon fears you.",
 } as const
 
 /** The time dock's timeline (visual pass, Pass 3). */
@@ -323,4 +329,75 @@ export const timelineText = {
   none: (maxDays: number) => `No more changes in the next ${maxDays} days.`,
   empty: "Nothing to predict yet.",
   ticks: ["Today", "15d", "30d", "45d", "60d"],
+  unfold: "Open the time machine",
+  fold: "Fold the time machine",
+} as const
+
+/** Answering in a fight or a challenge when the answer is checked (answer-check.ts). */
+export const answerText = {
+  choose: "Choose the answer",
+  keysHint: "Press A to D, or click.",
+  typeLabel: "Your answer",
+  check: "Check",
+  youWrote: (typed: string) => `You wrote: “${typed}”`,
+  rightMark: "right",
+  wrongMark: "your pick",
+  setting: "Answer by",
+  options: { choices: "Picking from four", typed: "Typing it", self: "Trust me (show the answer)" },
+  sleepsUntil: (date: string) => `It sleeps until ${date}. Next time it will sleep even longer.`,
+} as const
+
+/** The explainer beside Triage (the raid planner). */
+export const raidText = {
+  title: "Short on time? Plan a raid.",
+  steps: [
+    "Pick how many minutes you have.",
+    "Triage picks the weak facts that save the most memory in that time: the most important and the closest to dying first.",
+    "Press Start the session to fight them one after another.",
+  ],
+  note: "Facts you skip keep fading. Still lurking shows when each one dies.",
+} as const
+
+/** A fight in a Triage session, after right answers in a row. */
+export const comboText = (n: number) => `Combo ×${n}`
+
+/** The entrance doors (DoorSplash). */
+export const doorText = {
+  title: "Study Dungeon",
+  line: "Knock, if you dare. What you forget is waiting inside.",
+  enter: "Enter the dungeon",
+} as const
+
+/** "Today's raid": the five-minute session in one click. */
+export const dailyRaidText = {
+  button: "Start today's 5-minute raid",
+  hint: "One click: Triage for 5 minutes, then fight the picks.",
+  nothing: "Nothing needs saving right now. Come back when a fact weakens.",
+} as const
+
+/** "Import facts" (ImportFactsDialog). */
+export const importText = {
+  button: "Import facts",
+  title: "Import facts",
+  help: "One fact per line: question | answer | why it matters (optional). Rows pasted from a spreadsheet work too.",
+  label: "Your facts",
+  placeholder: "Capital of Peru? | Lima | Geography quiz\nPowerhouse of the cell? | Mitochondrion",
+  ready: (n: number) => (n === 0 ? "No facts to add yet." : `${n} ${n === 1 ? "fact" : "facts"} ready to add.`),
+  skipped: (line: number, reason: string) => `Line ${line} skipped: ${reason}.`,
+  more: (n: number) => `…and ${n} more skipped.`,
+  submit: (n: number) => (n === 0 ? "Add facts" : `Add ${n} ${n === 1 ? "fact" : "facts"}`),
+  done: (n: number) => `${n} ${n === 1 ? "fact" : "facts"} imported into the Crypt.`,
+} as const
+
+/** Back up and restore (BackupControls). */
+export const backupText = {
+  backUp: "Back up",
+  restore: "Restore",
+  saved: "Backup downloaded. Keep the file somewhere safe.",
+  nothing: "Nothing to back up yet.",
+  confirm: (n: number) =>
+    `Replace everything with this backup (${n} ${n === 1 ? "fact" : "facts"})? Your current facts will be lost.`,
+  confirmButton: "Replace",
+  cancel: "Cancel",
+  failed: "The backup could not be saved here. Storage may be full.",
 } as const

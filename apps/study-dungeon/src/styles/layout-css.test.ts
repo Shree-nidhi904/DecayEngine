@@ -79,10 +79,10 @@ const mobileBlocks = parsedLayout.blocks.filter((b) => b.prelude === `@media ${M
 const mobile = mobileBlocks[0]?.rules ?? []
 
 describe("layout.css: wide screens", () => {
-  it("puts the lists and the side panels in two columns, the side one 16 to 22rem", () => {
+  it("stacks the raid planner and the scenes in one full-width column (visual pass)", () => {
     const grid = declarationsFor(parsedLayout.top, ".sd-layout")
     expect(grid.display).toBe("grid")
-    expect(grid["grid-template-columns"]).toBe("minmax(0, 1fr) minmax(16rem, 22rem)")
+    expect(grid["grid-template-columns"]).toBe("minmax(0, 1fr)")
   })
 
   it("lets both columns shrink below their content (no overflow from long words)", () => {
@@ -149,6 +149,9 @@ describe("nothing is wider than a 320px screen", () => {
     "./tour.css",
     "./layout.css",
     "./animations.css",
+    "./world.css",
+    "./dock.css",
+    "./fx.css",
     "../../../../packages/shell/src/shell.css",
   ]
 

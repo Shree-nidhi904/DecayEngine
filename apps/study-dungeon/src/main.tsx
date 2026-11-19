@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { Root } from "./Root";
+import { DoorSplash } from "./components/DoorSplash";
 import { createEngine } from "./engine-instance";
 import type { FlagStorage } from "./first-run";
 import "./styles/global.css";
@@ -24,5 +25,6 @@ function browserStorage(): FlagStorage | null {
 createRoot(rootElement).render(
   <React.StrictMode>
     <Root createEngine={createEngine} storage={browserStorage()} />
+    <DoorSplash />
   </React.StrictMode>,
 );

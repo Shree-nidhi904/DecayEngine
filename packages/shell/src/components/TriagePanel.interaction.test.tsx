@@ -212,3 +212,27 @@ describe("TriagePanel Start the session", () => {
     expect(start.hasAttribute("title")).toBe(false);
   });
 });
+
+describe("TriagePanel initialBudget", () => {
+  it("runs straight away with that budget selected", () => {
+    const calls: number[] = []
+    render(
+      <TriagePanel
+        theme={fixtureTheme}
+        wording={fixtureWording}
+        triage={(minutes) => {
+          calls.push(minutes)
+          return { picks: [], others: [] }
+        }}
+        now={0}
+        maxBudgetMinutes={1440}
+        renderText={() => "x"}
+        onStartSession={() => {}}
+        initialBudget={20}
+      />
+    )
+    expect(calls).toEqual([20])
+    expect((screen.getByRole("radio", { name: fixtureWording.triage.minutes(20) }) as HTMLInputElement).checked).toBe(true)
+    expect(screen.getByText(fixtureWording.triage.empty)).toBeTruthy()
+  })
+})
