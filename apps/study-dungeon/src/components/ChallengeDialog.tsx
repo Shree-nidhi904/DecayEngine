@@ -12,6 +12,7 @@ import type { Fact } from "../policy"
 import type { SoundPlayer } from "../sound"
 import { challengeText, studyDungeonWording } from "../wording"
 import { useModalDialog } from "./useModalDialog"
+import { DialogFoe } from "./DialogFoe"
 import "../styles/dialogs.css"
 
 export interface ChallengeDialogProps {
@@ -93,15 +94,30 @@ export function ChallengeDialog({
     <dialog
       ref={ref}
       className="sd-dialog sd-challenge"
+      data-result={result === null ? undefined : result.ok ? "resurrected" : "stays-dead"}
       aria-labelledby="sd-challenge-title"
       onCancel={(event) => {
         event.preventDefault()
         onClose()
       }}
     >
-      <h2 id="sd-challenge-title" className="sd-dialog-title">
-        {studyDungeonWording.actions.resurrect}
-      </h2>
+      <div className="sd-dialog-head">
+        <h2 id="sd-challenge-title" className="sd-dialog-title">
+          {studyDungeonWording.actions.resurrect}
+        </h2>
+        <DialogFoe
+          fact={fact}
+          mood={result?.ok === true ? "happy" : "feral"}
+          quip={
+            result === null
+              ? "You let me rot. Prove you still know it."
+              : result.ok
+                ? "You brought me back. Now rebuild the memory."
+                : "The grave holds me. Try again when you remember."
+          }
+          fx={result === null ? "popin" : result.ok ? "rise" : "lunge"}
+        />
+      </div>
 
       <p className="sd-dialog-label">{challengeText.question}</p>
       <p className="sd-dialog-question">{fact.payload.question}</p>

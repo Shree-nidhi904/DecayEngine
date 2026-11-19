@@ -5,24 +5,25 @@
 // ../lists.ts so they can be tested without a browser.
 
 import { useMemo, useRef, useState, type KeyboardEvent } from "react"
-import { ItemCard } from "@decay-engine/shell"
 import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
-import { buildLists, epitaphOf, formatHealth, formatWakeUp, type FactState } from "../lists"
-import { studyDungeonShellTheme } from "../theme"
-import { emptyCryptPrompt, landmarkText, studyDungeonWording } from "../wording"
-import { studyDungeonIcons } from "./icons"
+import { buildLists, lastReviewHealth, type FactState } from "../lists"
+import { emptyCryptPrompt, landmarkText, sceneText, studyDungeonWording } from "../wording"
 import { ConfirmRemoveDialog } from "./ConfirmRemoveDialog"
+import { FactCard } from "./FactCard"
+import { Torch, Tree } from "./art/Scenery"
 import "../styles/lists.css"
 
 /** What a card's main button asks for: Fight (tend) or Challenge (resurrect). */
 export type FactAction = "tend" | "resurrect"
 
 export interface ThreeListsProps {
-  /** Only view is used: the lists never write. */
-  engine: Pick<StudyDungeonEngine, "view">
+  /** Only reads are used: the lists never write. history is optional (the "lost" segment). */
+  engine: Pick<StudyDungeonEngine, "view"> & Partial<Pick<StudyDungeonEngine, "history">>
   /** The time to show (today, or a previewed day once the time machine exists). */
   now: number
+  /** Today's real time. When it differs from now, cards say which state a fact is in today. */
+  realNow?: number
   /** Bumped by the App after every write, so the lists are read again. */
   version: number
   onAction: (fact: Fact, action: FactAction) => void
@@ -47,6 +48,7 @@ const TABS: readonly FactState[] = ["alive", "weak", "dead"]
 export function ThreeLists({
   engine,
   now,
+  realNow,
   version,
   onAction,
   onEdit,
@@ -84,16 +86,32 @@ export function ThreeLists({
     tabRefs.current[state]?.focus()
   }
 
-  const card = (fact: Fact, detail: string | null) => (
+  // Each fact's state today, only while a future day is shown.
+  const statesToday = useMemo(() => {
+    if (realNow === undefined || realNow === now) return null
+    return new Map(engine.view(realNow).map((f) => [f.id, f.state] as const))
+  }, [engine, realNow, now, version])
+
+  // Health right after each weak fact's last review, read with the lists so a
+  // fact removed since then is never looked up.
+  const baseHealths = useMemo(() => {
+    const map = new Map<string, number>()
+    if (engine.history === undefined) return map
+    for (const fact of lists.dungeon) {
+      const base = lastReviewHealth(engine.history(fact.id))
+      if (base !== undefined) map.set(fact.id, base)
+    }
+    return map
+  }, [engine, lists])
+
+  const card = (fact: Fact, wakeAt?: number | null) => (
     <li key={fact.id}>
-      <ItemCard
-        item={fact}
-        state={fact.state}
-        theme={studyDungeonShellTheme}
-        wording={studyDungeonWording}
-        icons={studyDungeonIcons}
-        renderText={(f) => f.payload.question}
-        renderDetail={() => detail}
+      <FactCard
+        fact={fact}
+        now={now}
+        wakeAt={wakeAt}
+        stateToday={statesToday?.get(fact.id)}
+        baseHealth={baseHealths.get(fact.id)}
         onAction={() => onAction(fact, fact.state === "dead" ? "resurrect" : "tend")}
         onAutopsy={fact.state === "dead" && onAutopsy !== undefined ? () => onAutopsy(fact) : undefined}
         onEdit={() => onEdit(fact)}
@@ -106,13 +124,12 @@ export function ThreeLists({
 
   const items =
     selected === "alive"
-      ? lists.crypt.map(({ fact, wakeAt }) => card(fact, wakeAt === null ? null : `Wakes ${formatWakeUp(wakeAt)}`))
+      ? lists.crypt.map(({ fact, wakeAt }) => card(fact, wakeAt))
       : selected === "weak"
-        ? lists.dungeon.map((fact) => card(fact, `Health ${formatHealth(fact.health)}`))
-        : lists.graveyard.map((fact) => {
-            const epitaph = epitaphOf(fact)
-            return card(fact, epitaph === null ? null : `“${epitaph}”`)
-          })
+        ? lists.dungeon.map((fact) => card(fact))
+        : lists.graveyard.map((fact) => card(fact))
+
+  const scene = sceneText[selected]
 
   return (
     <section className="sd-lists" aria-label="Your facts">
@@ -146,17 +163,33 @@ export function ThreeLists({
         role="tabpanel"
         id={`sd-panel-${selected}`}
         aria-labelledby={`sd-tab-${selected}`}
-        className="sd-panel"
+        className="sd-panel sd-scene"
+        data-scene={selected}
         tabIndex={0}
       >
-        {items.length === 0 ? (
+        {selected === "weak" && (
           <>
+            <Torch className="sd-wall-torch sd-wall-torch-left" />
+            <Torch className="sd-wall-torch sd-wall-torch-right" />
+          </>
+        )}
+        {selected === "dead" && <Tree />}
+        <h2 className="sd-scene-title">{scene.title}</h2>
+        <p className="sd-scene-sub">{scene.sub}</p>
+        {items.length === 0 ? (
+          <div className="sd-scene-empty">
             <p className="sd-empty">The {studyDungeonWording.lists[selected]} is empty.</p>
             {counts.alive + counts.weak + counts.dead === 0 && <p className="sd-empty">{emptyCryptPrompt}</p>}
-          </>
+            {selected === "weak" && counts.alive + counts.weak + counts.dead > 0 && (
+              <p className="sd-empty sd-empty-hint">{scene.emptyHint}</p>
+            )}
+          </div>
         ) : (
-          <ul className="sd-cards">{items}</ul>
+          <ul className="sd-cards" data-scene={selected}>
+            {items}
+          </ul>
         )}
+        <div className="sd-scene-floor" aria-hidden="true" />
       </div>
 
       {removing !== null && (

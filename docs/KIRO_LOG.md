@@ -793,3 +793,20 @@ For each session, record:
 - **What I changed by hand**: no code.
 - **Status**: Study Dungeon's spec is complete: 58 of 58. Still to do outside the spec: a manual pass in a browser (keyboard only, a phone width, sound on), screenshots for this log, and deployment.
 
+
+---
+
+## After the spec: the visual pass (Nov 19, 2026)
+
+- **Goal**: close the gap between the working app and the approved wireframe. The app worked, but it looked like a flat black list. The Study Dungeon spec described behaviour, not the look, so nothing told Kiro to build the creatures, scenes or candle.
+- **Kiro feature used**: none. Done by Claude Opus 5.5 at my request; no Kiro credits.
+- **Honest split**: the wireframe (`docs/design/study-dungeon-wireframe.html`) was designed outside Kiro. The brief (`docs/design/study-dungeon-visual-pass.md`) and the design tokens (`.kiro/steering/design-tokens.md`) were written outside Kiro too. The code for the visual pass was written by Claude Opus 5.5 from them, not by Kiro.
+- **What was changed** (look and feel only; the engine is untouched, every behaviour kept):
+  - **Pass 1, the world**: fixed atmosphere layers (room darkening, fog, cobwebs, vignette, grain) that age with the time machine through `--age`; the logo between two flickering torches with bats; each tab is now a scene: the Dungeon is a torch-lit brick chamber, the Crypt cold blue stone, the Graveyard a moonlit yard with a tree.
+  - **Pass 2, creatures and health**: four creatures (slime, bat, imp, eye) chosen from each fact's id, in four moods (sleep, worried, feral, happy) by the brief's rule; monster cards with name, quip, urgency label, epitaph, importance, minutes, half-life, health orb, a health bar with the weak and dead marks and the hatched "lost since last review" part; sleeping creatures in the Crypt; tombstones in the Graveyard. Fight is the one filled button; Edit and Remove are quiet. An "alive today" tag shows in a preview.
+  - **Pass 3, time machine and motion**: the time machine moved into a dock fixed to the bottom, beside a candle that melts as you look ahead, with markers for the days facts weaken or die (click to jump) and a "Next:" line. The hero says "In 18 days: …" and compares with today while previewing. The fight and challenge show the creature: it pops in, is squished by a right answer, lunges at a wrong one, rises when resurrected; a miss shakes the dialog. All motion is inside `prefers-reduced-motion: no-preference`.
+- **Kept on purpose**: the tabs (the wireframe stacks the scenes, but the tab keyboard pattern and its tests stay); every button name, its order and its disabled reason; the shell's ItemCard contract (`FactCard` keeps its classes, so the tests read cards the same way).
+- **Small shell change**: `TimeMachine` gained an optional `belowSlider` slot for the timeline. Shell tests 103/103.
+- **Steering**: `theme-and-wording.md` said "not as a health bar"; it now allows a bar beside the world, always with the weak and dead marks.
+- **Tests**: new `creatures.test.ts` (mood rule, urgency, stable identity), `components/art/art.test.tsx` (every creature in every mood, HealthBar marks and lost part, the candle melting), `timeline.test.ts`; `styles/animations-css.test.tsx` rewritten for the new motion rules. One real bug found on the way: a card read the history of a fact removed mid-session; the base health is now read with the lists.
+- **What I changed by hand**: no code.

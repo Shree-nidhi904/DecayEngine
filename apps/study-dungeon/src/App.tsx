@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 import {
   PreviewBanner,
-  TimeMachine,
+  TIME_MACHINE_MAX_OFFSET_MS,
   TriagePanel,
   type FrameScheduler,
 } from "@decay-engine/shell"
@@ -19,6 +19,10 @@ import { HeroSection } from "./components/HeroSection"
 import { ResetData } from "./components/ResetData"
 import { SoundToggle } from "./components/SoundToggle"
 import { Tour } from "./components/Tour"
+import { TimeDock } from "./components/TimeDock"
+import { Creature } from "./components/art/Creature"
+import { Atmosphere, Bats, Torch } from "./components/art/Scenery"
+import { creatureOf, moodOf } from "./creatures"
 import { loadSampleData } from "./sample-data"
 import {
   hasStarted,
@@ -37,6 +41,7 @@ import {
   announceText,
   factFormText,
   formatPreviewDate,
+  headerText,
   landmarkText,
   previewBlockedText,
   sessionText,
@@ -44,6 +49,8 @@ import {
 } from "./wording"
 import "./styles/dialogs.css"
 import "./styles/app.css"
+import "./styles/world.css"
+import "./styles/dock.css"
 import "./styles/animations.css"
 import "./styles/layout.css"
 
@@ -435,8 +442,13 @@ export function App({
     openSessionFight(session.entries, session.position + 1, session.skipped)
   }, [session, openSessionFight])
 
+  // 0 today, 1 at +60 days: ages the room (torches dim, fog and cobwebs).
+  const age = Math.min(1, previewOffsetMs / TIME_MACHINE_MAX_OFFSET_MS)
+  const worldStyle = { "--age": age.toFixed(3) } as CSSProperties
+
   return (
-    <>
+    <div className="sd-world" style={worldStyle} data-previewing={previewing ? "" : undefined}>
+      <Atmosphere />
       {previewing && (
         <PreviewBanner
           theme={studyDungeonShellTheme}
@@ -445,8 +457,13 @@ export function App({
         />
       )}
       <header className="sd-header">
-        <h1>Study Dungeon</h1>
-        <p>Facts you are forgetting come back as monsters.</p>
+        <Torch className="sd-header-torch" />
+        <div className="sd-title">
+          <h1>{headerText.title}</h1>
+          <p className="sd-tagline">{headerText.tagline}</p>
+        </div>
+        <Torch className="sd-header-torch" />
+        <Bats />
       </header>
       <main ref={mainRef} className="sd-app" tabIndex={-1}>
         {/* Always on the page, so screen readers hear every change. */}
@@ -472,6 +489,7 @@ export function App({
               timeZone={timeZone}
               onFight={fightWeakest}
               fightDisabledReason={previewing ? previewBlockedText : undefined}
+              previewDate={previewing ? formatDate(now) : undefined}
             />
 
             <div className="sd-layout">
@@ -479,7 +497,7 @@ export function App({
                 <div className="sd-toolbar">
                   <button
                     type="button"
-                    className="sd-button sd-button-primary"
+                    className="sd-button sd-button-add"
                     aria-disabled={previewing ? true : undefined}
                     title={previewing ? previewBlockedText : undefined}
                     onClick={() => {
@@ -512,6 +530,7 @@ export function App({
                 <ThreeLists
                   engine={engine}
                   now={now}
+                  realNow={realNow}
                   version={version}
                   onAction={handleAction}
                   onEdit={handleEdit}
@@ -522,25 +541,21 @@ export function App({
               </div>
 
               <div className="sd-layout-side" role="group" aria-label={landmarkText.tools}>
-                <TimeMachine
-                  today={realNow}
-                  offsetMs={previewOffsetMs}
-                  onChange={setPreviewOffsetMs}
-                  formatDate={formatDate}
-                  theme={studyDungeonShellTheme}
-                  wording={studyDungeonWording}
-                  frames={frameScheduler}
-                  clock={frameClock}
-                  prefersReducedMotion={prefersReducedMotion}
-                />
-
                 <TriagePanel<FactPayload, FactPolicyData>
                   theme={studyDungeonShellTheme}
                   wording={studyDungeonWording}
                   triage={runTriage}
                   now={now}
                   maxBudgetMinutes={TRIAGE_MAX_BUDGET_MINUTES}
-                  renderText={(item) => item.payload.question}
+                  renderText={(item) => {
+                    const creature = creatureOf(item.id)
+                    return (
+                      <>
+                        <Creature kind={creature.kind} mood={moodOf(item.state, item.health)} className="sd-art-xs" />
+                        {item.payload.question}
+                      </>
+                    )
+                  }}
                   onStartSession={startSession}
                   startDisabled={previewing}
                   startDisabledReason={previewing ? previewBlockedText : undefined}
@@ -627,6 +642,20 @@ export function App({
           />
         )}
       </main>
-    </>
+
+      {!firstRun && (
+        <TimeDock
+          engine={engine}
+          realNow={realNow}
+          offsetMs={previewOffsetMs}
+          onChange={setPreviewOffsetMs}
+          formatDate={formatDate}
+          version={version}
+          frames={frameScheduler}
+          clock={frameClock}
+          prefersReducedMotion={prefersReducedMotion}
+        />
+      )}
+    </div>
   )
 }

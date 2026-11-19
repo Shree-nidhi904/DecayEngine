@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ThemeProps, WordingProps } from "../types";
 import { shellStyle } from "../theme";
 import "../shell.css";
@@ -51,6 +51,8 @@ export interface TimeMachineProps {
   clock?: () => number;
   /** Whether the user asked for reduced motion. Defaults to the prefers-reduced-motion media query. */
   prefersReducedMotion?: () => boolean;
+  /** Optional app content shown right under the slider (for example a timeline of predicted changes). */
+  belowSlider?: ReactNode;
 }
 
 function clampOffset(ms: number): number {
@@ -74,6 +76,7 @@ export function TimeMachine({
   frames = browserFrames,
   clock = browserClock,
   prefersReducedMotion = browserPrefersReducedMotion,
+  belowSlider,
 }: TimeMachineProps) {
   const text = wording.timeMachine;
   const [playing, setPlaying] = useState(false);
@@ -145,6 +148,7 @@ export function TimeMachine({
         value={clampOffset(offsetMs)}
         onChange={(event) => change(Number(event.currentTarget.value))}
       />
+      {belowSlider}
       <div className="shell-time-machine-controls">
         {TIME_MACHINE_JUMP_DAYS.map((jumpDays) => (
           <button

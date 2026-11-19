@@ -214,8 +214,8 @@ export const announceText = {
 export const landmarkText = {
   /** The nav around the Crypt, Dungeon and Graveyard tabs. */
   lists: "Crypt, Dungeon and Graveyard",
-  /** The side column: the time machine and Triage. */
-  tools: "Time machine and Triage",
+  /** The side column: Triage. The time machine is in the dock at the bottom. */
+  tools: "Triage",
 } as const
 
 /** The sound setting (task 20.1, Requirement 18.1). */
@@ -266,4 +266,61 @@ export const challengeText = {
   resurrected: (halfLifeDays: number) =>
     `Resurrected! New half-life: ${formatHalfLifeDays(halfLifeDays)} ${halfLifeDays === 1 ? "day" : "days"}`,
   close: "Close",
+} as const
+
+/** The three scenes (visual pass, Pass 1): a heading and one line under it. */
+export const sceneText = {
+  weak: {
+    title: "The Dungeon",
+    sub: "Weak facts, weakest first. Face them before they die.",
+    emptyHint: "The dungeon is quiet. Drag the candle forward to see what is coming.",
+  },
+  alive: {
+    title: "The Crypt",
+    sub: "Healthy facts, asleep. Each shows when it will wake.",
+    emptyHint: "",
+  },
+  dead: {
+    title: "The Graveyard",
+    sub: "Forgotten for too long. Challenge a grave to bring it back.",
+    emptyHint: "",
+  },
+} as const
+
+/** The page header (visual pass, Pass 1). */
+export const headerText = {
+  title: "Study Dungeon",
+  tagline: "What you forget will come for you",
+} as const
+
+/** Extra hero lines (visual pass, Pass 3). */
+export const heroExtraText = {
+  /** The eyebrow while a future day is shown. */
+  previewEyebrow: (date: string) => `Future preview · ${date}`,
+  /** Put before the message while previewing: "In 18 days: ". */
+  inDays: (days: number) => `In ${days} ${days === 1 ? "day" : "days"}: `,
+  /** The forecast against today: "4 will weaken, 3 will die. Nothing is saved." */
+  forecast: (weaken: number, die: number) => {
+    const bits: string[] = []
+    if (weaken > 0) bits.push(`${weaken} will weaken`)
+    if (die > 0) bits.push(`${die} will die`)
+    return bits.length === 0
+      ? "No new changes by then. This is a preview, nothing is saved."
+      : `Compared with today, ${bits.join(" and ")}. This is a preview, nothing is saved.`
+  },
+  /** Under "N facts are weakening" today. */
+  startWith: (name: string, health: string) => `Start with ${name}. It has ${health} health left.`,
+} as const
+
+/** The time dock's timeline (visual pass, Pass 3). */
+export const timelineText = {
+  markers: "Predicted changes",
+  marker: (day: number, name: string, kind: "weak" | "dead") =>
+    `Day ${day}: ${name} ${kind === "weak" ? "weakens" : "dies"}`,
+  next: "Next:",
+  event: (name: string, kind: "weak" | "dead", inDays: number) =>
+    `${name} ${kind === "weak" ? "weakens" : "dies"} in ${inDays}d`,
+  none: (maxDays: number) => `No more changes in the next ${maxDays} days.`,
+  empty: "Nothing to predict yet.",
+  ticks: ["Today", "15d", "30d", "45d", "60d"],
 } as const

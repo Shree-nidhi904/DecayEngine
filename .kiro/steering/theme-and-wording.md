@@ -9,7 +9,7 @@ Each app has its own metaphor:
 - **Ghosted**: Lit window = connection freshness
 - **Expiry Reaper**: Jar of time
 
-Show decay in the world, not as a health bar.
+Show decay in the world first (creature, orb, candle, the room aging). A health bar is allowed alongside, never alone, and it always shows the weak and dead marks. See `design-tokens.md` and `docs/design/study-dungeon-visual-pass.md`.
 
 ## State thresholds
 

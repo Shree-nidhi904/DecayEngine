@@ -13,6 +13,8 @@ import type { Fact } from "../policy"
 import type { SoundPlayer } from "../sound"
 import { fightText, sessionText, studyDungeonWording } from "../wording"
 import { useModalDialog } from "./useModalDialog"
+import { DialogFoe } from "./DialogFoe"
+import { moodOf, quipOf } from "../creatures"
 import "../styles/dialogs.css"
 
 export interface FightDialogProps {
@@ -101,6 +103,7 @@ export function FightDialog({
     <dialog
       ref={ref}
       className="sd-dialog sd-fight"
+      data-result={done ? step : undefined}
       aria-labelledby="sd-fight-title"
       onCancel={(event) => {
         // Escape: before an answer it is the same as Walk away.
@@ -108,9 +111,23 @@ export function FightDialog({
         onClose()
       }}
     >
-      <h2 id="sd-fight-title" className="sd-dialog-title">
-        {studyDungeonWording.actions.tend}
-      </h2>
+      <div className="sd-dialog-head">
+        <h2 id="sd-fight-title" className="sd-dialog-title">
+          {studyDungeonWording.actions.tend}
+        </h2>
+        <DialogFoe
+          fact={fact}
+          mood={step === "correct" ? "happy" : step === "incorrect" || step === "died" ? "feral" : moodOf(fact.state, fact.health)}
+          quip={
+            step === "correct"
+              ? "Defeated. It sleeps twice as long now."
+              : step === "incorrect"
+                ? "It got stronger. You will face it again sooner."
+                : quipOf(moodOf(fact.state, fact.health))
+          }
+          fx={step === "correct" ? "squish" : step === "incorrect" ? "lunge" : "popin"}
+        />
+      </div>
 
       {session !== undefined && (
         <p className="sd-dialog-progress num">{sessionText.progress(session.position, session.total)}</p>

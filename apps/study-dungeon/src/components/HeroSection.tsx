@@ -16,7 +16,9 @@ import type { Fact } from "../policy"
 import { groupByState, sortDungeon } from "../lists"
 import { allHistory, countSoulsBanished, currentStreak } from "../stats"
 import { studyDungeonShellTheme } from "../theme"
-import { heroText, studyDungeonWording } from "../wording"
+import { formatHealth } from "../lists"
+import { creatureOf } from "../creatures"
+import { heroExtraText, heroText, studyDungeonWording } from "../wording"
 import { studyDungeonIcons } from "./icons"
 import "../styles/hero.css"
 
@@ -35,7 +37,11 @@ export interface HeroSectionProps {
   onFight: (fact: Fact) => void
   /** When set, "Fight the weakest" is disabled with this reason (previewing). */
   fightDisabledReason?: string
+  /** The previewed day, formatted, while the time machine looks ahead. */
+  previewDate?: string
 }
+
+const DAY_MS = 86_400_000
 
 /** A small soul wisp for "souls banished". */
 function SoulIcon() {
@@ -78,6 +84,7 @@ export function HeroSection({
   timeZone,
   onFight,
   fightDisabledReason,
+  previewDate,
 }: HeroSectionProps) {
   // version is a dependency on purpose: a write changes what the engine returns.
   const groups = useMemo(() => groupByState(engine.view(now)), [engine, now, version])
@@ -89,6 +96,23 @@ export function HeroSection({
     }
   }, [engine, realNow, version, timeZone])
 
+  // While previewing: how many facts change state between today and the day shown.
+  const previewing = now !== realNow
+  const forecast = useMemo(() => {
+    if (!previewing) return null
+    const today = new Map(engine.view(realNow).map((f) => [f.id, f.state] as const))
+    let weaken = 0
+    let die = 0
+    for (const f of engine.view(now)) {
+      const was = today.get(f.id)
+      if (was === "alive" && f.state === "weak") weaken++
+      if (was !== undefined && was !== "dead" && f.state === "dead") die++
+    }
+    return { weaken, die }
+  }, [engine, now, realNow, previewing, version])
+  const daysAhead = Math.floor((now - realNow) / DAY_MS)
+  const prefix = previewing ? <span className="sd-hero-when">{heroExtraText.inDays(daysAhead)}</span> : null
+
   const weakest = sortDungeon(groups.weak)[0]
   const total = groups.alive.length + groups.weak.length + groups.dead.length
   const fightDisabled = fightDisabledReason !== undefined
@@ -97,7 +121,15 @@ export function HeroSection({
   if (weakest !== undefined) {
     message = (
       <>
-        <p className="sd-hero-message">{heroText.weakening(groups.weak.length)}</p>
+        <h2 className="sd-hero-message">
+          {prefix}
+          <span>{heroText.weakening(groups.weak.length)}</span>
+        </h2>
+        {!previewing && (
+          <p className="sd-hero-sub">
+            {heroExtraText.startWith(creatureOf(weakest.id).name, formatHealth(weakest.health))}
+          </p>
+        )}
         <button
           type="button"
           className="sd-button sd-button-primary sd-hero-action"
@@ -113,19 +145,37 @@ export function HeroSection({
       </>
     )
   } else if (groups.alive.length > 0) {
-    message = <p className="sd-hero-message">{heroText.allQuiet}</p>
+    message = (
+      <h2 className="sd-hero-message sd-hero-message-calm">
+        {prefix}
+        <span>{heroText.allQuiet}</span>
+      </h2>
+    )
   } else if (total === 0) {
-    message = <p className="sd-hero-message">{heroText.noFacts}</p>
+    message = (
+      <h2 className="sd-hero-message sd-hero-message-calm">
+        {prefix}
+        <span>{heroText.noFacts}</span>
+      </h2>
+    )
   } else {
-    message = <p className="sd-hero-message">{heroText.onlyDead}</p>
+    message = (
+      <h2 className="sd-hero-message sd-hero-message-calm">
+        {prefix}
+        <span>{heroText.onlyDead}</span>
+      </h2>
+    )
   }
 
   return (
-    <section className="sd-hero" aria-labelledby="sd-hero-eyebrow">
-      <p id="sd-hero-eyebrow" className="sd-hero-eyebrow">
-        {heroText.eyebrow}
-      </p>
-      {message}
+    <section className="sd-hero" aria-label={heroText.eyebrow} data-previewing={previewing ? "" : undefined}>
+      <div className="sd-hero-main">
+        <p className="sd-hero-eyebrow">
+          {previewing && previewDate !== undefined ? heroExtraText.previewEyebrow(previewDate) : heroText.eyebrow}
+        </p>
+        {message}
+        {forecast !== null && <p className="sd-hero-sub sd-hero-forecast">{heroExtraText.forecast(forecast.weaken, forecast.die)}</p>}
+      </div>
       <div className="sd-hero-stats" role="group" aria-label={heroText.stats}>
         <Counters
           alive={groups.alive.length}

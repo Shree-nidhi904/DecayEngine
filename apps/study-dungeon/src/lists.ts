@@ -106,3 +106,19 @@ export function formatWakeUp(ms: number, options: WakeUpFormatOptions = {}): str
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? ""
   return `${part("day")} ${part("month")} ${part("year")}, ${part("hour")}:${part("minute")}`
 }
+
+/** History entry types that reset a fact's health (its last "review"). */
+const REVIEW_TYPES = new Set(["created", "tended", "resurrected"])
+
+/**
+ * The health a fact had right after its last review (or when it was added or
+ * resurrected), from engine.history(id). Undefined when there is none.
+ * The card shows the difference as "lost since last review".
+ */
+export function lastReviewHealth(entries: readonly { type: string; health?: number }[]): number | undefined {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]!
+    if (REVIEW_TYPES.has(entry.type) && typeof entry.health === "number") return entry.health
+  }
+  return undefined
+}

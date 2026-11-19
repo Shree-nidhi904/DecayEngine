@@ -12,19 +12,10 @@
  * Checked by layout-css.test.ts.
  */
 
-.sd-header {
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 1.5rem 1.5rem 0;
-}
-
-.sd-header h1 {
-  margin: 0;
-}
-
-.sd-header p {
-  margin: 0.25rem 0 0;
-  color: var(--color-bone-dim);
+/* The header itself (logo between torches) is in world.css. */
+main.sd-app {
+  max-width: 1080px;
+  padding: 18px 16px 0;
 }
 
 /* The page is focused after the tour; it needs no outline of its own. */
@@ -36,7 +27,7 @@ main.sd-app:focus {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
   align-items: start;
-  gap: 1rem;
+  gap: 20px;
 }
 
 .sd-layout-main,
@@ -70,7 +61,7 @@ main.sd-app:focus {
 
 @media (max-width: 639.98px) {
   .sd-header {
-    padding: 1rem 0.75rem 0;
+    padding: 16px 12px 0;
   }
 
   main.sd-app {
@@ -87,16 +78,13 @@ main.sd-app:focus {
     align-items: stretch;
   }
 
-  .sd-hero-message {
-    font-size: 1.5rem;
-  }
 
   .sd-cards {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .sd-tab {
-    padding: 0.4rem 0.6rem;
+    padding: 0.3rem 0.7rem;
     font-size: 1.1rem;
   }
 

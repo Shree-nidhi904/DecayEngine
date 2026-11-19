@@ -38,11 +38,12 @@ body {
   background: var(--color-bg);
   color: var(--color-bone);
   font-family: var(--font-body);
+  font-size: 17px;
   line-height: 1.5;
 }
 
 .sd-app {
-  max-width: 72rem;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 1.5rem;
 }

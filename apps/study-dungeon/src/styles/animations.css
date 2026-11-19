@@ -1,17 +1,16 @@
-/* Study Dungeon motion (tasks 17.1 and 17.2): the candle flame flickers on
-   alive facts, and a monster shakes when you point at or focus its card.
-   Targets the data-icon attributes in components/icons.tsx, so it works
-   wherever those icons are used (cards, hero, counters).
-   The tombstone (17.3) is the inline SVG in icons.tsx and stays still.
-   Everything here is switched off under prefers-reduced-motion.
-   Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md. */
-
-/* 17.1 Candle flame: the first path of the candle icon is the flame. */
-[data-icon="candle"] > path:first-child {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: sd-flicker 2.4s ease-in-out infinite;
-}
+/* Study Dungeon motion (tasks 17.1-17.2, visual pass Pass 3).
+   Every animation and transition sits inside
+   @media (prefers-reduced-motion: no-preference), so nothing moves for a
+   viewer who asked for reduced motion. The reduce block at the end is a
+   second guard, and global.css switches all animation off as well.
+   Checked by animations-css.test.tsx.
+   - Flames flicker: torches, the time dock's candle and the candle icon.
+   - Creatures idle by mood: sleep breathes, worried sways, feral shakes.
+   - A monster icon shakes once when its card is pointed at or focused.
+   - Bats cross the header; the fog drifts; the crypt's z z pulses.
+   - Cards pop in; graves rise. In a fight the creature pops in, is
+     squished by a right answer, lunges at a wrong one; a resurrected one
+     rises. A wrong answer shakes the dialog. */
 
 @keyframes sd-flicker {
   0%,
@@ -28,16 +27,9 @@
     opacity: 1;
   }
   70% {
-    transform: scale(0.97, 1.04) rotate(-1deg);
+    transform: scale(0.97, 1.08) rotate(-1deg);
     opacity: 0.85;
   }
-}
-
-/* 17.2 Monster shake: only on the card you point at or move focus into,
-   so a Dungeon full of monsters is not all moving at once. */
-.shell-item-card:hover [data-icon="monster"],
-.shell-item-card:focus-within [data-icon="monster"] {
-  animation: sd-shake 0.45s ease-in-out 1;
 }
 
 @keyframes sd-shake {
@@ -59,12 +51,305 @@
   }
 }
 
-/* Reduced motion: still icons. global.css also turns off all animation,
-   but this file must be safe on its own. */
-@media (prefers-reduced-motion: reduce) {
+@keyframes sd-feral {
+  0%,
+  100% {
+    transform: rotate(-2.5deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+
+@keyframes sd-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes sd-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04, 1.06);
+  }
+}
+
+@keyframes sd-fly {
+  0% {
+    left: -40px;
+    opacity: 0;
+    transform: translateY(0);
+  }
+  8% {
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(18px);
+  }
+  92% {
+    opacity: 0.8;
+  }
+  100% {
+    left: calc(100% + 20px);
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes sd-zz {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes sd-drift {
+  from {
+    transform: translateX(-4%);
+  }
+  to {
+    transform: translateX(4%);
+  }
+}
+
+@keyframes sd-popin {
+  from {
+    transform: translateY(14px) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes sd-rise {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes sd-squish {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25, 0.8);
+  }
+  100% {
+    transform: scale(0.1, 1.6) translateY(-40px);
+    opacity: 0;
+  }
+}
+
+@keyframes sd-lunge {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes sd-hit {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes sd-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Flames: the candle icon's first path, and every torch and candle flame. */
   [data-icon="candle"] > path:first-child,
+  .sd-flame {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: sd-flicker 1.4s ease-in-out infinite;
+  }
+
+  /* A monster icon shakes once on the card you point at or move focus into. */
   .shell-item-card:hover [data-icon="monster"],
   .shell-item-card:focus-within [data-icon="monster"] {
+    animation: sd-shake 0.45s ease-in-out 1;
+  }
+
+  /* Creatures idle by mood. */
+  .sd-mood-sleep {
+    transform-box: fill-box;
+    transform-origin: 50% 90%;
+    animation: sd-breathe 3.4s ease-in-out infinite;
+  }
+
+  .sd-mood-worried {
+    transform-box: fill-box;
+    transform-origin: 50% 90%;
+    animation: sd-sway 2.4s ease-in-out infinite;
+  }
+
+  .sd-mood-feral {
+    transform-box: fill-box;
+    transform-origin: 50% 90%;
+    animation: sd-feral 0.5s ease-in-out infinite;
+  }
+
+  .sd-bat {
+    animation: sd-fly 16s linear infinite;
+  }
+
+  .sd-bat:nth-child(2) {
+    top: 40px;
+    width: 20px;
+    animation: sd-fly 16s linear -8s infinite;
+  }
+
+  .sd-zzz {
+    animation: sd-zz 2.6s ease-in-out infinite;
+  }
+
+  .sd-fog {
+    animation: sd-drift 12s ease-in-out infinite alternate;
+  }
+
+  /* Cards pop in when a scene opens; graves rise out of the ground. */
+  .sd-cards > li {
+    animation: sd-popin 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+  }
+
+  .sd-cards[data-scene="dead"] > li {
+    animation: sd-rise 0.8s ease-out both;
+  }
+
+  /* Monster cards lift toward you; the creature leans in when you aim at Fight. */
+  .sd-monster.shell-item-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .sd-monster.shell-item-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 0 #000, 0 0 30px rgb(255 138 43 / 0.22), inset 0 0 40px rgb(255 138 43 / 0.06);
+  }
+
+  .sd-monster .sd-art {
+    transition: transform 0.2s;
+  }
+
+  .sd-monster:has(.sd-btn-primary:hover) .sd-art,
+  .sd-monster:has(.sd-btn-primary:focus-visible) .sd-art {
+    transform: scale(1.14) rotate(-5deg);
+  }
+
+  .sd-grave:hover .sd-stone-art {
+    animation: sd-wiggle 0.5s 1;
+  }
+
+  .sd-marker .sd-glyph {
+    transition: transform 0.15s;
+  }
+
+  .sd-marker:hover .sd-glyph,
+  .sd-marker:focus-visible .sd-glyph {
+    transform: scale(1.35);
+  }
+
+  .sd-torch,
+  .sd-room-dark,
+  .sd-web {
+    transition: opacity 0.6s;
+  }
+
+  /* The fight and the challenge. */
+  .sd-foe[data-fx="popin"] .sd-foe-art {
+    animation: sd-popin 0.45s cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+
+  .sd-foe[data-fx="squish"] .sd-foe-art {
+    animation: sd-squish 0.55s ease-in 0.7s forwards;
+  }
+
+  .sd-foe[data-fx="rise"] .sd-foe-art {
+    filter: drop-shadow(0 0 14px #9cf26b);
+    animation: sd-rise 0.8s ease-out;
+  }
+
+  .sd-foe[data-fx="lunge"] .sd-foe-art {
+    animation: sd-lunge 0.35s 1;
+  }
+
+  .sd-dialog[data-result="incorrect"],
+  .sd-dialog[data-result="stays-dead"] {
+    animation: sd-hit 0.4s 1;
+  }
+}
+
+/* Second guard: still under reduced motion even if a rule above leaks. */
+@media (prefers-reduced-motion: reduce) {
+  [data-icon="candle"] > path:first-child,
+  .sd-flame,
+  .shell-item-card:hover [data-icon="monster"],
+  .shell-item-card:focus-within [data-icon="monster"],
+  .sd-mood-sleep,
+  .sd-mood-worried,
+  .sd-mood-feral,
+  .sd-bat,
+  .sd-bat:nth-child(2),
+  .sd-zzz,
+  .sd-fog,
+  .sd-cards > li,
+  .sd-cards[data-scene="dead"] > li,
+  .sd-grave:hover .sd-stone-art,
+  .sd-foe[data-fx="popin"] .sd-foe-art,
+  .sd-foe[data-fx="squish"] .sd-foe-art,
+  .sd-foe[data-fx="rise"] .sd-foe-art,
+  .sd-foe[data-fx="lunge"] .sd-foe-art,
+  .sd-dialog[data-result="incorrect"],
+  .sd-dialog[data-result="stays-dead"] {
     animation: none;
+  }
+
+  .sd-bat {
+    display: none;
   }
 }

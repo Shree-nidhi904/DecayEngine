@@ -182,3 +182,124 @@
   justify-content: flex-end;
   margin: 0 0 1rem;
 }
+
+/* ---- Visual pass: dialogs as in the wireframe ---- */
+.sd-world .sd-dialog {
+  background: linear-gradient(180deg, #1f1624, var(--color-stone));
+  border: 1px solid var(--color-pumpkin);
+  box-shadow: 0 0 60px rgb(255 138 43 / 0.18);
+}
+
+.sd-world .sd-challenge {
+  border-color: var(--color-moon);
+  box-shadow: 0 0 60px rgb(168 230 214 / 0.16);
+}
+
+.sd-world .sd-dialog[data-result="incorrect"],
+.sd-world .sd-dialog[data-result="stays-dead"],
+.sd-world .sd-dialog[data-result="died"] {
+  border-color: var(--color-blood);
+  box-shadow: 0 0 60px rgb(255 95 119 / 0.4);
+}
+
+.sd-world .sd-dialog[data-result="correct"],
+.sd-world .sd-dialog[data-result="resurrected"] {
+  border-color: var(--color-ecto);
+  box-shadow: 0 0 60px rgb(156 242 107 / 0.25);
+}
+
+.sd-world .sd-dialog-title {
+  font-size: 32px;
+  letter-spacing: 0.04em;
+}
+
+.sd-dialog-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sd-dialog-head .sd-dialog-title {
+  margin: 0;
+}
+
+.sd-foe {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sd-foe-art {
+  flex: none;
+}
+
+.sd-art-lg {
+  width: 104px;
+  height: 104px;
+}
+
+.sd-foe-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+}
+
+.sd-foe-name {
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.sd-world .sd-dialog-question {
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.sd-world .sd-dialog-answer {
+  color: var(--color-ecto);
+  font-size: 20px;
+  background: #0f0a15;
+  border-left: 3px solid var(--color-ecto);
+}
+
+.sd-world .sd-button-right {
+  background: var(--color-ecto);
+  border-color: var(--color-ecto);
+  color: #0a1a05;
+  box-shadow: 0 3px 0 #3f7a22;
+}
+
+.sd-world .sd-button-wrong {
+  background: transparent;
+  border-color: var(--color-blood);
+  color: var(--color-blood);
+}
+
+.sd-world .sd-button-revive {
+  background: var(--color-moon);
+  border-color: var(--color-moon);
+  color: #06201a;
+}
+
+.sd-world .sd-button-danger {
+  background: var(--color-blood);
+  border-color: var(--color-blood);
+  color: #1c0207;
+}
+
+.sd-world .sd-field input[type="text"],
+.sd-world .sd-field select {
+  min-height: 40px;
+  background: #05030a;
+}
+
+@media (max-width: 520px) {
+  .sd-art-lg {
+    width: 80px;
+    height: 80px;
+  }
+}
