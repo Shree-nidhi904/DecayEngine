@@ -387,9 +387,9 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 
 #### Acceptance Criteria
 
-1. THE shell `AutopsyDialog` SHALL accept an optional marker renderer that draws each tend marker and its legend entry from app data.
-2. WHERE no renderer is given, THE `AutopsyDialog` SHALL behave exactly as today: right and wrong marks, the same legend and the same accessible chart summary.
-3. WHERE a renderer is given, THE chart's accessible summary SHALL describe the markers in the app's words (for example "3 calls, 2 messages, 1 meet-up") instead of right and wrong counts.
+1. THE shell `AutopsyDialog` SHALL accept an optional list of markers, each with a time, a kind and a label, and an optional renderer, and SHALL draw each marker inside the chart's time span and its legend entry from that app data. WHERE no renderer is given, each marker SHALL be drawn as a plain filled circle.
+2. WHERE no markers are given, THE `AutopsyDialog` SHALL behave exactly as today: right and wrong marks, the same legend and the same accessible chart summary.
+3. WHERE markers are given, THE chart's accessible summary SHALL describe them in the app's words (for example "3 calls, 2 messages, 1 meet-up") instead of right and wrong counts, and THE legend SHALL list one entry for each kind that has at least one marker inside the chart's time span.
 4. A new shell test SHALL prove text, call and meet-up markers render with their legend, and the existing shell tests and Study Dungeon tests SHALL pass without modification.
 5. THE shell AutopsyDialog SHALL accept an optional prop that moves focus to the dialog's content when it opens; WHERE it is not given, THE dialog SHALL behave exactly as today. A new shell test SHALL prove both.
 
@@ -400,9 +400,9 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 #### Acceptance Criteria
 
 1. THE Ghosted work SHALL make zero changes under `packages/engine/`.
-2. A check SHALL record the commit at which this spec is approved and run `git diff --exit-code <that commit> -- packages/engine` and `git status --porcelain -- packages/engine`, failing if either reports a change.
+2. A check (`scripts/check-engine-unchanged.sh`, called by `scripts/check.sh`) SHALL work out the state before the Ghosted work from git history (the parent of the first commit that added anything under `.kiro/specs/ghosted`, or HEAD when nothing about Ghosted is committed yet), with no recorded file, and SHALL run `git diff --exit-code <that commit> -- packages/engine` and `git status --porcelain --untracked-files=all -- packages/engine`, failing if either reports a change. On a shallow clone, where that history is missing, it SHALL say it was skipped and not fail.
 3. WHERE Ghosted seems to need an engine change, THE work SHALL stop and the need SHALL be reported (`engine-boundary.md`).
-4. CHANGES under `packages/shell/` SHALL be limited to Requirements 26 to 28. Requirement 32 needs no shell change; WHERE it turns out to need one, THE work SHALL stop and report it rather than widen this list.
+4. CHANGES under `packages/shell/` SHALL be limited to Requirements 26 to 28, and the same check SHALL fail when a shell file outside the files those requirements name (including every existing shell test) differs from that state. Requirement 32 needs no shell change; WHERE it turns out to need one, THE work SHALL stop and report it rather than widen this list.
 
 ### Requirement 30: Look and Fonts
 
@@ -458,7 +458,7 @@ Each property is a fast-check test with `{ numRuns: 100 }` or more, fixed timest
 
 ## Authorship
 
-- **Hand-written by the developer** (Kiro never writes or edits it):
+- **Written by Claude Code at the developer's request, outside Kiro** (Kiro never writes or edits it):
   - `apps/ghosted/src/autopsy-sentences.ts`: the cause-of-death sentences in Requirement 19.3.
 - **Written by Kiro as a documented exception** (the rules are set by the developer in Requirements 1 to 4):
   - `apps/ghosted/src/policy.ts`: the decay rules in Requirements 1 to 4, and the type changes in the Type Contract.

@@ -1,0 +1,77 @@
+/*
+ * Ghosted base page styles (design section 5.4).
+ * Dark only. Spectral for body text, IBM Plex Mono for numbers and labels,
+ * Josefin Sans (--display) for headings. The fonts are bundled through the
+ * @fontsource packages imported in main.tsx; nothing loads from another origin.
+ * No animation or transition here: motion lives only in motion.css.
+ */
+:root {
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--bone);
+}
+
+body {
+  font-family: "Spectral", Georgia, serif;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Labels, numbers and buttons: mono, uppercase, spaced (design-tokens.md). */
+.gh-label {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+}
+
+.gh-number {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+/* Visible on every focusable element; the offset keeps it off the lit panes (Req 24.5). */
+:focus-visible {
+  outline: 2px solid var(--sign);
+  outline-offset: 2px;
+}
+
+/* Text for screen readers only (for example the live region's label). */
+.gh-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

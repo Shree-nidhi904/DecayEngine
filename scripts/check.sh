@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Runs every check the project has, in order, and prints a short summary:
-# install, typecheck (shell, app), tests (engine, shell, app), and the app build.
+# install, the engine-unchanged check, typecheck (shell, app, Ghosted),
+# tests (engine, shell, app, Ghosted), and the app and Ghosted builds.
+# "app" is Study Dungeon.
 # Run it from anywhere in WSL:  bash scripts/check.sh
 # Exit code is 0 only when every step passes.
 #
 # Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+# The three Ghosted steps were added by Kiro (Ghosted task 2.10, design section 8.3).
 
 set -u
 cd "$(dirname "$0")/.."
@@ -40,12 +43,16 @@ step() {
 
 echo "Node $(node --version), pnpm $(pnpm --version)"
 step "install"            pnpm install
+step "engine unchanged"   bash scripts/check-engine-unchanged.sh
 step "typecheck shell"    pnpm --filter @decay-engine/shell typecheck
 step "typecheck app"      pnpm --filter @decay-engine/study-dungeon typecheck
 step "test engine"        pnpm --filter @decay-engine/engine test
 step "test shell"         pnpm --filter @decay-engine/shell test
 step "test app"           pnpm --filter @decay-engine/study-dungeon test
 step "build app"          pnpm --filter @decay-engine/study-dungeon build
+step "typecheck ghosted"  pnpm --filter @decay-engine/ghosted typecheck
+step "test ghosted"       pnpm --filter @decay-engine/ghosted test
+step "build ghosted"      pnpm --filter @decay-engine/ghosted build
 
 echo
 if [ "$failed" -eq 0 ]; then

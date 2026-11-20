@@ -1,0 +1,102 @@
+/*
+ * Houses on the Street (task 4.1, design section 5.1), ported from the
+ * wireframe's .houses / .house / .roof / .hbody / .win. Ghosted tokens only.
+ * No fixed width above 288px: a house is min(100%, var(--w)), so the street
+ * never scrolls sideways at 320px (Req 24.4). No animation here: motion.css.
+ */
+
+.gh-houses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 24px;
+  align-items: flex-end;
+  justify-content: center;
+  margin: 0;
+  padding: 0 0 16px;
+  list-style: none;
+  border-block-end: 6px solid var(--wall-lo);
+}
+
+.gh-house {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  inline-size: min(100%, var(--w, 200px));
+  min-inline-size: 0;
+}
+
+.gh-house-roof {
+  block-size: 26px;
+  margin-block-end: -1px;
+  background: var(--wall);
+  clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
+
+.gh-house-body {
+  padding: 8px 8px 12px;
+  background: linear-gradient(180deg, var(--wall), var(--wall-lo));
+  border: 1px solid var(--wall-edge);
+  border-block-start: 0;
+}
+
+.gh-house-name {
+  margin: 0 0 8px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--dim);
+  overflow-wrap: anywhere;
+}
+
+.gh-wins {
+  display: grid;
+  grid-template-columns: repeat(var(--c, 2), minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A window button: the pane, the first name, and the glyph with its word. */
+.gh-win {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  inline-size: 100%;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--bone);
+  text-align: center;
+  cursor: pointer;
+}
+
+.gh-win-name {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.gh-win-meta {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11px;
+}
+
+.gh-win-meta .gh-glyph {
+  inline-size: 11px;
+  block-size: 11px;
+}
+
+/* Hover is a hint only; focus has the same cue (and the global outline). */
+.gh-win:hover .gh-win-name,
+.gh-win:focus-visible .gh-win-name {
+  color: var(--glow);
+}

@@ -6,7 +6,7 @@ Ghosted is a keep-in-touch app built on the Decay Engine. Each person is a windo
 
 The plan runs in seven groups. Each group ends with a checkpoint task that runs `bash scripts/check.sh`. **The developer runs every checkpoint in WSL, because Kiro's shell cannot run commands on this setup.**
 
-- **0. Developer tasks:** the approval commit, `policy.ts` and `autopsy-sentences.ts`. Not Kiro's.
+- **0. Policy and sentences:** `policy.ts` is written by Kiro (0.2, done); `autopsy-sentences.ts` was written by Claude Code outside Kiro (0.3, done).
 - **A. Shell additions:** three optional props, each with its own new test file (design section 3).
 - **B. App skeleton and checks:** package, Vite and React entry, fonts, copied modules, the engine-unchanged check.
 - **C. Policy tests:** generators, coverage check, outcome tests, properties (design section 7).
@@ -14,17 +14,15 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
 - **E. Dock, forecast, backup, import, first run, wording and contrast tests, README.**
 - **F. Final checkpoint:** full check, manual checks, screenshots.
 
-**Authorship.** `apps/ghosted/src/autopsy-sentences.ts` is HAND-WRITTEN by the developer (`authorship.md`); Kiro never creates, edits or "fixes" it. `apps/ghosted/src/policy.ts` is written by Kiro (task 0.2) as a documented exception in `authorship.md`, from Requirements 1 to 4 and design section 2.2 only. Kiro also writes their tests, plus the shell additions, the UI, the app glue, the styles and the checks. If a test seems to need either file changed, Kiro stops and reports it.
+**Authorship.** `apps/ghosted/src/autopsy-sentences.ts` was written by Claude Code at the developer's request, outside Kiro (`authorship.md`); Kiro never creates, edits or "fixes" it. `apps/ghosted/src/policy.ts` is written by Kiro (task 0.2) as a documented exception in `authorship.md`, from Requirements 1 to 4 and design section 2.2 only. Kiro also writes their tests, plus the shell additions, the UI, the app glue, the styles and the checks. If a test seems to need either file changed, Kiro stops and reports it.
 
 **Engine.** No task changes `packages/engine/`. If one seems to need it, stop and report it (`engine-boundary.md`, Requirement 29.3).
 
 ## Tasks
 
-- [ ] 0. Policy, sentences and approval commit (0.3 is HAND-WRITTEN by the developer; 0.2 is written by Kiro)
-  - [ ] 0.1 Record the approval commit (DEVELOPER)
-    - Before any other task starts, run once in WSL: `git rev-parse HEAD > .kiro/specs/ghosted/approved-commit.txt`, then `git add .kiro/specs/ghosted/approved-commit.txt && git commit -m "Record Ghosted spec approval commit"` (design section 8.1)
-    - The file holds one full 40-character hash and a newline. No script writes it, and it is never changed again: the check in task 2.10 fails if a second commit touches it
-    - Every shell and app change must come after this commit, because the check diffs against it
+- [x] 0. Policy and sentences (0.2 is written by Kiro; 0.3 by Claude Code outside Kiro)
+  - [x] 0.1 Engine-unchanged baseline (no task needed)
+    - Dropped: the check derives the "before" state from git history (design section 8.1), so nothing is recorded and nothing has to be done before other tasks start
     - _Requirements: 29.2_
 
   - [x] 0.2 Write the Ghosted policy (KIRO, from the spec; documented exception in `authorship.md`)
@@ -34,7 +32,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Implement the contract table in design section 2.2: thresholds `{ weak: 60, dead: 10 }`; `init`; straight-line `healthAt` that never reads `item.lastEventAt` or `item.health`; text `min(100, h + 40)` with `lastContactAt = now − (100 − health) / 100 × T`; call and meet-up 100 with `lastContactAt = now`; `nextDueAt` as `L + 2 × T / 5`, `now` or `null`; `resurrect` always `{ ok: true, policyData: { lastContactAt: now } }`
     - _Requirements: 1, 2, 3, 4_
 
-  - [ ] 0.3 Write the cause-of-death sentences (WRITTEN BY THE DEVELOPER)
+  - [x] 0.3 Write the cause-of-death sentences (written by Claude Code at the developer's request, outside Kiro)
     - Create `apps/ghosted/src/autopsy-sentences.ts` with `generateCauseSentences(report, payload, options?)` and `CauseSentenceOptions`, as in design section 2.3
     - Sentences such as "After the last call there was no contact for 84 days, about 3 times your usual rhythm."
     - For a person added already dark (`report.lifeStartedAt === report.diedAt`, no tends): the whole-day gap from `payload.lastContactAt` to `report.diedAt`, at least 1 day, never "0 days". Open issue 3.3 (floor or round) is the developer's call; task 3.6 tests floor unless told otherwise
@@ -42,118 +40,120 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Optional, for open issue 3.2: give Kiro the expected sentences for two or three fixed reports, so task 3.6 can add exact-sentence tests as Study Dungeon has
     - _Requirements: 19.3, 19.4, 19.6, 31.1, 31.2_
 
-  - [ ] 0.4 Checkpoint: developer tasks done
+  - [x] 0.4 Checkpoint: developer tasks done
     - The developer runs `bash scripts/check.sh` in WSL; every existing step passes (Ghosted is not in `check.sh` until task 2.10)
     - Also run `pnpm --filter @decay-engine/ghosted typecheck`; the new `policy.ts` and `autopsy-sentences.ts` type-check
-    - **What waits for this group:** group A needs only 0.1. Every test in groups B to F that builds an engine with `ghostedPolicy` (tasks 2.4, 2.6, 2.7 and everything in C, D and E) waits for 0.2. Tasks 3.6, 4.11 and 5.8 also wait for 0.3. Until then those tests fail, they are not skipped (`no-fake-tests.md`, design open issue 3.1)
+    - **What waits for this group:** group A needs nothing before it. Every test in groups B to F that builds an engine with `ghostedPolicy` (tasks 2.4, 2.6, 2.7 and everything in C, D and E) waits for 0.2. Tasks 3.6, 4.11 and 5.8 also wait for 0.3. Until then those tests fail, they are not skipped (`no-fake-tests.md`, design open issue 3.1)
 
-- [ ] 1. Group A: Shell additions (each an optional prop whose default keeps today's behaviour)
+- [x] 1. Group A: Shell additions (each an optional prop whose default keeps today's behaviour)
   - [x] 1.1 TimeMachine: range and jumps
     - Edit `packages/shell/src/components/TimeMachine.tsx` only as in the table in design section 3.1: optional `maxDays` and `jumpDays`; `maxMs` used by the slider `max`, Play's end and every `clampOffset` call; jump buttons from `jumpDays` in the given order; an invalid `maxDays` (0, −1, 1.5, NaN) falls back to 60
     - Keep every exported constant's name and value (`TIME_MACHINE_MAX_DAYS`, `TIME_MACHINE_JUMP_DAYS`, `TIME_MACHINE_MAX_OFFSET_MS`, `TIME_MACHINE_STEP_MS`, `TIME_MACHINE_PLAY_MS`)
     - Create `packages/shell/src/components/TimeMachine.range.test.tsx`: slider `max` for 365 days; buttons 30, 90, 180, 365 in order with their offsets; `onChange` clamped at 365 days; Play ends at 365 days with fake frames and a fake clock; reduced-motion Play jumps to 365 days; the invalid-`maxDays` fallbacks
     - _Requirements: 26.1, 26.2, 26.3, 26.4, 26.5_
 
-  - [ ] 1.2 TriagePanel: budget choices
+  - [x] 1.2 TriagePanel: budget choices
     - Edit `packages/shell/src/components/TriagePanel.tsx` only as in design section 3.2: optional `budgets` and `defaultBudget`; `choices`, `fallback` and `initial` exactly as the design's code block; without `budgets` the two `useState` initial values are the same as today (including today's quirk with an `initialBudget` outside `[5, 10, 20]`)
     - `TRIAGE_BUDGETS` stays `[5, 10, 20]`
     - Create `packages/shell/src/components/TriagePanel.budgets.test.tsx`: 15, 30, 60, 120 plus custom, in order; no `defaultBudget` selects 15; `defaultBudget={60}` selects 60; `initialBudget={30}` runs triage once with 30; `initialBudget={10}` runs nothing and selects the fallback; a custom budget still obeys `maxBudgetMinutes`
     - _Requirements: 27.1, 27.2, 27.3, 27.4_
 
-  - [ ] 1.3 AutopsyDialog: contact markers
+  - [x] 1.3 AutopsyDialog: contact markers
     - Edit `packages/shell/src/components/AutopsyDialog.tsx`, `packages/shell/src/types.ts` and `packages/shell/src/index.ts` only as in design section 3.3: new `AutopsyMarker` type; optional `markers`, `renderMarker`, `markerSummary`; optional `markers` field on `AutopsyChartSummary`; `data-marker={kind}` groups; one `data-legend-marker={kind}` entry per kind in first-appearance order; right/wrong marks and legend entries not drawn when `markers` is given
     - `tends` stays required
     - Create `packages/shell/src/components/AutopsyDialog.markers.test.tsx`: one `data-marker` group per marker inside the span and none outside it; three legend entries with their labels; no right/wrong legend entries; the aria-label built by `chartLabel` with `summary.markers === "3 calls, 2 messages, 1 meet-up"` and `right === 0`; the default circle when `renderMarker` is omitted
     - _Requirements: 28.1, 28.2, 28.3, 28.4_
 
-  - [ ] 1.4 AutopsyDialog: focus on the content
+  - [x] 1.4 AutopsyDialog: focus on the content
     - Edit `packages/shell/src/components/AutopsyDialog.tsx`: optional `focusContentOnOpen` (default `false`), `titleRef` on the `h2`, `tabIndex={-1}` only when the prop is set, focus after `showModal()` (design section 3.3, "Focus on open")
     - Create `packages/shell/src/components/AutopsyDialog.focus.test.tsx`: with the prop, `document.activeElement` is the title `h2` and it has `tabindex="-1"`; without it, the title has no `tabindex` and does not have focus
     - _Requirements: 28.5, 24.2_
 
-  - [ ] 1.5 Checkpoint: shell additions
+  - [x] 1.5 Checkpoint: shell additions
     - The developer runs `bash scripts/check.sh` in WSL; every step passes, including the existing shell and Study Dungeon tests
-    - The developer also runs `pnpm -r typecheck` and `git diff --exit-code "$(cat .kiro/specs/ghosted/approved-commit.txt)" -- 'packages/shell/src/**/*.test.ts' 'packages/shell/src/**/*.test.tsx' packages/shell/src/test-fixtures.tsx packages/shell/src/boundary.test.ts 'apps/study-dungeon/src/**'`, which shows no change apart from the four new test files (they are untracked, so the diff does not list them)
+    - The developer also runs `pnpm -r typecheck`
+    - `bash scripts/check.sh` includes the "engine unchanged" step (design section 8): it fails on any change under `packages/engine` and on any shell file outside Requirements 26 to 28, including every existing shell test. The four new test files are the only new shell tests
     - If an existing test fails, fix the shell change, never the test (design section 3.4)
     - _Requirements: 26.5, 27.4, 28.4, 28.5, 29.4_
 
-- [ ] 2. Group B: App skeleton and checks
-  - [ ] 2.1 Package, Vite and HTML entry
+- [x] 2. Group B: App skeleton and checks
+  - [x] 2.1 Package, Vite and HTML entry
     - Edit `apps/ghosted/package.json`: scripts `dev`, `build`, `preview`, `test`, `typecheck`, modelled on `apps/study-dungeon/package.json`; dependencies `@decay-engine/engine`, `@decay-engine/shell`, `react`, `react-dom`, `@fontsource/monoton`, `@fontsource/josefin-sans`, `@fontsource/spectral`, `@fontsource/ibm-plex-mono`; dev dependencies `fast-check` (`^4.10.2`), `@testing-library/react`, `jsdom`, `@vitejs/plugin-react`, the React types, `typescript`, `vitest` (versions as Study Dungeon's)
     - Edit `apps/ghosted/tsconfig.json`: `jsx` and the DOM lib, strict mode kept
     - Create `apps/ghosted/vite.config.ts`: `base: "/"`, React plugin, `test.environment: "jsdom"`, `test.testTimeout: 20000`
     - Create `apps/ghosted/index.html`: title "Ghosted", root element, no remote font links, no remote URLs
     - _Requirements: 32.1, 32.3, 32.4, 23.2, 30.2_
 
-  - [ ] 2.2 Fonts, tokens and theme
+  - [x] 2.2 Fonts, tokens and theme
     - Create `apps/ghosted/src/styles/tokens.css` with every Ghosted token from `design-tokens.md` (including the scenery tokens), plus `--lit` and `--age`. Then delete the scaffold `apps/ghosted/src/skin.css` (design section 1.4)
     - Create `apps/ghosted/src/styles/global.css`: base page styles, Spectral body text, IBM Plex Mono labels, `:focus-visible` outline in `--sign` (design section 5.4)
     - Create `apps/ghosted/src/theme.ts`: `ghostedTheme` (tokens) and `ghostedShellTheme`, the shell role mapping in design section 5.2
     - In `apps/ghosted/src/main.tsx` (task 2.8) import the four `@fontsource` packages; no font is loaded from `fonts.googleapis.com` or `fonts.gstatic.com`
     - _Requirements: 30.1, 30.2, 30.3, 24.5_
 
-  - [ ] 2.3 Wording and time helpers
+  - [x] 2.3 Wording and time helpers
     - Create `apps/ghosted/src/wording.ts`: every interface string in one place, and `ghostedWording` for the shell's `WordingProps`. It includes the list names (Still lit, Fading, Empty windows), the state words (lit, lit again, flickering, boarded up), `timeMachine.jump(365)` → "+1 year", the Triage steps, `markerSummary`, and `markRight`/`markWrong` filled with "Message"/"Call" (design open issue 2.8). Later tasks add their strings here
     - Create `apps/ghosted/src/time.ts` (`DAY_MS`, `dayStartOf(isoDate, timeZone)`, `wholeDaysBetween`) and `apps/ghosted/src/time.test.ts` with fixed timestamps and `timeZone: "UTC"`
     - _Requirements: 31.1, 31.3, 16.1, 12.1_
 
-  - [ ] 2.4 Copy the engine instance, storage errors, write guard and ticking
+  - [x] 2.4 Copy the engine instance, storage errors, write guard and ticking
     - Create, each with a header comment naming the Study Dungeon file it was copied from (design section 1.3): `apps/ghosted/src/engine-instance.ts` (`GhostedEngine`, namespace `"ghosted"`), `storage-errors.ts` (Ghosted sentences only), `write-guard.ts` (copied, plus `runGatedWrite(previewing, write, onProblem): WriteOutcome`, design section 4.2), `ticking.ts` (unchanged)
     - Create the tests: `engine-instance.test.ts` (snapshot under `decay-engine:ghosted` in jsdom's `localStorage`), `storage-errors.test.ts`, `write-guard.test.ts` (`runGatedWrite` returns "blocked" without calling `write`, "saved", "storage-problem", and rethrows other errors), `ticking.test.ts`
     - No import from `apps/study-dungeon`
     - _Requirements: 23.1, 23.3, 12.5, 21.1_
 
-  - [ ] 2.5 Copy the first-run flags
+  - [x] 2.5 Copy the first-run flags
     - Create `apps/ghosted/src/first-run.ts` as in design section 1.3: `STARTED_FLAG`, `ENGINE_STORAGE_KEY`, new `OWN_PEOPLE_FLAG` with `hasOwnPeople` and `markOwnPeople`, `RESET_KEYS` exactly Ghosted's three keys, `needsFirstRun`, `resetAllData`; no tour flags
     - Create `apps/ghosted/src/test/fake-storage.ts` (in-memory `FlagStorage`) and `apps/ghosted/src/first-run.test.ts`: `RESET_KEYS` are exactly Ghosted's keys; reset leaves other apps' keys alone; `needsFirstRun` after "Start empty" with no people is false
     - _Requirements: 20.7, 15.2_
 
-  - [ ] 2.6 Person form rules
+  - [x] 2.6 Person form rules
     - Create `apps/ghosted/src/person-form.ts` as in design section 1.3: the limits, `PersonField`, `FieldError`, `validatePerson`, and `startsDark`, which calls `ghostedPolicy.healthAt` on the provisional item and never repeats its formula
     - Create `apps/ghosted/src/person-form.test.ts`: each rule at and beyond its limit (name 1-60, relationship 0-40, rhythm whole 1-365, last contact not after today, importance 1-3, minutes whole 1-600), each error naming its field and rule; `startsDark` false at exactly `2.7 × rhythm` days and true one minute later
     - _Requirements: 17.1, 17.3, 17.7_
 
-  - [ ] 2.7 Copy backup and import modules
+  - [x] 2.7 Copy backup and import modules
     - Create `apps/ghosted/src/backup.ts` (copy of `backup.ts`, design section 1.3): `{ app: "ghosted", version: 1, exportedAt, snapshot }`; `checkBackup` builds a real engine with `ghostedPolicy` on a throwaway adapter; the reasons not JSON, another app, not a Ghosted backup, newer version, damaged; `applyBackup` also sets `OWN_PEOPLE_FLAG`
     - Create `apps/ghosted/src/import-people.ts` (copy of `import-facts.ts`): signature in design section 1.3, `IMPORT_IMPORTANCE = 2`, `IMPORT_COST_MINUTES = 10`, lines checked with `person-form.ts`, blank and `#` lines ignored, no duplicate-name skip (design open issue 1.5)
     - Create `apps/ghosted/src/backup.test.ts` (file shape, each refusal reason, a damaged snapshot refused by the real engine, nothing changed on refusal) and `apps/ghosted/src/import-people.test.ts` (`|`, tab and CSV; optional relationship and date; the import day as the default date; importance 2 and 10 minutes; 1-based line numbers with reasons; valid lines kept)
     - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 17.1_
 
-  - [ ] 2.8 Root, crash screen, dialogs hook and the App frame
+  - [x] 2.8 Root, crash screen, dialogs hook and the App frame
     - Create `apps/ghosted/src/Root.tsx` (copy, plus the `session` prop), `src/components/ErrorBoundary.tsx` and `src/styles/problem.css` (copies, Ghosted wording and tokens), `src/components/useModalDialog.ts` (copied unchanged), `src/main.tsx` (fonts, renders `Root`)
     - Create `apps/ghosted/src/App.tsx` with the frame from design section 4.3: `AppProps`; `realNow`, `previewOffsetMs`, `previewing`, `now`; the `previewing` ref read by every write through `runGatedWrite`; `useSettleTicks` with the once-per-problem tick handler; `version`; the `OpenDialog` union (one dialog at a time); the polite live region; `<header>`, `<main>` and a dock slot. Components are wired in by later tasks
     - Create `apps/ghosted/src/test/fixtures.ts` (`T0 = 1_700_000_000_000`, day offsets, `makeEngine()` on `InMemoryAdapter`, `counterIds()`) and `src/test/recording-adapter.ts` (counts `save` calls, keeps the last snapshot as JSON)
     - Create `apps/ghosted/src/Root.test.tsx`: a corrupt snapshot shows the problem screen with Reload and Reset; no usable storage shows its sentence; another error reaches the crash screen
     - _Requirements: 32.1, 23.3, 24.2, 24.3_
 
-  - [ ] 2.9 Boundary and source checks
+  - [x] 2.9 Boundary and source checks
     - Create `apps/ghosted/src/shell-boundary.test.ts` exactly as design section 3.5 (reads, never imports, the non-test shell sources; fails on any Ghosted word or colour name)
     - Create `apps/ghosted/src/app-boundary.test.ts`: no import from `apps/study-dungeon`; no `Date.now()`, argument-less `new Date()` or real-time fake timers in any Ghosted test file
     - Create `apps/ghosted/src/no-network.test.ts`: no `fetch`, `XMLHttpRequest`, `WebSocket`, `sendBeacon` or remote URLs in `src/` and `index.html`
     - Create `apps/ghosted/src/config.test.ts`: the five `package.json` scripts, the four `@fontsource` dependencies, `vite.config.ts` `testTimeout: 20000` and `base: "/"` (the README check is added in task 5.10)
     - _Requirements: 21.1, 23.2, 29.4, 30.2, 32.1, 32.3, 32.4_
 
-  - [ ] 2.10 Engine-unchanged check and the check script
-    - Create `scripts/check-engine-unchanged.sh` exactly as design section 8.2 (exit 0 unchanged, 1 change found, 2 cannot run; the allowed shell file list; Study Dungeon tests unchanged)
-    - Add the four lines from design section 8.3 to `scripts/check.sh`: "engine unchanged" right after "install", then "typecheck ghosted", "test ghosted", "build ghosted". No existing line changes
+  - [x] 2.10 Ghosted steps in the check script
+    - `scripts/check-engine-unchanged.sh` and the "engine unchanged" step in `scripts/check.sh` already exist (written and tested outside Kiro, design section 8.2). Do not rewrite them
+    - Add the three Ghosted steps from design section 8.3 to `scripts/check.sh`: "typecheck ghosted", "test ghosted", "build ghosted". No existing line changes
+    - Add a short test or script note proving the Ghosted steps fail the script when a Ghosted step fails (design section 7)
     - _Requirements: 29.1, 29.2, 29.4, 32.2_
 
-  - [ ] 2.11 Checkpoint: app skeleton
+  - [x] 2.11 Checkpoint: app skeleton
     - The developer runs `bash scripts/check.sh` in WSL. Every step passes, including the four new ones, and "engine unchanged" prints its success line
     - The developer runs `pnpm --filter @decay-engine/ghosted dev` once: the empty frame renders, and the browser's Network tab shows no request to another origin
     - _Requirements: 29.2, 32.1, 32.2, 23.2_
 
-- [ ] 3. Group C: Policy tests (wait for task 0.2; task 3.6 also waits for 0.3)
-  - [ ] 3.1 Generators
+- [x] 3. Group C: Policy tests (wait for task 0.2; task 3.6 also waits for 0.3)
+  - [x] 3.1 Generators
     - Create `apps/ghosted/src/test/generators.ts` as design section 7.1: `T0`, `MINUTE_MS`, `HOUR_MS`, `DAY_MS`, `spanMs`, `rhythmDays()`, `contactEvent()`, `AddSpec`, `Step`, `Scenario`, `scenario()`, `buildScenario`, `personAt`, `livingPerson()`, `deadPerson()`, `startedDark()`. All times are `T0` plus whole minutes; a step on a dead person is a reconnect
     - _Requirements: 5.8_
 
-  - [ ] 3.2 Generator coverage check
+  - [x] 3.2 Generator coverage check
     - Create `apps/ghosted/src/generator-coverage.test.ts` with the four checks in design section 7.2: each state at least 10% of 300 people (seed 42); each contact kind at least 10% of steps (seed 7); at least 5% of scenarios contain a reconnect (seed 9); whole-minute, non-decreasing times (seed 11)
     - If a check fails, fix the generator, never the threshold
     - _Requirements: 5.8_
 
-  - [ ] 3.3 Policy unit and outcome tests
+  - [x] 3.3 Policy unit and outcome tests
     - Replace each `it.todo` stub in `apps/ghosted/src/policy.test.ts` with a real test; no stub is deleted without one taking its place (design section 1.4)
     - Contract: `checkPolicy(ghostedPolicy, payloads, events, T0)` with rhythms 1, 30, 365, last contact at `T0` and 10 days before, all three kinds, `failures` equal to `[]`; thresholds `{ weak: 60, dead: 10 }`
     - Functions: `init`; `healthAt` at days 0, 36, 37, 81, 82, 90 for a 30-day rhythm, 100 for a future last contact, unaffected by `lastEventAt` and `health`; `applyEvent` per kind; every `nextDueAt` branch, including `state: "dead"`; `resurrect` per kind
@@ -161,27 +161,27 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - If an expected value fails, stop and report it to the developer. Never change the expected value, and never touch `policy.ts`
     - _Requirements: 1.1-1.7, 2.1-2.4, 3.1-3.3, 4.1-4.3, 5.1-5.8_
 
-  - [ ] 3.4 Properties 1 to 9
+  - [x] 3.4 Properties 1 to 9
     - Create `apps/ghosted/src/policy.properties.test.ts` with one `fc.assert` per row 1 to 9 of the table in design section 7.3, each named `// Feature: ghosted, Property N: …`, with that row's generator and `numRuns` (200, 100, 200, 100, 200, 200, 100, 300, 100)
     - _Requirements: 1.3-1.7, 2.1-2.4, 3.1-3.3, 4.1-4.3_
 
-  - [ ] 3.5 Property 12 at the gate
+  - [x] 3.5 Property 12 at the gate
     - Create `apps/ghosted/src/write-guard.properties.test.ts`: any sequence of writes with `previewing: true` returns "blocked" and never calls `write`, `{ numRuns: 1000 }` (the app-level half is task 5.5)
     - _Requirements: 12.5_
 
-  - [ ] 3.6 Autopsy sentence tests and Property 13
+  - [x] 3.6 Autopsy sentence tests and Property 13
     - Create `apps/ghosted/src/autopsy-sentences.test.ts`: reports built through the real engine (`InMemoryAdapter`, fixed times, `timeZone: "UTC"`). It checks facts and rules (design open issue 3.2): the day counts, the kind of the last contact, the rhythm ratio, the started-dark gap, no banned words, no "0 days". Exact-sentence tests are added only if the developer supplies the expected sentences (task 0.3)
     - Create `apps/ghosted/src/started-dark.test.ts`: Property 13 with `startedDark()`, `{ numRuns: 100 }`, asserting row 13 of design section 7.3 (dead at creation; `created` then `died` at `addAt`; `lifeStartedAt === diedAt` and no tends; the sentences contain `${floor(gapMs / DAY_MS)} days` and never match `/\b0 days\b/`)
     - Do not edit `autopsy-sentences.ts`. If a test shows a bug, stop and report it
     - _Requirements: 19.3, 19.4, 19.6, 20.8, 31.2_
 
-  - [ ] 3.7 Checkpoint: policy tests
+  - [x] 3.7 Checkpoint: policy tests
     - The developer runs `bash scripts/check.sh` in WSL; every step passes
     - **Where the other properties live:** Properties 10 and 11 render components, so they are written with the Window and PersonCard (tasks 4.1 and 4.2). The app-level half of Property 12 needs every write control, so it is task 5.5. The sample expectations of design section 7.5 need `sample-data.ts`, so they are task 4.13. Each test comes right after the code it checks, so every checkpoint can pass
     - _Requirements: 1, 2, 3, 4, 5_
 
 - [ ] 4. Group D: Components, sample data and window art
-  - [ ] 4.1 State glyphs, window and house art
+  - [x] 4.1 State glyphs, window and house art
     - Create `apps/ghosted/src/components/icons.tsx`: circle, triangle and cross state glyphs (`data-glyph`, `aria-hidden`, `currentColor`) and the contact marker shapes (envelope, diamond, two dots) from design section 5.2
     - Create `apps/ghosted/src/components/Window.tsx` (`WindowProps`, `--lit = health / 100` to 4 decimals, `data-state`, silhouette unless dead, two boards when dead or falling) and `apps/ghosted/src/components/House.tsx` (house roof and body around its windows)
     - Create `apps/ghosted/src/styles/window.css` and `apps/ghosted/src/styles/street.css` from design section 5.1, colours from tokens only
@@ -190,14 +190,14 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Create `apps/ghosted/src/components/Window.test.tsx` (dead: boards, no silhouette; weak: `data-state="weak"`) and `apps/ghosted/src/components/Window.property.test.tsx` (Property 10, `{ numRuns: 100 }`: `--lit` within 5e-5 of `health / 100`, 0 when dead)
     - _Requirements: 16.1, 16.3, 16.4, 16.5, 25.1, 30.3_
 
-  - [ ] 4.2 PersonCard
+  - [x] 4.2 PersonCard
     - Create `apps/ghosted/src/components/PersonCard.tsx` with `PersonActions` and `PersonCardProps` from design section 4.4: name, relationship, glyph and word; "last contact N days ago" or "today"; "usual rhythm every N days"; "goes dark in N days" when weak; the window; the health bar named "Freshness N of 100" with marks at 60 and 10; buttons per state; Edit and Remove quiet and at least 44 × 44 px; the History disclosure, newest first
     - Add `lastLoggedContactAt(history, payload)` to `apps/ghosted/src/lists.ts`; it never reads `policyData.lastContactAt`
     - Freshness is shown as `Math.floor(health)`
     - Create `apps/ghosted/src/components/PersonCard.test.tsx` (each field; a text sent today reads "today"; marks at 60 and 10; Reach out for alive and weak, Reconnect and Autopsy for dead; the 44 px rule in the CSS; history order and words; write buttons `aria-disabled` with the reason when `blocked`) and `apps/ghosted/src/components/PersonCard.property.test.tsx` (Property 11, `{ numRuns: 100 }`)
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.6, 16.1, 16.2_
 
-  - [ ] 4.3 The three lists and section navigation
+  - [x] 4.3 The three lists and section navigation
     - Create `apps/ghosted/src/components/ThreeLists.tsx` with `ThreeListsProps` and `SectionNavProps`: Fading, Empty windows and Still lit stacked full width, each with its lighting class and count badge; the Still lit rows with "starts fading in N days" and a quiet Open; one line in the list's own words when a list is empty
     - Add `sortFading`, the graveyard order rebuilt from `people`, the Still lit order by `ghostedPolicy.nextDueAt`, and `heroTarget` to `apps/ghosted/src/lists.ts`
     - Create `apps/ghosted/src/styles/layout.css` (page width, gutters, card grid with `minmax(min(100%, 280px), 1fr)`, single column under 760px)
@@ -339,8 +339,8 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
 
 - [ ] 6. Group F: Final checkpoint
   - [ ] 6.1 Full check
-    - The developer runs `bash scripts/check.sh` in WSL. Every step passes, and "engine unchanged" prints its success line against the approval commit
-    - `git status` shows no change under `packages/engine/` and no change to an existing shell or Study Dungeon test
+    - The developer runs `bash scripts/check.sh` in WSL. Every step passes, and "engine unchanged" prints its success line
+    - `git status` shows no change under `packages/engine/`; the existing shell and Study Dungeon tests pass without edits to their assertions
     - _Requirements: 29.1, 29.2, 29.4, 32.2_
 
   - [ ] 6.2 Manual checks
@@ -359,7 +359,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
 
 ## Notes
 
-- **Hand-written module.** `autopsy-sentences.ts` is the developer's (task 0.3); Kiro writes only its tests and never edits it. `policy.ts` is written by Kiro in task 0.2 as a documented exception; after that, Kiro changes it only through a task that names it, and if a test seems to need a change Kiro stops and reports it.
+- **Module not written by Kiro.** `autopsy-sentences.ts` was written by Claude Code outside Kiro (task 0.3); Kiro writes only its tests and never edits it. `policy.ts` is written by Kiro in task 0.2 as a documented exception; after that, Kiro changes it only through a task that names it, and if a test seems to need a change Kiro stops and reports it.
 - **Checkpoints.** The developer runs every `bash scripts/check.sh` in WSL. A Kiro task is done when its tests prove the behaviour; the checkpoint confirms the whole suite.
 - **Optional tasks.** Study Dungeon's plan marks no task with `*`, so none is marked here. Its only cut-first task (sound) is out of scope for Ghosted.
 - **Shell scope.** Only the files in task 1.1 to 1.4 change in `packages/shell/`. Task 2.10's check fails on any other shell change; if one seems needed, stop and report it (Requirement 29.4).

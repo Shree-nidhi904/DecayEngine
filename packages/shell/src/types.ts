@@ -89,6 +89,8 @@ export interface AutopsyChartSummary {
   right: number;
   /** How many tends in the chart were marked wrong. */
   wrong: number;
+  /** markerSummary's text when the app gives markers; undefined otherwise. */
+  markers?: string;
 }
 
 /** Labels for the autopsy dialog. */

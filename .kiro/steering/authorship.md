@@ -43,6 +43,10 @@ Written at the developer's request, in new files, while Kiro worked on round 5 (
 
 The rule above (Kiro never writes decay-rule code) was kept for the engine, Triage, Autopsy and the Study Dungeon policy. For Ghosted the developer chose to let Kiro write `apps/ghosted/src/policy.ts`, to save time and use Kiro more. The rules themselves were still set by the developer, in Requirements 1 to 4 and design section 2.2 of the Ghosted spec, with the formulas and expected values written out and checked by hand before Kiro wrote any code. A different reader, the `policy-reviewer` agent and the developer's own review, checks the result. `apps/ghosted/src/autopsy-sentences.ts` stays hand-written.
 
+## Ghosted cause-of-death sentences
+
+`apps/ghosted/src/autopsy-sentences.ts` was planned as hand-written, like Study Dungeon's. At the developer's request it was written by Claude Code (Sonnet 5.5) outside Kiro, from Requirements 19 and 31 and design section 2.3, with no Kiro credits. It was tested on real engine reports (a normal death, a death after a text, a person who was lit again, and a person added already dark), and its wording was checked against the Ghosted wording rules. Kiro writes its tests and never edits it.
+
 ## What Kiro writes (generated)
 
 Kiro is used for:

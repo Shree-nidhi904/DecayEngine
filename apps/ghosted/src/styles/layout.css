@@ -1,0 +1,365 @@
+/*
+ * Page layout, buttons, the person card and the three lists (tasks 4.2 and
+ * 4.3; design sections 4.4 and 5.4; Req 11, 13, 24.4, 24.7). Ported from the
+ * wireframe's .wrap, .card, .bar, .plot, .row1 and .nav. Ghosted tokens only,
+ * with color-mix for tints (#000 only for the shell's hard card shadow).
+ *
+ * 320px: nothing here sets a width or minimum above 288px (the content box at
+ * 320px with 16px gutters). The card grid is minmax(min(100%, 280px), 1fr),
+ * and everything stacks in one column under 760px. No animation here.
+ */
+
+/* Page: full width up to 1080px, gutters of at least 16px (Req 24.7). */
+.gh-app {
+  max-inline-size: 1080px;
+  margin-inline: auto;
+  padding-inline-start: max(16px, env(safe-area-inset-left, 0px));
+  padding-inline-end: max(16px, env(safe-area-inset-right, 0px));
+  overflow-wrap: anywhere;
+}
+
+/* ----- Buttons: one filled primary per region, everything else quiet ----- */
+
+.gh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-button);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--bone);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.gh-button:hover,
+.gh-button:focus-visible {
+  border-color: var(--glow);
+}
+
+/* The one primary action: filled glow with a 3px darker bottom edge. */
+.gh-button-primary {
+  border-color: var(--glow);
+  border-bottom: 3px solid color-mix(in srgb, var(--glow) 55%, #000);
+  background: var(--glow);
+  color: var(--bg);
+}
+
+/* A write button during a preview: visible, focusable, says why (title and description). */
+.gh-button[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ----- Person card ----- */
+
+.gh-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gh-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-inline-size: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  box-shadow: 0 6px 0 #000;
+}
+
+.gh-card[data-state="dead"] {
+  background: linear-gradient(180deg, var(--panel), var(--bg));
+}
+
+.gh-card-top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.gh-card-who {
+  min-inline-size: 0;
+}
+
+.gh-card-state {
+  margin: 0 0 4px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gh-card-name {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+}
+
+.gh-card-rel {
+  margin: 2px 0 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.gh-card-facts {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.gh-card-hot {
+  color: var(--flick);
+}
+
+/* Health bar: never alone, the window is always beside it (Req 13.2). */
+.gh-bar {
+  position: relative;
+  block-size: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--bg);
+}
+
+.gh-bar-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  background: var(--glow);
+}
+
+.gh-bar[data-state="weak"] .gh-bar-fill {
+  background: var(--flick);
+}
+
+.gh-bar-mark {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 2px;
+  background: var(--bone);
+  opacity: 0.55;
+}
+
+.gh-bar-key {
+  margin: -6px 0 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.gh-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gh-card-blocked {
+  margin: 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--glow);
+}
+
+.gh-card-history {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+}
+
+.gh-card-history li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.gh-card-history-empty {
+  margin: 0;
+  font-style: italic;
+  color: var(--dim);
+}
+
+/* ----- Section navigation (Req 11.5) ----- */
+
+.gh-section-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gh-section-nav .gh-button {
+  border-radius: 999px;
+}
+
+.gh-nav-count {
+  margin-inline-start: 8px;
+  color: var(--glow);
+}
+
+/* ----- The three lists: full width, stacked, each with its own light (Req 11.4, 11.6) ----- */
+
+.gh-lists {
+  display: grid;
+  gap: 20px;
+}
+
+.gh-plot {
+  min-inline-size: 0;
+  padding: 16px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  scroll-margin-block-start: 16px;
+}
+
+.gh-plot-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+}
+
+.gh-plot-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gh-badge {
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+}
+
+.gh-plot-sub {
+  margin: 4px 0 16px;
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.gh-plot-empty {
+  margin: 0;
+  font-style: italic;
+  color: var(--dim);
+}
+
+.gh-plot-fading {
+  border-color: color-mix(in srgb, var(--flick) 30%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--flick) 7%, var(--panel)), var(--bg));
+}
+.gh-plot-fading .gh-plot-title,
+.gh-plot-fading .gh-badge {
+  color: var(--flick);
+}
+
+.gh-plot-empty-windows {
+  background: linear-gradient(180deg, var(--panel), var(--bg));
+}
+/* --dark only as large text: the 26px heading (contrast, design section 7.6). */
+.gh-plot-empty-windows .gh-plot-title,
+.gh-plot-empty-windows .gh-badge {
+  color: var(--dark);
+}
+
+.gh-plot-still {
+  border-color: color-mix(in srgb, var(--glow) 25%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--glow) 5%, var(--panel)), var(--bg));
+}
+.gh-plot-still .gh-plot-title,
+.gh-plot-still .gh-badge {
+  color: var(--glow);
+}
+
+/* Still lit rows (the wireframe's .row1). */
+.gh-rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gh-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.gh-row[data-state="litAgain"] {
+  border-color: var(--mint);
+}
+
+.gh-row-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  min-inline-size: 0;
+}
+
+.gh-row-name {
+  font-weight: 600;
+}
+
+/* A small window in each row, so the light is shown here too (Req 16.1). */
+.gh-row .gh-pane[data-size] {
+  inline-size: 28px;
+  flex: none;
+  align-self: center;
+}
+
+.gh-row-meta {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+/* One column under 760px: nothing sits beside empty space (Req 24.7). */
+@media (max-width: 760px) {
+  .gh-plot {
+    padding: 14px 14px 20px;
+  }
+  .gh-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

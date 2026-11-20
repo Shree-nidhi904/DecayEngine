@@ -1,0 +1,81 @@
+/*
+ * Every Ghosted animation and transition (design section 5.3; Req 16.4,
+ * 25.1, 25.2). All movement sits inside the one
+ * @media (prefers-reduced-motion: no-preference) block at the end of this
+ * file. Outside it are only the static end states, which reduced motion shows
+ * at once.
+ *
+ * This task (4.1): window flicker, pane light change, boards falling, relight
+ * flash. Later tasks add the splash, sign hum, moths, fog, headlights, moon
+ * and smooth scrolling inside the same block.
+ */
+
+/* Static end state: falling boards are simply gone, at once. */
+.gh-pane[data-boards="falling"] .gh-boards {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Pane light change (Req 12.2). */
+  .gh-pane {
+    transition:
+      background 0.3s,
+      box-shadow 0.3s;
+  }
+
+  /* Window flicker (Req 16.4). */
+  .gh-pane[data-state="weak"] {
+    animation: gh-flicker 2.6s infinite;
+  }
+
+  /* Boards falling away after a reconnect (Req 14.3). */
+  .gh-pane[data-boards="falling"] .gh-boards {
+    display: block;
+  }
+  .gh-pane[data-boards="falling"] .gh-board {
+    animation: gh-boards-fall 0.8s forwards;
+  }
+  .gh-pane[data-boards="falling"] .gh-board:nth-child(2) {
+    animation-delay: 0.12s;
+  }
+
+  /* One warm flash when the light comes back. */
+  .gh-pane[data-relight] {
+    animation: gh-relight 0.9s;
+  }
+
+  @keyframes gh-flicker {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    40% {
+      opacity: 0.72;
+    }
+    55% {
+      opacity: 0.95;
+    }
+    70% {
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes gh-boards-fall {
+    to {
+      transform: translateY(120%) rotate(14deg);
+      opacity: 0;
+    }
+  }
+
+  @keyframes gh-relight {
+    0% {
+      filter: brightness(0.3);
+    }
+    60% {
+      filter: brightness(1.8);
+    }
+    100% {
+      filter: none;
+    }
+  }
+}

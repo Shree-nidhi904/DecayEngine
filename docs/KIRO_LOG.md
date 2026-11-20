@@ -977,3 +977,153 @@ Spec stage total: about 121 credits (not counting Session 19, 20 or task 1.1 in 
 - **Credits used**: 10.82 (2 min 48 s).
 - **Screenshot**: (add file names)
 
+
+---
+
+## Session 23: Ghosted shell addition, task 1.2 TriagePanel budget choices (Nov 20, 2026)
+
+- **Goal**: add optional `budgets` and `defaultBudget` props to the shell's `TriagePanel` (Requirement 27, design 3.2), with today's behaviour as the default.
+- **Kiro feature used**: spec task, steering.
+- **What Kiro produced**:
+  - `packages/shell/src/components/TriagePanel.tsx` (34 lines added, 5 removed): `budgets` and `defaultBudget` props; `choices`, `fallback` and `initial` taken from the design's code block. With no list (or an empty one) the panel behaves as before, including the old quirk that an `initialBudget` outside 5 / 10 / 20 still runs triage while 10 stays selected. `TRIAGE_BUDGETS` is still `[5, 10, 20]`.
+  - `packages/shell/src/components/TriagePanel.budgets.test.tsx` (14 tests): the list 15, 30, 60, 120 with custom; the default choice (first, `defaultBudget`, or the first when `defaultBudget` is not in the list); `initialBudget` in and out of the list; the custom limit; the no-list defaults.
+  - No existing test file, engine file or Study Dungeon file was touched.
+- **Verification (in WSL, outside Kiro)**: shell tests 135 pass (121 plus 14). Kiro could not finish the Study Dungeon run in its shell; mine passed: 465.
+- **What I changed by hand**: nothing in this task.
+- **What went wrong or surprised me**: while checking this task, my first `check.sh` run showed Study Dungeon tests taking 100 to 130 seconds each and some failing, and a second run was killed (exit 137). The load average had reached 38 on a 12-core, 3.5 GB machine, from my run overlapping Kiro's own test runs and 12 Vitest workers. With nothing else running, the same suite passed in 30 seconds with 4 workers. Fix: `maxWorkers: 4` in Study Dungeon's Vite config.
+- **Credits used**: 7.58 (2 min 39 s).
+
+---
+
+## Work outside Kiro on Nov 20 (not a Kiro session)
+
+Listed so the write-up does not count it as Kiro work. Done by Claude Code in WSL, with no Kiro credits.
+
+- **Engine-unchanged check, replaced.** The design's check recorded an approval commit in a file. That file was dropped as fragile (commits were undone and the recorded hash left the branch). The new `scripts/check-engine-unchanged.sh` works the "before" state out from git history (the parent of the first commit that added anything under `.kiro/specs/ghosted`; HEAD if none; skipped on a shallow clone). It checks that `packages/engine` is unchanged and that `packages/shell` changed only in the files Requirements 26 to 28 allow. I tested it on the real repository (passes) and on three planted violations (an engine edit, an untracked engine file, an edited existing shell test), each of which fails it. It is wired into `scripts/check.sh`. Requirement 29, design section 8 and tasks 0.1, 1.5, 2.10 and 6.1 were rewritten to match. The script was written outside Kiro, and task 2.10 now only adds the Ghosted steps.
+- Independent review of the policy against Requirements 1 to 4 and a temporary test (since deleted) on the real engine: `checkPolicy` passes, boundaries at day 36 / 81 / 82, the text on day 45, and a reconnect.
+- The test-stability fixes above, and the catch-up log entries.
+
+---
+
+## Session 24: Ghosted shell additions, tasks 1.3 and 1.4 AutopsyDialog markers and focus (Nov 20, 2026)
+
+- **Goal**: add contact markers and a focus-on-content prop to the shell's `AutopsyDialog` (Requirement 28, design 3.3), with today's behaviour as the default; close Group A (task 1.5).
+- **Kiro feature used**: spec tasks, steering. Two tasks in one run, as grouped runs were planned.
+- **What Kiro produced**:
+  - `AutopsyDialog.tsx`, `types.ts`, `index.ts`: a new exported `AutopsyMarker` (time, kind, label) and four optional props, `markers`, `renderMarker`, `markerSummary` and `focusContentOnOpen`. With `markers`, each marker in the chart's span is drawn as a `data-marker` group, the legend keeps weak and dead and adds one entry per kind, the right/wrong marks and legend are dropped, and the summary carries the app's `markerSummary` text. Without `markers` the markup and the summary object are exactly as before. With `focusContentOnOpen`, the title gets `tabindex="-1"` and takes focus after `showModal()`.
+  - `AutopsyDialog.markers.test.tsx` and `AutopsyDialog.focus.test.tsx`: 16 new tests (order and positions of call, text and meet-up markers, none outside the span, the legend, the "3 calls, 2 messages, 1 meet-up" summary, the default circle, an empty list, the unchanged defaults; the focus prop on, off and omitted).
+  - No existing test file, engine file, Study Dungeon file or script was touched.
+- **Verification (in WSL, outside Kiro)**: `bash scripts/check.sh` passed: engine unchanged ok, engine 701, shell 151 (135 plus 16), Study Dungeon 465, builds ok.
+- **What I changed by hand**: nothing in the code. I amended Requirement 28 (1 to 3) so that `markers` is the switch (as the design already had it) and the legend lists only kinds that have a marker inside the span.
+- **What went wrong or surprised me**:
+  - Kiro read the requirement ("no renderer given: as today") and the design (the `markers` prop is the switch) as different, flagged it, and followed the design. The requirement was the wrong one.
+  - Its closing message still gave the old `approved-commit.txt` command for the Group A checkpoint, after tasks 1.5 and the design had been rewritten without that file: stale context.
+  - It ran an empty `true` command by mistake in a session where I had said not to use the terminal. It changed nothing.
+  - The legend lists a kind even when all its markers fall outside the span (count 0); fixed in the next run.
+- **Credits used**: 12.86 (4 min 11 s).
+
+---
+
+## Session 25: Ghosted app skeleton, tasks 2.1 to 2.5, plus the legend fix (Nov 20, 2026)
+
+- **Goal**: the legend fix from amended Requirement 28.3, then the first half of Group B: package, Vite entry, fonts and tokens, wording and time helpers, and the modules copied from Study Dungeon (engine instance, storage errors, write guard, ticking, first-run flags). Five tasks in one run.
+- **Kiro feature used**: spec tasks, steering.
+- **What Kiro produced**:
+  - Shell: the legend lists only kinds with a marker inside the chart's span (`AutopsyDialog.tsx`), with a new test.
+  - `apps/ghosted/`: `package.json` (React, the shell, four `@fontsource` packages, fast-check and the test libraries; plus `vite` and `@types/node`, which the task did not list), `tsconfig.json`, `vite.config.ts` (jsdom, 20-second timeout, base "/"), `index.html` (no remote URLs), `styles/tokens.css`, `styles/global.css`, `theme.ts`, `wording.ts`, `time.ts` and its test, and the copied `engine-instance.ts`, `storage-errors.ts`, `write-guard.ts` (plus `runGatedWrite`), `ticking.ts`, `first-run.ts`, `test/fake-storage.ts`, each with a header naming its Study Dungeon source and its own tests. None imports from `apps/study-dungeon`.
+  - Where the spec gave no text, Kiro wrote the wording itself ("Moon clock", "Play the year", "Plan"), and listed it for me to change.
+- **Verification (in WSL, outside Kiro)**: Ghosted typecheck clean; Ghosted tests 61 passed plus 5 `it.todo`; shell 152 (151 plus 1); full `check.sh` passed with the engine check ok. No remote URL anywhere in the app; the only "study-dungeon" strings are storage keys in tests that check reset leaves other apps' data alone.
+- **What I changed by hand**:
+  - Deleted the scaffold `skin.css` (Kiro's file tools cannot delete files and I had told it to stay off the terminal).
+  - Added `apps/ghosted/src/vite-env.d.ts`: without it the Ghosted typecheck failed on the shell's CSS imports. The spec and design did not list it.
+  - Added `maxWorkers: 4` to `apps/ghosted/vite.config.ts`, as in Study Dungeon.
+  - Ran `pnpm install` (Kiro cannot).
+- **What went wrong or surprised me**:
+  - The typecheck failure above: a gap in my spec, not in Kiro's work.
+  - `index.html` points at `/src/main.tsx`, which arrives in task 2.8, so `vite build` fails until then.
+  - Kiro could not delete a file and said so instead of working around it.
+- **Credits used**: 34.48 (8 min 29 s).
+
+---
+
+## Session 26: Ghosted tasks 2.6 to 2.11, first attempt, cancelled (Nov 20, 2026)
+
+- **Goal**: the rest of Group B in one run (person form rules, backup and import copies, Root and the App frame, boundary checks, the Ghosted steps in `check.sh`).
+- **What Kiro produced**: nothing. It read parts of `tasks.md` and `design.md` and made no file changes.
+- **What went wrong**: Kiro's file-read tool failed on this workspace's path, so it fell back to its shell, and `execute_bash` errored seven times. I cancelled the run. The prompt had not told Kiro to stay off the terminal, which the two earlier runs had. Fix for the next attempt: the run is split in two, the prompt says to read only through file references and file tools, and a tool that fails twice means stop and report.
+- **Credits used**: 1.95 (1 min 15 s).
+
+---
+
+## Session 27: Ghosted tasks 2.6 and 2.7, person form rules, copied backup and import (Nov 20, 2026)
+
+- **Goal**: the form validation rules and the backup and import modules (Requirements 17 and 21), with no React components yet.
+- **Kiro feature used**: spec tasks, steering. First run with the terminal forbidden in the prompt, after Session 26's `execute_bash` failures.
+- **How it went**: Kiro stopped before writing anything and asked eight questions the spec left open (what `PersonFormInput` holds, trimming, what counts as a whole number, what "not later than today" means, the rule sentences, how an import line leaves out the relationship, the backup refusal sentences). Each came with a proposal. I accepted all of them, and for the relationship chose positional fields ("Mira | | 30"), so "Mira | 30" is skipped with a clear reason. Asking instead of guessing is what the steering and the prompt told it to do, and it is why the spec's gaps now show up in the log.
+- **What Kiro produced** (all in `apps/ghosted/src/`): `person-form.ts` (limits, `validatePerson`, `startsDark`, which calls the policy's own `init` and `healthAt` rather than repeating the formula) and its test; `backup.ts` (`{ app: "ghosted", version: 1, exportedAt, snapshot }`, five refusal reasons, restore checked by building a real engine) and its test; `import-people.ts` (`|`, tab and CSV, positional fields, bad lines skipped with reasons, importance 2 and 10 minutes) and its test; `wording.ts` extended with the rule and refusal sentences and the import help text. No dependencies added.
+- **Verification (in WSL, outside Kiro)**: Ghosted typecheck clean; Ghosted tests 101 passed plus 5 `it.todo` (40 new); no import from Study Dungeon.
+- **What I changed by hand**: nothing in the code.
+- **What went wrong or surprised me**:
+  - Kiro made one choice the spec does not cover, and said so: a line with more than four fields is skipped with a reason, and empty trailing fields are fine. I accepted it.
+  - A skipped line's reason holds only the reason; the import dialog (task 5.3) adds "Line N: ".
+  - Kiro's steering file still asks it to log each session, which I overrode in the prompts, so these entries are written from its reports.
+- **Credits used**: 13.56 (5 min 24 s); the earlier cancelled attempt is Session 26 (1.95).
+
+---
+
+## Session 28: Ghosted tasks 2.8 to 2.10, Root and App frame, source checks, check script (Nov 20, 2026)
+
+- **Goal**: finish Group B: the Root and crash screen, the App frame, `main.tsx`, the source-check tests and the Ghosted steps in `scripts/check.sh`. Three tasks in one run, with the terminal forbidden in the prompt.
+- **Kiro feature used**: spec tasks, steering. Kiro again stopped first and asked twelve questions (what the frame renders, where `SessionFlagStorage` lives, crash-screen wording, button styling, font weights, fixture names, how each source check matches, where the three `check.sh` steps go), each with a proposal. I answered yes to all, with one adjustment (it may update the comment lines in `check.sh`).
+- **What Kiro produced** (`apps/ghosted/src/`): `Root.tsx`, `components/ErrorBoundary.tsx`, `styles/problem.css`, `components/useModalDialog.ts`, `main.tsx` (the approved font weights), `App.tsx` (the frame: props, `now` and preview state, `runGatedWrite` through a ref, settle ticks, the dialog union, a live region, header, main and a dock slot, no placeholder behaviour), `splash.ts` (only the `SessionFlagStorage` type), `test/fixtures.ts`, `test/recording-adapter.ts`, `test/source-files.ts` (a helper not in the task list), `Root.test.tsx`, and the source checks `shell-boundary.test.ts`, `app-boundary.test.ts`, `no-network.test.ts`, `config.test.ts` and `check-script.test.ts`. Each source check builds its patterns from pieces so it cannot match itself, and first proves it catches a planted example. `wording.ts` gained `problemScreenText`. In `scripts/check.sh` it added the three Ghosted steps after "build app" and updated the header comment; no executable line changed.
+- **Verification (in WSL, outside Kiro)**: after one fix (below), the full `bash scripts/check.sh` passed: engine unchanged ok, engine 701, shell 152, Study Dungeon 465, Ghosted 128 passed plus 5 `it.todo`, both builds ok (Ghosted 1.1 MB).
+- **What I changed by hand**: one line of `test/source-files.ts`. Five of the new tests failed with "The URL must be of scheme file": in the jsdom test environment `new URL(...)` is jsdom's own URL class, which Node's `fileURLToPath` rejects. Passing the plain string `import.meta.url` fixed it.
+- **What went wrong or surprised me**:
+  - The jsdom URL failure above: Kiro could not have seen it without a terminal.
+  - Kiro could only read shell files that `index.ts` exports (no folder listing without a terminal); it said so, and the test itself reads the whole shell tree, so it covers the rest.
+  - The problem card uses the shell's hard `0 6px 0 #000` shadow, which task 5.9's token test may flag.
+- **Credits used**: 23.55 (6 min 33 s).
+
+---
+
+## Work outside Kiro, later on Nov 20 (not a Kiro session): the Ghosted cause-of-death sentences
+
+- **Task 0.3** was planned as hand-written by the developer. At the developer's request I (Claude Code, Sonnet 5.5, in WSL) wrote `apps/ghosted/src/autopsy-sentences.ts` instead. No Kiro credits were used, and Kiro never edits the file; it writes its tests (task 3.6).
+- **What it does**: `generateCauseSentences(report, payload, { timeZone, locale })` returns the cause first ("After the last call there was no contact for 81 days, about 2.7 times your usual rhythm."), then the supporting facts (when it started fading, when it went dark, the last contact and its kind, how many contacts and of which kinds, how many times it had been lit again) and a closing line that the light shows how recently you were in touch, not how much anyone matters. A person added already dark gets "Already dark when added: no contact for N days, about X times your usual rhythm." with N measured from `payload.lastContactAt` and never below 1 (Requirement 19.6). Never tended and resurrected-with-no-contact lives have their own first sentence.
+- **Checks**: typecheck clean. A temporary test (since deleted) built real engine reports for a normal death, a death after a text, a never-tended person, a person who was lit again, and a started-dark person, and I read the sentences. A 200-run property check on started-dark people (rhythm 1 to 365 days, gaps just past 2.7 rhythms up to years) found the sentences always contain the floored day count and never "0 days" or a banned phrase.
+- **Records updated to match**: `authorship.md` (new section), the Ghosted requirements, design and tasks (0.3 and 0.4 ticked), `ghosted.md` steering, the README.
+
+---
+
+## Session 29: Ghosted tasks 3.1 to 3.5, policy tests and properties (Nov 20, 2026)
+
+- **Goal**: test the Ghosted policy: generators, a generator coverage check, unit and outcome tests, Properties 1 to 9, and Property 12 at the gate.
+- **Kiro feature used**: spec tasks, steering, property-based testing (fast-check). The run did not stop to ask questions this time; it made three small choices the spec leaves open and listed them.
+- **What Kiro produced** (`apps/ghosted/src/`): `test/generators.ts` (people built by replaying a real engine with `ghostedPolicy`, every time T0 plus whole minutes), `generator-coverage.test.ts` (each state at least 10% of 300 people, each contact kind at least 10% of steps, time order and gaps, seeds 42, 7, 9, 11), `policy.properties.test.ts` (Properties 1 to 9, `numRuns` 100 to 300), `write-guard.properties.test.ts` (Property 12 at the gate, 1000 runs), and `policy.test.ts` with each of the five `it.todo` stubs replaced by a real test (contract through `checkPolicy`, every function, and every row of the outcome table through the engine, with exact values worked out from the formula, not copied from the policy).
+- **Verification (in WSL, outside Kiro)**: Ghosted typecheck clean; Ghosted tests 186 passed, no `it.todo` left; full `bash scripts/check.sh` passed.
+- **Mutation check (mine, outside Kiro)**: to see whether the tests can fail, I broke `policy.ts` nine ways, one at a time, and restored it afterwards. Eight were caught: text adds 30 instead of 40 (4 tests failed), decay from `item.lastEventAt` (18), dead threshold 9 (8), no clamp on negative elapsed (4), reconnect keeps an old contact date (6), `nextDueAt` null at exactly health 10 (1), text not capped at 100 (3), `healthAt` scaled by `item.health` (8). The ninth, `h >= 60` to `h > 60` in `nextDueAt`, survived, and it is an equivalent mutant: at exactly 60 both return `now`. No property found a bug in the policy.
+- **What I changed by hand**: nothing in the code.
+- **What went wrong or surprised me**:
+  - The `#[[file:...]]` references did not load as written this time; Kiro read the files by their full WSL path and said so.
+  - The three choices the spec did not make (all small): the gap range for `startedDark()` (from `floor(2.7 × rhythm) + 1` days up to three rhythms more), whole minutes for the starting last contact, and two extra helpers in `generators.ts` (`scenarioTimes`, `scenarioPayload`).
+  - No property failed, so there is still no "PBT found a real bug" story. The honest claim for the write-up is: property-based tests designed from the spec, a generator coverage check against vacuous properties, and mutation-checked.
+- **Credits used**: 20.67 (8 min 5 s).
+
+---
+
+## Session 30: Ghosted tasks 3.6 and 4.1 to 4.3, sentence tests, window art, person card and the three lists (Nov 20, 2026)
+
+- **Goal**: test the cause-of-death sentences (task 3.6), then the first UI: state glyphs and window and house art (4.1), the person card (4.2), and the three lists with section navigation (4.3). Four tasks in one run.
+- **Kiro feature used**: spec tasks, steering, property-based testing (Properties 10, 11 and 13).
+- **What Kiro produced** (`apps/ghosted/src/`): `autopsy-sentences.test.ts` (facts, rules and exact sentences for three fixed reports) and `started-dark.test.ts` (Property 13, 100 runs); `lists.ts` and its test; `components/icons.tsx`, `Window.tsx`, `House.tsx`, `PersonCard.tsx`, `ThreeLists.tsx` with their tests, `Window.property.test.tsx` (Property 10) and `PersonCard.property.test.tsx` (Property 11); `styles/window.css`, `street.css`, `motion.css`, `layout.css`; `test/css.ts` and `test/dom.ts` (helpers that read the CSS for motion, widths and 44px targets, since jsdom cannot measure); `App.test.tsx`; and the section nav and three lists wired into `App.tsx`. `wording.ts` gained the card and list strings. It worked out the expected sentences by hand from the function and the engine's dates, since it had no terminal.
+- **Choices beyond the spec, which I accepted**: Still lit rows show a small window (Requirement 16.1 asks for light, glyph and word everywhere); the "Street" entry in the nav does nothing until task 4.4; Property 11 covers the card now and the Street window later; `ThreeLists` has an extra `formatDate` prop; boarded-up glyphs use `--rust` as design 5.2 says, not the wireframe's `--dark`.
+- **Verification (in WSL, outside Kiro)**: the first run showed 5 TypeScript errors and 2 failing tests; after my fixes below, Ghosted typecheck clean, 270 tests passed, and the full `check.sh` passed.
+- **What I changed by hand**:
+  - `PersonCard.test.tsx`: an explicit return type on the `actions()` helper (`PersonActions & Record<..., Mock>`) did not type-check against Vitest's mock type. I removed the annotation so TypeScript infers it.
+  - `ThreeLists.tsx`: **a real accessibility bug.** The Open button's accessible name came out as "OpenPriya Raman" with no space, because the space was the first character inside the visually hidden span. Two tests (written by Kiro) caught it. The space is now outside the span.
+  - `wording.ts`: the wireframe's "Dark for too long." (Kiro flagged it) became "These windows went dark." because "too long" judges the user.
+- **What went wrong or surprised me**:
+  - Kiro ran one shell command (`echo skip`) by mistake in a no-terminal run; it changed nothing.
+  - Kiro could not run anything, so a type error and an accessible-name bug reached my checkpoint. The tests did their job: they found the bug.
+  - This was the biggest run so far.
+- **Credits used**: 77.5 (21 min 2 s).

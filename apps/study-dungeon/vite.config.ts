@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   // The jsdom App tests render the whole app; on a loaded machine they can pass
-  // 5 seconds and fail by timeout without any real bug.
-  test: { testTimeout: 20_000 },
+  // 5 seconds and fail by timeout without any real bug. Four workers keep memory
+  // use low on small machines (12 jsdom workers were killed on a 3.5 GB laptop).
+  test: { testTimeout: 20_000, maxWorkers: 4 },
 });

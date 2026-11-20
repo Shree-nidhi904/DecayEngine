@@ -11,7 +11,7 @@ Key decisions:
 - **Engine unchanged.** Ghosted uses `@decay-engine/engine` exactly as it is (Requirement 29).
 - **Shell plus three optional props.** The shell gains optional props for the time machine's range and jumps, the Triage budget choices and the autopsy markers (Requirements 26 to 28). When they are left out, each shell component behaves as it does today.
 - **No imports from Study Dungeon.** The support modules Ghosted needs are copied into `apps/ghosted/src` and adapted (Requirement 21.1).
-- **Hand-written decay rules.** The developer writes `policy.ts` and `autopsy-sentences.ts` by hand. Kiro writes only their tests.
+- **Rules and sentences not written by Kiro's task flow.** `policy.ts` is written by Kiro as a documented exception, from the developer's rules; `autopsy-sentences.ts` was written by Claude Code at the developer's request. Kiro writes their tests.
 - **One `now` for every read.** `now = realNow + previewOffsetMs`, as in Study Dungeon. Every write is blocked while `previewOffsetMs > 0`.
 
 ---
@@ -81,7 +81,7 @@ Files outside `apps/ghosted` that Ghosted work touches:
 | `packages/shell/src/components/TimeMachine.tsx`, `TriagePanel.tsx`, `AutopsyDialog.tsx`, `types.ts`, `index.ts` | optional props only (section 3) | 26-28 |
 | `packages/shell/src/components/*.range.test.tsx`, `*.budgets.test.tsx`, `*.markers.test.tsx` | new test files; existing tests untouched | 26.5, 27.4, 28.4 |
 | `scripts/check.sh` | Ghosted install, typecheck, test, build | 32.2 |
-| `scripts/check-engine-unchanged.sh` | new: `git diff --exit-code <approval commit> -- packages/engine` and `git status --porcelain -- packages/engine` | 29.2 |
+| `scripts/check-engine-unchanged.sh` | new: compares `packages/engine` and `packages/shell` with the state before the Ghosted work, worked out from git history (section 8) | 29.2, 29.4 |
 | `README.md` | Ghosted marked as built, with its run command | 32.5 |
 | `docs/KIRO_LOG.md` | one session per Kiro session | steering |
 
@@ -191,7 +191,7 @@ The App mirrors Study Dungeon's `App.tsx` pattern but is not copied from it: the
 
 ## 2. The policy (contract only)
 
-**Authorship.** `apps/ghosted/src/autopsy-sentences.ts` is written by the developer (`authorship.md`, requirements "Authorship"); Kiro never creates, edits or "fixes" it. `apps/ghosted/src/policy.ts` is written by Kiro as a documented exception in `authorship.md`, from this section only: the rules are the developer's, set in Requirements 1 to 4 and the contract below. Kiro's tests check this contract.
+**Authorship.** `apps/ghosted/src/autopsy-sentences.ts` was written by Claude Code at the developer's request, outside Kiro (`authorship.md`, requirements "Authorship"); Kiro never creates, edits or "fixes" it. `apps/ghosted/src/policy.ts` is written by Kiro as a documented exception in `authorship.md`, from this section only: the rules are the developer's, set in Requirements 1 to 4 and the contract below. Kiro's tests check this contract.
 
 ### 2.1 Exported names and types of `policy.ts`
 
@@ -254,7 +254,7 @@ A person starts dark when `now − L > 9T/10` at add time (more than `2.7 × rhy
 
 ### 2.3 Exported names of `autopsy-sentences.ts`
 
-This file is hand-written by the developer. Its shape follows Study Dungeon's `generateCauseSentences`:
+This file was written by Claude Code at the developer's request, outside Kiro. Its shape follows Study Dungeon's `generateCauseSentences`:
 
 ```typescript
 import type { AutopsyReport } from "@decay-engine/engine"
@@ -1425,97 +1425,111 @@ The test also checks the CSS: `--dark` is used for text only in the Empty window
 
 ---
 
-## 8. Engine-unchanged check (Requirement 29.2)
+## 8. Engine-unchanged check (Requirement 29)
 
-### 8.1 Recording the approval commit
+### 8.1 Where the "before" state comes from
 
-When the developer approves this spec, they record the commit once and commit the file:
+No file is recorded. The check works the "before" state out from git history each time it runs:
 
-```bash
-git rev-parse HEAD > .kiro/specs/ghosted/approved-commit.txt
-git add .kiro/specs/ghosted/approved-commit.txt && git commit -m "Record Ghosted spec approval commit"
-```
-
-The file holds one full 40-character commit hash and a newline. No script writes it. "Written once" is enforced by the check: it fails if the file has been changed by more than one commit, or if its working copy differs from the committed one.
+- **Normal case:** the parent of the first commit that added anything under `.kiro/specs/ghosted` (`git log --diff-filter=A --format=%H -- .kiro/specs/ghosted | tail -n 1`, then `^`). That is the last commit before any Ghosted work, and it needs no one to remember to record it. If commits are rewritten or undone, the answer follows the history that is actually there.
+- **Nothing about Ghosted committed yet:** HEAD. The check then compares against the last commit, which still catches an engine edit made while building.
+- **Shallow clone** (a judge cloning with `--depth 1`): the earlier history is missing, so the check prints that it was skipped and exits 0. It does not guess and does not fail.
 
 ### 8.2 `scripts/check-engine-unchanged.sh`
 
+This script was written and tested (outside Kiro, see Session 23 of the log) while the design was being revised, and it is the version task 2.10 keeps. It was run against the real repository (exit 0) and against three planted violations, each of which made it exit 1: an edit to a tracked engine file, a new untracked engine file, and an edit to an existing shell test.
+
 ```bash
 #!/usr/bin/env bash
-# Requirement 29: packages/engine is unchanged since the Ghosted spec was
-# approved, and packages/shell changed only as Requirements 26 to 28 allow.
-# Exit 0: unchanged. Exit 1: a change was found. Exit 2: the check cannot run.
+# Requirement 29: during the Ghosted work packages/engine is unchanged, and
+# packages/shell changed only as Requirements 26 to 28 allow.
+#
+# The "before" state comes from git history, so no file has to be recorded:
+# it is the parent of the first commit that added anything under
+# .kiro/specs/ghosted. If nothing about Ghosted is committed yet, it is HEAD.
+#
+# Exit 0: nothing outside the allowed changes (or the check cannot be made on a
+#         shallow clone and says so). Exit 1: a change was found.
+# Exit 2: the check cannot run.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-file=.kiro/specs/ghosted/approved-commit.txt
-if [ ! -f "$file" ]; then
-  echo "check-engine-unchanged: $file is missing." >&2
-  echo "Record the approval commit once: git rev-parse HEAD > $file, then commit it." >&2
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "check-engine-unchanged: this is not a git repository." >&2
   exit 2
 fi
-commit="$(tr -d '[:space:]' < "$file")"
-if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
-  echo "check-engine-unchanged: $file does not hold a full commit hash." >&2; exit 2
-fi
-if ! git cat-file -e "${commit}^{commit}" 2>/dev/null; then
-  echo "check-engine-unchanged: commit $commit is not in this repository." >&2; exit 2
+if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+  echo "check-engine-unchanged: skipped, this is a shallow clone and the history before Ghosted is missing."
+  exit 0
 fi
 
-# Written once: at most one commit has touched the file, and the working copy matches it.
-if [ "$(git log --format=%H -- "$file" | wc -l)" -gt 1 ]; then
-  echo "check-engine-unchanged: $file was changed after it was first recorded." >&2; exit 1
-fi
-if git ls-files --error-unmatch "$file" >/dev/null 2>&1 && ! git diff --quiet HEAD -- "$file"; then
-  echo "check-engine-unchanged: $file differs from its committed version." >&2; exit 1
+first="$(git log --diff-filter=A --format=%H -- .kiro/specs/ghosted | tail -n 1)"
+if [ -n "$first" ]; then
+  if ! base="$(git rev-parse --verify --quiet "${first}^")"; then
+    echo "check-engine-unchanged: the first Ghosted commit ${first:0:12} has no parent commit." >&2
+    exit 2
+  fi
+  label="${base:0:12}, the commit before the first Ghosted commit"
+else
+  base="$(git rev-parse HEAD)"
+  label="${base:0:12}, HEAD (no Ghosted commit yet)"
 fi
 
-# 29.2: committed, staged and unstaged changes to tracked engine files since the approval commit.
-if ! git diff --exit-code --stat "$commit" -- packages/engine; then
-  echo "packages/engine changed since $commit." >&2; exit 1
+# 29.1, 29.2: committed, staged and unstaged changes to tracked engine files since the base.
+if ! git diff --exit-code --stat "$base" -- packages/engine; then
+  echo "check-engine-unchanged: packages/engine changed since $label." >&2
+  exit 1
 fi
 # 29.2: untracked files and any other working-tree change under packages/engine.
 status="$(git status --porcelain --untracked-files=all -- packages/engine)"
 if [ -n "$status" ]; then
-  echo "$status" >&2; echo "packages/engine has uncommitted changes." >&2; exit 1
+  echo "$status" >&2
+  echo "check-engine-unchanged: packages/engine has uncommitted changes." >&2
+  exit 1
 fi
 
-# 29.4, 26.5, 27.4, 28.4: shell changes only in these files; existing tests untouched.
+# 29.4, 26.5, 27.4, 28.4: shell changes only in these files. Every existing shell test
+# file is outside the list, so editing one fails here.
 allowed='^packages/shell/src/(index\.ts|types\.ts|shell\.css|components/(TimeMachine|TriagePanel|AutopsyDialog)\.tsx|components/(TimeMachine\.range|TriagePanel\.budgets|AutopsyDialog\.markers|AutopsyDialog\.focus)\.test\.tsx)$'
-changed="$( { git diff --name-only "$commit" -- packages/shell; git ls-files --others --exclude-standard -- packages/shell; } | sort -u )"
+changed="$( { git diff --name-only "$base" -- packages/shell; git ls-files --others --exclude-standard -- packages/shell; } | sort -u )"
 outside="$(printf '%s\n' "$changed" | grep -Ev "$allowed" | grep -v '^$' || true)"
 if [ -n "$outside" ]; then
-  echo "packages/shell changed outside Requirements 26 to 28:" >&2; echo "$outside" >&2; exit 1
-fi
-if ! git diff --exit-code --stat "$commit" -- 'apps/study-dungeon/src/*.test.ts' 'apps/study-dungeon/src/*.test.tsx' 'apps/study-dungeon/src/**/*.test.ts' 'apps/study-dungeon/src/**/*.test.tsx'; then
-  echo "Study Dungeon tests changed since $commit." >&2; exit 1
+  echo "$outside" >&2
+  echo "check-engine-unchanged: packages/shell changed outside Requirements 26 to 28 since $label." >&2
+  exit 1
 fi
 
-echo "packages/engine unchanged since ${commit:0:12}; shell changes within Requirements 26 to 28."
+echo "packages/engine unchanged and packages/shell within Requirements 26 to 28, since $label."
 ```
 
 What each part covers:
 
-- `git diff <commit> -- packages/engine` compares the approval commit with the working tree. It catches later commits and staged or unstaged edits to tracked files.
-- `git status --porcelain --untracked-files=all` catches new untracked files. Ignored paths such as `node_modules` are not reported by either command.
-- The shell part does not edit or skip any test. It only fails when a file outside the allowed list changes, which includes every existing shell test file.
+- `git diff <base> -- packages/engine` compares the base with the working tree, so it catches later commits and staged or unstaged edits to tracked files.
+- `git status --porcelain --untracked-files=all` catches new untracked files. Ignored paths such as `node_modules` are reported by neither command.
+- The shell check fails on any change outside the files named in Requirements 26 to 28. Every existing shell test file is outside the list, so editing one fails here. It does not decide whether an old test is still correct; the old tests and Study Dungeon's tests still have to pass, and `check.sh` runs them.
+- Study Dungeon's own files are not checked by git. Comment-only edits there (the attribution comments have been reworded by hand) would make such a check fail without weakening any test.
 
 ### 8.3 How `scripts/check.sh` calls it
 
-Four lines are added to `scripts/check.sh` (Req 32.2). No existing line changes.
+`scripts/check.sh` already has this step, right after "install":
 
 ```bash
-step "engine unchanged"   bash scripts/check-engine-unchanged.sh      # right after "install"
+step "engine unchanged"   bash scripts/check-engine-unchanged.sh
+```
+
+Task 2.10 adds the three Ghosted steps once the app exists (Req 32.2). No existing line changes.
+
+```bash
 step "typecheck ghosted"  pnpm --filter @decay-engine/ghosted typecheck
 step "test ghosted"       pnpm --filter @decay-engine/ghosted test
 step "build ghosted"      pnpm --filter @decay-engine/ghosted build
 ```
 
-`step` already reports any non-zero exit as `FAIL`, and `check.sh` exits 1 when any step fails. Each outcome of the new step:
+`step` reports any non-zero exit as `FAIL`, and `check.sh` exits 1 when any step fails. Each outcome of the engine step:
 
-- **Missing approval file:** the step prints `FAIL`, and its log says how to record the commit. `check.sh` exits non-zero. The script never creates the file itself, because a commit recorded during a later check would not be the approval commit.
-- **Malformed file or unknown commit (exit 2):** also `FAIL`.
-- **Engine or shell-scope change found (exit 1):** also `FAIL`.
+- **Exit 0:** prints which commit it compared against.
+- **Exit 1 (a change was found):** `FAIL`, and its log names the files.
+- **Exit 2 (cannot run, for example no git repository):** also `FAIL`.
 
 ---
 
@@ -1655,5 +1669,5 @@ Places where the real code or the requirements do not fit what part 3 needs. Not
 5. **No layout in jsdom.** Requirements 12.7, 24.4 and 24.7 (nothing behind the dock, no sideways scroll at 320 px, no column beside empty space) cannot be measured in jsdom. They are covered by CSS source tests plus the manual check at 320, 390 and 1280 px. No browser test runner is in the stack (`tech.md`). FYI.
 6. **Test dependencies not yet in `apps/ghosted/package.json`.** It lists only the engine, Vitest and TypeScript. The setup task (Req 32.1) adds `fast-check` (`^4.10.2`, the engine's version), `@testing-library/react`, `jsdom`, `react`, `react-dom`, the shell and the `@fontsource` packages. FYI.
 7. **The shell-scope check.** Section 8.2 fails on any shell change outside the files of sections 3.1 to 3.3 and the four new test files. A later shell need would make it fail until the list is widened, which Req 29.4 says should stop the work and be reported anyway. **Confirm the allowed list.**
-8. **The approval commit and today's working tree.** `packages/engine` currently has no uncommitted changes. The repository as a whole does (for example `docs/KIRO_LOG.md` is staged as deleted). The check looks only at `packages/engine`, `packages/shell` and Study Dungeon's tests, so the rest does not affect it. The approval commit should still be recorded before any Ghosted code task starts. FYI.
+8. **The "before" state is derived, not recorded.** An earlier version of this design recorded an approval commit in a file. It was dropped: the file was fragile (commits were undone and the hash left the branch) and git history already holds the answer. See section 8.1. FYI.
 9. **Kiro log.** Steering asks for a `docs/KIRO_LOG.md` session for every Kiro session that touches Ghosted. These spec sessions were limited to `.kiro/specs/ghosted/` (and `design-tokens.md` once), so no entry was written, and the file is currently staged as deleted in git. The log needs entries for the spec sessions once it is restored. **Needs your action.**

@@ -20,7 +20,7 @@ Look and screens: `docs/design/ghosted-visual-brief.md` (state table, numbered p
 - Never edit `packages/engine/` for Ghosted. If Ghosted seems to need a change there, stop and report it (`engine-boundary.md`).
 - `packages/shell/` may change only to add an optional prop or option whose default keeps today's behaviour (for example the time machine's range and jump list, the Triage budget choices, the Autopsy marker renderer). Each such change is its own task, and the shell and Study Dungeon tests must still pass unchanged. No other shell edits.
 - `apps/ghosted/src/policy.ts` is written by Kiro from the spec (Requirements 1 to 4 and design section 2.2). This is a documented exception to the rule that Kiro never writes decay rules (`authorship.md`, "Exception: Ghosted's decay policy"). Implement exactly the contract table and nothing else; if the spec seems wrong or a formula is unclear, stop and ask instead of choosing.
-- `apps/ghosted/src/autopsy-sentences.ts` stays hand-written by the developer. Kiro never creates, edits or "fixes" it; if a test seems to need it changed, stop and ask.
+- `apps/ghosted/src/autopsy-sentences.ts` was written by Claude Code at the developer's request, outside Kiro (`authorship.md`). It already exists. Kiro never creates, edits or "fixes" it; if a test seems to need it changed, stop and ask.
 - Kiro may write the policy's tests. Outcome tests check the "Ghosted (straight line" reference rule and its row in the expected-outcomes table in `.kiro/specs/engine/design.md`.
 
 ## 3. Look

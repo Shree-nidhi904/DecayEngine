@@ -1,0 +1,44 @@
+/*
+ * Ghosted tokens: a night street. The light shows connection freshness,
+ * never "how much someone cares". Lit amount: --lit = health / 100.
+ *
+ * Every value is from the Ghosted section of .kiro/steering/design-tokens.md
+ * (the scenery tokens are the wireframe's exact values). Replaces the
+ * scaffold's skin.css (design section 1.4). Add no colours outside this list.
+ */
+:root {
+  --bg: #07060d;
+  --panel: #100e1a;
+  --panel-hi: #1a1727;
+  --line: #2a2640;
+  --bone: #efe9f5;
+  --dim: #aea8c4;
+  --glow: #ffd479;
+  --flick: #ff9a4a;
+  --dark: #6d6a86;
+  --sign: #ff7ab8;
+  --rust: #ff7a7a;
+  --mint: #8fe3c4;
+  --display: "Josefin Sans", sans-serif;
+  --logo: "Monoton", sans-serif;
+
+  /* Scenery, from docs/design/ghosted-wireframe.html (exact values) */
+  --frame: #0a0812;
+  --wall: #1d1733;
+  --wall-lo: #151128;
+  --wall-edge: #2c2548;
+  --board: #7a6252;
+  --board-lo: #5c483c;
+  --board-2: #725b4c;
+  --board-2-lo: #54413a;
+  --moon: #ece6ff;
+  --moon-shade: #0e0b18;
+  --border-hero: #4a3a66;
+  --border: #44406a;
+  --border-button: #3a3560;
+
+  /* Set at run time: --lit on each pane (health / 100), --age on .gh-app
+     (preview offset / 365 days). These are the resting values. */
+  --lit: 1;
+  --age: 0;
+}
