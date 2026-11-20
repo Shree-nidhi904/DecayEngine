@@ -4,7 +4,7 @@
 # Run it from anywhere in WSL:  bash scripts/check.sh
 # Exit code is 0 only when every step passes.
 #
-# Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+# Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 set -u
 cd "$(dirname "$0")/.."

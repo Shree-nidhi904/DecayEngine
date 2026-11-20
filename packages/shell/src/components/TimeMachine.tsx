@@ -39,7 +39,7 @@ export interface TimeMachineProps {
   today: number;
   /** How far ahead of today is shown, in ms (0 = today). Controlled by the app. */
   offsetMs: number;
-  /** Called with the new offset, from 0 to TIME_MACHINE_MAX_OFFSET_MS. */
+  /** Called with the new offset, from 0 to maxDays days. */
   onChange: (offsetMs: number) => void;
   /** Formats the previewed time (today + offsetMs) for display. Supplied by the app. */
   formatDate: (ms: number) => string;
@@ -53,18 +53,27 @@ export interface TimeMachineProps {
   prefersReducedMotion?: () => boolean;
   /** Optional app content shown right under the slider (for example a timeline of predicted changes). */
   belowSlider?: ReactNode;
+  /** Days the slider reaches. A positive whole number; anything else uses the default. Default TIME_MACHINE_MAX_DAYS (60). */
+  maxDays?: number;
+  /** Quick jumps, in days ahead of today, shown in this order. Default TIME_MACHINE_JUMP_DAYS ([7, 14, 30]). */
+  jumpDays?: readonly number[];
 }
 
-function clampOffset(ms: number): number {
-  return Math.min(TIME_MACHINE_MAX_OFFSET_MS, Math.max(0, ms));
+function isPositiveWholeNumber(value: number): boolean {
+  return Number.isInteger(value) && value > 0;
+}
+
+function clampOffset(ms: number, maxMs: number): number {
+  return Math.min(maxMs, Math.max(0, ms));
 }
 
 /**
- * A slider from today to +60 days, quick jumps (+7, +14, +30) and Play.
- * Play moves the offset from where it is to +60 days over 5 seconds; pressing
- * it again stops. With reduced motion, Play jumps straight to +60 days.
- * Moving the slider or using a quick jump stops a running Play. Quick jumps
- * are always available. Every label comes from wording.timeMachine.
+ * A slider from today to +maxDays days (default 60), quick jumps (default
+ * +7, +14, +30) and Play. Play moves the offset from where it is to the end
+ * over 5 seconds; pressing it again stops. With reduced motion, Play jumps
+ * straight to the end. Moving the slider or using a quick jump stops a
+ * running Play. Quick jumps are always available; one beyond the range is
+ * clamped to the end. Every label comes from wording.timeMachine.
  */
 export function TimeMachine({
   today,
@@ -77,8 +86,11 @@ export function TimeMachine({
   clock = browserClock,
   prefersReducedMotion = browserPrefersReducedMotion,
   belowSlider,
+  maxDays = TIME_MACHINE_MAX_DAYS,
+  jumpDays = TIME_MACHINE_JUMP_DAYS,
 }: TimeMachineProps) {
   const text = wording.timeMachine;
+  const maxMs = (isPositiveWholeNumber(maxDays) ? maxDays : TIME_MACHINE_MAX_DAYS) * DAY_MS;
   const [playing, setPlaying] = useState(false);
   const frameRef = useRef<{ handle: unknown } | null>(null);
   // The latest props, so a running animation never calls a stale onChange.
@@ -102,14 +114,14 @@ export function TimeMachine({
 
   function change(next: number) {
     stop();
-    onChange(clampOffset(next));
+    onChange(clampOffset(next, maxMs));
   }
 
   function play() {
     // At the end already: play again from today.
-    const from = offsetMs >= TIME_MACHINE_MAX_OFFSET_MS ? 0 : clampOffset(offsetMs);
+    const from = offsetMs >= maxMs ? 0 : clampOffset(offsetMs, maxMs);
     if (prefersReducedMotion()) {
-      onChange(TIME_MACHINE_MAX_OFFSET_MS);
+      onChange(maxMs);
       return;
     }
     const startedAt = clock();
@@ -118,11 +130,11 @@ export function TimeMachine({
       if (progress >= 1) {
         frameRef.current = null;
         setPlaying(false);
-        latest.current.onChange(TIME_MACHINE_MAX_OFFSET_MS);
+        latest.current.onChange(maxMs);
         return;
       }
-      const raw = from + (TIME_MACHINE_MAX_OFFSET_MS - from) * progress;
-      latest.current.onChange(clampOffset(Math.round(raw / TIME_MACHINE_STEP_MS) * TIME_MACHINE_STEP_MS));
+      const raw = from + (maxMs - from) * progress;
+      latest.current.onChange(clampOffset(Math.round(raw / TIME_MACHINE_STEP_MS) * TIME_MACHINE_STEP_MS, maxMs));
       frameRef.current = { handle: latest.current.frames.request(step) };
     };
     setPlaying(true);
@@ -130,8 +142,8 @@ export function TimeMachine({
     frameRef.current = { handle: frames.request(step) };
   }
 
-  const days = Math.floor(clampOffset(offsetMs) / DAY_MS);
-  const showing = text.showing(formatDate(today + clampOffset(offsetMs)), days);
+  const days = Math.floor(clampOffset(offsetMs, maxMs) / DAY_MS);
+  const showing = text.showing(formatDate(today + clampOffset(offsetMs, maxMs)), days);
 
   return (
     <section className="shell-time-machine" style={shellStyle(theme)} aria-label={text.title}>
@@ -143,21 +155,21 @@ export function TimeMachine({
         aria-label={text.slider}
         aria-valuetext={showing}
         min={0}
-        max={TIME_MACHINE_MAX_OFFSET_MS}
+        max={maxMs}
         step={TIME_MACHINE_STEP_MS}
-        value={clampOffset(offsetMs)}
+        value={clampOffset(offsetMs, maxMs)}
         onChange={(event) => change(Number(event.currentTarget.value))}
       />
       {belowSlider}
       <div className="shell-time-machine-controls">
-        {TIME_MACHINE_JUMP_DAYS.map((jumpDays) => (
+        {jumpDays.map((jump) => (
           <button
-            key={jumpDays}
+            key={jump}
             type="button"
             className="shell-button shell-button-quiet"
-            onClick={() => change(jumpDays * DAY_MS)}
+            onClick={() => change(jump * DAY_MS)}
           >
-            {text.jump(jumpDays)}
+            {text.jump(jump)}
           </button>
         ))}
         <button

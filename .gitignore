@@ -20,3 +20,4 @@ coverage/
 *.log
 
 # Note: .kiro/ must never be listed here. The hackathon rules require it to be committed.
+

@@ -1,7 +1,7 @@
 // The "Answer by" setting beside the sound switch: how a fight checks your
 // answer (answer-check.ts).
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { useId } from "react"
 import { ANSWER_CHECKS, type AnswerCheck } from "../answer-check"

@@ -843,3 +843,137 @@ For each session, record:
 - **Briefs for the next apps**: `docs/design/ghosted-visual-brief.md` (with `ghosted-wireframe.html`) and `docs/design/expiry-reaper-visual-brief.md`, written before Kiro builds them, so the look is in their specs from day one.
 - **Tests**: app 465/465, shell 104/104, typechecks clean.
 - **What I changed by hand**: no code.
+
+---
+
+## Session 19: scaffold hook back on, Ghosted scaffold, and a policy-reviewer agent (Nov 20, 2026)
+
+- **Goal**: use the two Kiro features the write-up was weakest on. Turn the scaffold-policy hook back on and use it for Ghosted, and add a custom agent that reviews a policy.
+- **Kiro feature used**: hooks, custom agents (sub-agents), chat. The `custom-agent-creator` and `introspect` built-in agents helped write and check the agent file.
+- **What Kiro produced**:
+  - **Scaffold hook** (`.kiro/hooks/scaffold-a-new-decay-policy.json`): `enabled` set back to `true` (it was turned off in Session 11 after it fired on every prompt). Its instructions now:
+    - take the skin colours from `design-tokens.md`;
+    - write test stubs as `it.todo`, not empty passing tests (`no-fake-tests.md`);
+    - create a minimal `package.json` and `tsconfig.json` if they are missing;
+    - log the run as a new session.
+  - **Ghosted scaffold**: Kiro followed the hook's instructions. The hook did not fire, because this session's prompt ("do option 2 and 3") does not match `scaffold.*policy`. New files:
+    - `apps/ghosted/src/policy.ts`. Every function throws "not written yet". The thresholds are `NaN`, so the engine constructor rejects the policy until it is written. The payload, policyData and event types come from the Ghosted reference policy in the engine `design.md`. No decay rule is written (`authorship.md`).
+    - `apps/ghosted/src/policy.test.ts`, with 5 `it.todo` tests: health 0-100, purity, `healthAt` never increases, checkPolicy, and the design.md outcome (dies just after day 81 on a 30-day rhythm).
+    - `apps/ghosted/src/skin.css`, with the Ghosted values from `design-tokens.md` and a comment on the window metaphor ("connection freshness").
+    - `apps/ghosted/package.json` and `tsconfig.json`. The engine is the only dependency, with no React or Vite yet.
+  - **Custom agent `policy-reviewer`** (`.kiro/agents/policy-reviewer.md`):
+    - It checks an app's `policy.ts` against the Type Contract, the purity and clock rules, and the app spec.
+    - It runs the policy tests and checks them against `no-fake-tests.md`.
+    - It reports in five sections and never edits files. Its tools are `read` and `shell` only, with no `write`, and a `permissions` rule allows only the policy test command.
+    - The steering files and the engine requirements are attached as `resources`.
+    - The format was checked against kiro.dev (custom-agents/configuration-reference).
+- **First run of the agent (Study Dungeon policy)**:
+  - **Contract, purity and time**: no findings that need a change. It noted one small risk: `nextDueAt` calls `this.healthAt` (line 91), which breaks if the function is called on its own instead of as a method.
+  - **A real spec conflict**: Study Dungeon `requirements.md` 4.1 (line 89) says a right-answer resurrect returns `policyData: { halfLifeDays: ... }`, but `design.md` line 386 says `{ ok: true }`. The Session 8 hand fix changed the design and never updated the requirement. The code follows the design, and the result is the same.
+  - **Tests**: it would not run them. Kiro's shell printed nothing, and the agent's no-write rule stopped it from saving the output to a file. It gave me the command to run instead, so the read-only limit held.
+- **Verification (in WSL)**: `pnpm install` OK; the lockfile gained the `apps/ghosted` importer only. Ghosted typecheck clean. Ghosted tests: 1 file skipped, 5 todo, 0 passed. Study Dungeon policy tests 60/60.
+- **What I changed by hand**: nothing yet. The requirement 4.1 / design conflict is mine to settle.
+- **What went wrong or surprised me**:
+  - Kiro's shell printed nothing for long chained commands. Saving the output to a file in one command and reading it in a second worked.
+  - The hook cannot be triggered by Kiro itself. To see it fire, send a prompt such as "scaffold the expiry-reaper policy".
+- **Credits used**: (add from the usage panel)
+- **Screenshot**: (add file names: the agent's report, the hook panel showing it enabled)
+
+---
+
+## Session 20: Ghosted policy, task 0.2 (Nov 20, 2026)
+
+- **Goal**: replace the scaffold `apps/ghosted/src/policy.ts` with the real policy, from Requirements 1 to 4 and design sections 2.1 and 2.2 only. This is the documented exception in `authorship.md`: the rules are the developer's, the code is Kiro's.
+- **Kiro feature used**: spec task, steering (`ghosted.md`, `authorship.md`, `engine-boundary.md`). The scaffold hook was not run, as asked.
+- **What Kiro produced**: `apps/ghosted/src/policy.ts`:
+  - `PersonPayload` gained `relationship: string`. Exports are exactly `PersonPayload`, `PersonPolicyData`, `ContactEvent`, `Person` and `ghostedPolicy`. `DAY_MS` is a module constant, not exported, because design 2.1 does not list it.
+  - Thresholds `{ weak: 60, dead: 10 }`; `init` copies `payload.lastContactAt`.
+  - `healthAt`: `elapsed = max(0, now − L)`, `T = 3 × rhythmDays × DAY_MS`, `max(0, 100 × (T − elapsed) / T)`, in that order. It reads only `policyData.lastContactAt`, `payload.rhythmDays` and `now`.
+  - `applyEvent`: text gives `min(100, h + 40)` and `lastContactAt = now − (100 − health) / 100 × T`; call and meet-up give 100 and `lastContactAt = now`.
+  - `nextDueAt`: `null` when `item.state === "dead"`, otherwise `L + 2 × T / 5` at 60 or more, `now` from 10 to below 60, and `null` below 10.
+  - `resurrect`: always `{ ok: true, policyData: { lastContactAt: now } }`.
+  - Imports only types from `@decay-engine/engine`. No clock, no randomness, no side effects.
+  - `policy.test.ts`, `autopsy-sentences.ts`, the engine and the shell were not touched.
+- **What I changed by hand**: (fill in after review)
+- **What went wrong or surprised me**:
+  - **Stale text in design.md**: section 2's intro still says `policy.ts` is "Hand-written by the developer" and that Kiro never edits it. Tasks.md 0.2, requirements and `authorship.md` say Kiro writes it. The formulas do not conflict; only that paragraph is out of date.
+  - **One order choice, to confirm**: Requirement 3.1 (health 60 or more) and 3.3 (state dead) overlap if a dead item ever had health 60 or more. The code checks `state === "dead"` first, so a dead item is never due.
+  - Kiro's shell printed nothing again. Saving the typecheck output to a file and reading it back worked: `tsc --noEmit`, exit 0.
+- **Verification (in WSL)**: Ghosted typecheck clean (Kiro, through the file). Tests: (add the result of `pnpm --filter @decay-engine/ghosted test`; expect the 5 `it.todo` only, since the real tests are task 3.x)
+- **Credits used**: 5.64 (2 min 34 s)
+- **Screenshot**: (add file names)
+
+---
+
+## Session 21: Ghosted steering, requirements, design and tasks (Nov 20, 2026; catch-up entry)
+
+Written after the fact for the sessions that came before Session 20, from Kiro's own end-of-session reports. Credits are the "Est. Credits Used" Kiro showed after each step. Reviews marked *outside Kiro* were done by Claude Code in WSL (no Kiro credits); they are not Kiro work and are listed so the write-up does not claim them.
+
+- **Goal**: build the Ghosted spec the same way as the two earlier specs (requirements, then design, then tasks), one stage at a time with a review round between stages, and add Ghosted steering first.
+- **Kiro feature used**: spec-driven development (requirements, design, tasks), steering (`ghosted.md`, `fileMatch`), hooks (the scaffold hook, see below), chat.
+
+### What Kiro produced, step by step
+
+| Step | Credits | Time | Result |
+|---|---|---|---|
+| Ghosted steering | 3.12 | 2 min | `.kiro/steering/ghosted.md`, 44 lines, `inclusion: fileMatch` on `apps/ghosted/**`. Front matter checked against kiro.dev/docs/steering |
+| Requirements, attempt 1 | 7.01 | 7 min | Cancelled before any file was written (see conflicts below) |
+| Requirements, attempt 2 | 7.95 | 4 min | `requirements.md`: 31 requirements, glossary, type contract, 12 properties |
+| Requirements, correction round | 5.41 | 2 min | Added Requirement 32 (app runs and is checked), 19.6 / 20.8 / property 13 (started dark), `2 × T / 5` in 3.1 |
+| Design, attempt 1 | 6.75 | 2 min | Stopped: the `#[[folder:...]]` references did not load, so Kiro read files by hand and used its context before writing anything |
+| Design part 1 (sections 1 to 3) | 13.52 | 6 min | Architecture, policy contract table, shell additions with real line numbers |
+| Design part 2 (sections 4 to 6) | 24.81 | 10 min | Components, window art, a 12-person sample table with the arithmetic |
+| Design part 3, attempt 1 | 13.06 | 4 min | Cancelled after the amendments; part 3 not written |
+| Design part 3 (sections 7 to 9) | 10.88 | 5 min | Testing strategy, the engine-unchanged script, error and accessibility notes, 13 correctness properties |
+| Tasks | 14.62 | 6 min | `tasks.md`: groups 0 and A to F, every requirement 1 to 32 in at least one task (checked with a script) |
+
+Spec stage total: about 121 credits (not counting Session 19, 20 or task 1.1 in Session 22).
+
+### Corrections that came out of the review rounds
+
+- **Conflicts Kiro found by reading the real code, before any file was written (requirements attempt 1)**: the engine always sets health to 100 on resurrect (the wireframe showed 70); `100 × (1 − elapsed / T)` gives 9.999999999999998 on day 81, so a person would die a day early (the form `100 × (T − elapsed) / T` gives exactly 10); `engine.edit` never changes `policyData`, so editing the last contact date would do nothing; the shell's time machine stops at 60 days and Triage offers 5 / 10 / 20 minutes; the autopsy chart only marks right and wrong; backup, restore and import live in Study Dungeon, not in the shell; "No reply yet" needs an event kind the policy does not have. These became decisions in the requirements.
+- **Requirements, attempt 2**: Kiro corrected its own wrong example (a text on day 45 gives 90 and fades again on day 72, not day 54).
+- **Correction round**: I added Requirement 32 because nothing said Ghosted had to run in `scripts/check.sh`; I asked for the started-dark case because the engine records "created" and "died" at the same instant, so an autopsy would say "0 days"; Kiro found that `0.4 × T` and `2 × T / 5` give identical results for every rhythm from 1 to 365 days, so the change is exactness by construction, not a fix.
+- **Design part 1 open issues, decided by me**: autopsy dialog focus (add an optional prop in the shell), the counters show the list name rather than the state word (amend 16.1), imported people get importance 2 and 10 minutes, and `initialBudget` keeps today's behaviour when no list is given.
+- **Design part 2 error caught after the fact**: the sample table's expected values in 6.3 treated a death on a whole day as on that day. The engine dates a crossing up to one minute after it happens, and health exactly 10 is still weak, so Grace is not in the 30-day forecast and the dock markers fall just after the day. Kiro spotted this while planning part 3; I fixed section 6.3.
+- **Tasks**: Kiro moved four tests next to the code they test (properties 10, 11, the app half of 12, and the sample expectations), because in group C they would have failed the checkpoint. I accepted that.
+
+### Checks done outside Kiro
+
+- I recomputed all 12 sample people from the Requirement 1 to 4 formulas with my own script, not Kiro's. States, orders (fading, empty windows, still lit) and the 30-minute Triage picks (Dan and Meera, 193.74) all matched. That check did not catch the one-minute point above.
+- I reviewed the shell allowed list in design 8.2 and added `shell.css`.
+
+### What I changed by hand
+
+- Gated the scaffold hook (see below) and removed its `matcher`.
+- Settled the open issues listed above and wrote the corrected section 6.3.
+- Bundled the fonts in Study Dungeon (`@fontsource`), raised its test timeout to 20 seconds (three App tests timed out at random under load), fixed the README forecast line and Study Dungeon requirement 4.1, and put `docs/KIRO_LOG.md` in `.gitignore`.
+- Recorded the approval commit: `57b2783` in `.kiro/specs/ghosted/approved-commit.txt`.
+- Decided that Kiro writes `policy.ts` for Ghosted, as a documented exception (see Session 20 and `authorship.md`).
+
+### What went wrong or surprised me
+
+- **The scaffold hook fired on every prompt.** Kiro said it fired on the steering request, which never mentioned scaffolding. The docs (kiro.dev/docs/hooks) document `matcher` only for tool and file events, not for prompt submit, so `scaffold.*policy` never filtered anything. The IDE cannot create a new manual hook either. Fix: the hook's instructions now start with a gate that does nothing unless the prompt asks for a scaffold. I had also been adding "do not run the scaffold hook" to prompts as a workaround, which was a patch rather than a fix.
+- **Folder references in prompts do not load.** `#[[folder:...]]` failed, so design attempt 1 spent its context reading files one by one. Splitting the design into three parts with plain file paths worked. Two attempts were cancelled (about 20 credits).
+- **File-save hooks fire for agent-made changes only** (kiro.dev/docs/hooks/types). The `check-policy-on-save` hook watches `policy.ts`, which until Session 20 nobody but me edited, so it may never have fired.
+- **Study Dungeon source files were rewritten under me** (the attribution comments, "Claude" replaced by "-" in 45 files). I left them as they are.
+- Kiro's shell printed nothing for some commands again.
+- **Credits used**: about 121 for this session (table above).
+- **Screenshot**: (add file names: the steering file with its front matter, the requirements and design files, the hook panel)
+
+---
+
+## Session 22: Ghosted shell addition, task 1.1 TimeMachine range and jumps (Nov 20, 2026)
+
+- **Goal**: add optional `maxDays` and `jumpDays` props to the shell's `TimeMachine` (Requirement 26, design 3.1), with today's behaviour as the default.
+- **Kiro feature used**: spec task, steering.
+- **What Kiro produced**:
+  - `packages/shell/src/components/TimeMachine.tsx`: `maxDays` is used only if it is a positive whole number (0, −1, 1.5 and NaN fall back to 60); the range sets the slider maximum, Play's end and every clamp including the one on `onChange`; one jump button per `jumpDays` entry in order, clamped to the end. Exported constants and the step and Play timings are unchanged.
+  - `packages/shell/src/components/TimeMachine.range.test.tsx`: 17 tests (a 365-day range with jumps of 30, 90, 180 and 365; the exact offset of each jump; clamp with a jump of 400; Play ending at 365, half-way at 182.5; reduced-motion Play; the fallbacks; the defaults).
+  - No existing test file, `packages/engine` or anything else was changed.
+- **Verification (in WSL, outside Kiro)**: `bash scripts/check.sh` passed: engine 701, shell 121 (104 before, plus 17), Study Dungeon 465. Kiro could confirm only the shell tests and both typechecks; its run of the Study Dungeon tests did not finish, so that confirmation is mine.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: Kiro's shell lost the Study Dungeon test run, as in earlier sessions.
+- **Credits used**: 10.82 (2 min 48 s).
+- **Screenshot**: (add file names)
+

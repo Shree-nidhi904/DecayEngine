@@ -1,7 +1,7 @@
 // What Triage is for, in three steps, beside the Triage panel. A queue of
 // small creatures waits at the door. Decoration plus plain words.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { dailyRaidText, raidText } from "../wording"
 import { Creature } from "./art/Creature"

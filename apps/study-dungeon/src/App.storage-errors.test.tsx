@@ -37,7 +37,7 @@ function addThroughDialog(question: string, answer: string) {
 
 describe("a full storage during a write", () => {
   it("addItem: shows Storage full in the form, keeps what was typed, adds nothing, and a retry works", () => {
-    // Changed after round 7 (Claude Opus 5.5): the form used to close on a storage
+    // Changed after round 7 (- Opus 5.5): the form used to close on a storage
     // problem and lose the typed text. It now stays open and says why, inside
     // the dialog, because the page behind a modal dialog is inert.
     const adapter = new FailingAdapter()
@@ -165,7 +165,7 @@ describe("a full storage during a write", () => {
 })
 
 describe("a full storage during a settle tick", () => {
-  // Added after round 7 (Claude Opus 5.5). A tick saves deaths, so it can hit
+  // Added after round 7 (- Opus 5.5). A tick saves deaths, so it can hit
   // the quota too; before, that reached the crash screen at load and was
   // uncaught every minute after.
   // A solid fact dies 10 × log2(10) ≈ 33.2 days after it was added, so a tick

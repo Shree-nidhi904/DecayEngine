@@ -66,7 +66,7 @@ In return the engine gives every app the same tools:
 | `history` | Show everything that ever happened to an item |
 | `triage` | "I have N minutes. What should I save?" |
 | `autopsy` | The facts behind an item's death |
-| `forecast` | What will die in the next 7, 30 or 90 days |
+| `forecast` | What will die within any time horizon you give it |
 
 **The rule that keeps it honest:** the engine never imports an app. If an app needs the engine changed, the policy contract is wrong, and the contract gets fixed instead.
 
@@ -96,7 +96,7 @@ Decay is slow. Nobody wants to wait three weeks to see whether an app works.
 
 Every engine function takes the current time as an input instead of reading the clock. So each app has a **time slider**: drag it forward 30 days and watch items weaken and die in seconds. Drag it back and they recover. Nothing is saved while you look into the future.
 
-The same idea gives the **forecast** (what dies in the next 7, 30 or 90 days) almost for free.
+The same idea gives the **forecast** (what dies within a horizon you choose) almost for free. Study Dungeon shows it as markers on the time machine and as a line in the hero.
 
 ---
 
@@ -233,7 +233,7 @@ The project is built with [Kiro](https://kiro.dev). The `.kiro/` folder is commi
 | Hooks | Run the engine tests when an engine file is saved; scaffold a new decay policy on request |
 | Property-based testing | The engine rules listed above |
 
-The decay rules (each app's policy) are written by hand. Kiro wrote most of the engine from the spec (types, errors, state derivation, settle, bisection, serialization, storage adapters, checkPolicy, forecast) and their tests, and writes the UI, the app glue and the app tests. I ran the WSL verification and wrote the `DecayEngine` class (tasks 9–19), the Triage selection and the Autopsy analysis, with their tests, and the engine's property-based tests. Triage implements the locked value rule from the product steering; Autopsy reports facts only, and each app writes its own cause-of-death sentences. Each session is recorded in [docs/KIRO_LOG.md](docs/KIRO_LOG.md): what Kiro produced, what was changed by hand, and what went wrong. A full write-up comparing spec-driven work with free-form prompting will be added before submission.
+The decay rules are set by me in the specs. I wrote Study Dungeon's policy by hand; for Ghosted I let Kiro write the policy from the spec's formulas and checked it with the `policy-reviewer` agent and the tests (a documented exception in the authorship steering). Each app's cause-of-death sentences are hand-written. Kiro wrote most of the engine from the spec (types, errors, state derivation, settle, bisection, serialization, storage adapters, checkPolicy, forecast) and their tests, and writes the UI, the app glue and the app tests. I ran the WSL verification and wrote the `DecayEngine` class (tasks 9–19), the Triage selection and the Autopsy analysis, with their tests, and the engine's property-based tests. Triage implements the locked value rule from the product steering; Autopsy reports facts only, and each app writes its own cause-of-death sentences. Each session is recorded in [docs/KIRO_LOG.md](docs/KIRO_LOG.md): what Kiro produced, what was changed by hand, and what went wrong. A full write-up comparing spec-driven work with free-form prompting will be added before submission.
 
 ## Build status
 

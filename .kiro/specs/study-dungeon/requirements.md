@@ -86,7 +86,7 @@ type ReviewEvent = {
 
 #### Acceptance Criteria
 
-1. WHERE a dead fact receives a resurrection attempt with a review event where correct is true, WHEN calling resurrect, THE function SHALL return { ok: true, policyData: { halfLifeDays: <the half-life the fact had when it died> } }.
+1. WHERE a dead fact receives a resurrection attempt with a review event where correct is true, WHEN calling resurrect, THE function SHALL return { ok: true } with no policyData, so the engine keeps the half-life the fact had when it died.
 2. WHERE a dead fact receives a resurrection attempt with a review event where correct is false, WHEN calling resurrect, THE function SHALL return { ok: false, reason: "You got it wrong. The fact stays dead." }.
 3. WHERE a fact is successfully resurrected, WHEN the engine applies the result, THE item SHALL have health 100, state "alive", timesResurrected incremented, and diedAt cleared.
 

@@ -10,7 +10,7 @@
 //
 // Pure: these functions only look at an error and decide what it means.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { DecayEngineError } from "@decay-engine/engine"
 

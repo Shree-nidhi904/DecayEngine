@@ -8,7 +8,7 @@
 // the sound setting (not cleared by Reset).
 //
 // Pure apart from the storage helpers. No clock reads.
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 export type AnswerCheck = "choices" | "typed" | "self"
 

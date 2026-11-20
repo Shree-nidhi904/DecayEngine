@@ -2,7 +2,7 @@
 // Uses the real engine and LocalStorageAdapter over a fake localStorage, so the
 // errors are the ones the engine really throws.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { afterEach, describe, expect, it } from "vitest"
 import { DecayEngine, DecayEngineError, InMemoryAdapter, LocalStorageAdapter } from "@decay-engine/engine"

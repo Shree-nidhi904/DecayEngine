@@ -3,7 +3,7 @@
 // type it. After an answer the options stay on screen, marked right and
 // wrong, so you can see what the answer was.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { useId, useState, type FormEvent } from "react"
 import { checkTyped } from "../answer-check"

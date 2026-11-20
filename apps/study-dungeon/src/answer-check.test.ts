@@ -1,6 +1,6 @@
 // Answer checking (answer-check.ts): typed answers with some slack, and the
 // options for picking. Expected values are written out by hand.
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { describe, expect, it } from "vitest"
 import {

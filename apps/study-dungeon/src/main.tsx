@@ -4,6 +4,13 @@ import { Root } from "./Root";
 import { DoorSplash } from "./components/DoorSplash";
 import { createEngine } from "./engine-instance";
 import type { FlagStorage } from "./first-run";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
+import "@fontsource/pirata-one/400.css";
+import "@fontsource/spectral/400.css";
+import "@fontsource/spectral/400-italic.css";
+import "@fontsource/spectral/600.css";
 import "./styles/global.css";
 
 const rootElement = document.getElementById("root");

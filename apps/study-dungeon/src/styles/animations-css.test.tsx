@@ -4,7 +4,7 @@
 // art, so renaming a data attribute or a class breaks a test instead of
 // silently stopping an animation.
 //
-// Rewritten for the visual pass by Claude Opus 5.5 at the developer's
+// Rewritten for the visual pass by - Opus 5.5 at the developer's
 // request; see .kiro/steering/authorship.md.
 
 import { describe, expect, it } from "vitest"

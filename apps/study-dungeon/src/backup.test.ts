@@ -1,6 +1,6 @@
 // Back up and restore (backup.ts): a real engine on a LocalStorage-shaped
 // fake, so the snapshot is the one the app really saves.
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { describe, expect, it } from "vitest"
 import { DecayEngine } from "@decay-engine/engine"

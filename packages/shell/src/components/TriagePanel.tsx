@@ -38,10 +38,22 @@ export interface TriagePanelProps<Payload, PolicyData> {
   /** Why the start button is disabled: shown as its title and read as its description. */
   startDisabledReason?: string;
   /**
-   * Run straight away with this budget (it should be one of TRIAGE_BUDGETS),
-   * so the panel is never empty. Omitted: nothing runs until the user asks.
+   * Run straight away with this budget (one of the budget choices; with
+   * `budgets`, any other value counts as none), so the panel is never empty.
+   * Omitted: nothing runs until the user asks.
    */
   initialBudget?: number;
+  /**
+   * Budget choices in minutes, shown in this order before "custom". Whole
+   * numbers from 1 to maxBudgetMinutes, no repeats. Omitted or empty: TRIAGE_BUDGETS.
+   */
+  budgets?: readonly number[];
+  /**
+   * The choice selected at first when initialBudget does not apply. Ignored
+   * unless it is in the list. Omitted: TRIAGE_BUDGETS[1] without `budgets`,
+   * the list's first entry with `budgets`.
+   */
+  defaultBudget?: number;
 }
 
 /** Whole days from `now` to `diesAt`, rounded up, never below 0. */
@@ -75,6 +87,8 @@ export function TriagePanel<Payload, PolicyData>({
   startDisabled = false,
   startDisabledReason,
   initialBudget,
+  budgets,
+  defaultBudget,
 }: TriagePanelProps<Payload, PolicyData>) {
   const text = wording.triage;
   const ids = {
@@ -85,13 +99,28 @@ export function TriagePanel<Payload, PolicyData>({
     others: useId(),
     reason: useId(),
   };
+  const custom = budgets !== undefined && budgets.length > 0;
+  const choices = custom ? budgets : TRIAGE_BUDGETS;
+  const fallback =
+    defaultBudget !== undefined && choices.includes(defaultBudget)
+      ? defaultBudget
+      : custom
+        ? choices[0]!
+        : TRIAGE_BUDGETS[1]!;
+  // Today's rule is kept when no list is given (Req 27.2); with a list, an
+  // initialBudget outside it counts as none and runs no triage (Req 27.3).
+  const initial = custom
+    ? initialBudget !== undefined && choices.includes(initialBudget)
+      ? initialBudget
+      : undefined
+    : initialBudget;
   const [choice, setChoice] = useState<Choice>(
-    initialBudget !== undefined && TRIAGE_BUDGETS.includes(initialBudget) ? initialBudget : TRIAGE_BUDGETS[1]!
+    initial !== undefined && choices.includes(initial) ? initial : fallback
   );
   const [customText, setCustomText] = useState("");
   const [invalid, setInvalid] = useState(false);
   // The budget of the last valid run, or null before the first one.
-  const [budget, setBudget] = useState<number | null>(initialBudget ?? null);
+  const [budget, setBudget] = useState<number | null>(initial ?? null);
 
   const result = useMemo(() => (budget === null ? null : triage(budget)), [triage, budget]);
 
@@ -181,7 +210,7 @@ export function TriagePanel<Payload, PolicyData>({
       <form className="shell-triage-form" onSubmit={run} noValidate>
         <fieldset className="shell-triage-budget">
           <legend>{text.budget}</legend>
-          {TRIAGE_BUDGETS.map((minutes) => (
+          {choices.map((minutes) => (
             <label key={minutes} className="shell-triage-choice">
               <input
                 type="radio"

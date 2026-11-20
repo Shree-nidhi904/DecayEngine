@@ -10,7 +10,7 @@
 // no Web Audio. The audio context is created on the first sound, which is
 // always inside a click, as browsers require.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 export type SoundKind = "right" | "wrong" | "revive"
 

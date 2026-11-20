@@ -4,7 +4,7 @@
 // dies (click one to jump there) and a "Next:" line.
 // Reads only: today's facts and the engine's forecast.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { useMemo, useState } from "react"
 import { TimeMachine, TIME_MACHINE_MAX_DAYS, type FrameScheduler } from "@decay-engine/shell"

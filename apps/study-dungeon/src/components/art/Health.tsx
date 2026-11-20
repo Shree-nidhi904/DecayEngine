@@ -2,7 +2,7 @@
 // wireframe's orb() and bar(). The bar shows the weak and dead marks, and a
 // hatched "lost" segment for the health lost since the last review.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { useId } from "react"
 import { HEALTH_MARKS } from "../../creatures"

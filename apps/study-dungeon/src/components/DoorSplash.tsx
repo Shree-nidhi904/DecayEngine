@@ -3,7 +3,7 @@
 // or by itself after a few seconds. Skipped entirely under reduced motion.
 // Rendered by main.tsx beside the app, so the app and its tests never see it.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { useEffect, useRef, useState } from "react"
 import { doorText } from "../wording"

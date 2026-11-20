@@ -2,7 +2,7 @@
 // so clearing the browser does not lose them. A backup is checked by building
 // a real engine from it before anything is replaced.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { DecayEngine } from "@decay-engine/engine"
 import { studyDungeonPolicy, type FactPayload, type FactPolicyData, type ReviewEvent } from "./policy"

@@ -17,7 +17,7 @@
 //
 // Questions 1-9 come from the Study Dungeon wireframe; 10-12 are new.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import type { DecayEngine } from "@decay-engine/engine"
 import { DAY_MS, type FactPayload, type FactPolicyData, type Knowledge, type ReviewEvent } from "./policy"

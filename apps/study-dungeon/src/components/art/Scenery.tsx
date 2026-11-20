@@ -3,7 +3,7 @@
 // Ported from docs/design/study-dungeon-wireframe.html. Original SVG only.
 // Everything here is decoration and hidden from screen readers.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { CREATURES, type CreatureKind } from "../../creatures"
 

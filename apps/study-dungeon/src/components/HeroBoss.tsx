@@ -2,7 +2,7 @@
 // with its name, a health ring and a speech bubble. With no monster, a
 // dragon sleeps on its hoard. Decoration only (the hero says it in words).
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import type { Fact } from "../policy"
 import { creatureOf, moodOf, quipOf } from "../creatures"

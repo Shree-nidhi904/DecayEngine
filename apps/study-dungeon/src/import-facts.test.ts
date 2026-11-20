@@ -1,5 +1,5 @@
 // Bulk import parsing (import-facts.ts).
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import { describe, expect, it } from "vitest"
 import { parseImport } from "./import-facts"

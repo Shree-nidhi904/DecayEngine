@@ -53,6 +53,19 @@ Mood rule: weak and health at or above 35 is worried, below 35 is feral, alive i
   --bg: #07060d; --panel: #100e1a; --panel-hi: #1a1727; --line: #2a2640; --bone: #efe9f5; --dim: #aea8c4;
   --glow: #ffd479; --flick: #ff9a4a; --dark: #6d6a86; --sign: #ff7ab8; --rust: #ff7a7a; --mint: #8fe3c4;
   --display: "Josefin Sans", sans-serif; --logo: "Monoton", sans-serif;
+
+  /* Scenery, from docs/design/ghosted-wireframe.html (exact values) */
+  --frame: #0a0812;        /* window frames, mullions and silhouettes */
+  --wall: #1d1733;         /* house wall (top) and roof */
+  --wall-lo: #151128;      /* house wall (bottom of the gradient) */
+  --wall-edge: #2c2548;    /* house wall border */
+  --board: #7a6252; --board-lo: #5c483c;     /* top plank (gradient) */
+  --board-2: #725b4c; --board-2-lo: #54413a; /* bottom plank (gradient) */
+  --moon: #ece6ff;         /* moon face */
+  --moon-shade: #0e0b18;   /* moon's shadow */
+  --border-hero: #4a3a66;  /* hero border */
+  --border: #44406a;       /* Triage, dock and moon outline */
+  --border-button: #3a3560; /* quiet button border */
 }
 ```
 

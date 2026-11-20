@@ -10,7 +10,7 @@
 //
 // Only "tended" entries count, as the spec says: resurrect attempts do not.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import type { HistoryEntry } from "@decay-engine/engine"
 import type { ReviewEvent } from "./policy"

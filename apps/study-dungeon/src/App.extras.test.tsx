@@ -2,7 +2,7 @@
 //
 // Features added after the visual pass: today's 5-minute raid, bulk import,
 // unique creature names. Through the App, a real engine on InMemoryAdapter.
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import "./test/dialog-polyfill"
 import { afterEach, describe, expect, it } from "vitest"

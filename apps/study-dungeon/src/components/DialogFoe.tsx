@@ -3,7 +3,7 @@
 // motion in animations.css (popin, squish, rise, lunge); none under reduced
 // motion. Decoration: the dialog's title and result text say it in words.
 //
-// Written by Claude Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
 
 import type { Fact } from "../policy"
 import { creatureOf, type Mood } from "../creatures"

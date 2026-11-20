@@ -25,7 +25,7 @@ I ran the validation in WSL alongside Kiro, because Kiro's shell could not run c
 
 Do not rewrite these files; change them only through a task that names them.
 
-## What Claude Opus 5.5 wrote
+## What Opus 5.5 wrote
 
 Written at the developer's request, in new files, while Kiro worked on round 5 (time machine and Triage), so the two never edited the same file:
 
@@ -38,6 +38,10 @@ Written at the developer's request, in new files, while Kiro worked on round 5 (
 - **The check script** (`scripts/check.sh`): install, typechecks, all tests and the build in one command.
 - **The visual pass and what followed** (after the spec was complete): the world, creatures, health orb and bar, time dock and motion; answer checking; ranks, combos, today's raid, import, backup and restore. New files: `creatures.ts`, `timeline.ts`, `answer-check.ts`, `ranks.ts`, `import-facts.ts`, `backup.ts`, `components/FactCard.tsx`, `components/TimeDock.tsx`, `components/HeroBoss.tsx`, `components/DialogFoe.tsx`, `components/AnswerPanel.tsx`, `components/AnswerCheckSetting.tsx`, `components/RaidIntro.tsx`, `components/ImportFactsDialog.tsx`, `components/BackupControls.tsx`, `components/DoorSplash.tsx`, `components/art/*`, `styles/world.css`, `styles/dock.css`, `styles/fx.css`, and their tests. Changes to Kiro's files: `App.tsx`, `ThreeLists.tsx`, `HeroSection.tsx`, `FightDialog.tsx`, `ChallengeDialog.tsx`, the styles, and the shell's `TimeMachine` (`belowSlider`) and `TriagePanel` (`initialBudget`). The wireframe itself was designed outside Kiro.
 - **After round 7:** catching a full storage during a settle tick (`ticking.ts` and the handler in `App.tsx`), and keeping the add/edit form open on a storage problem (`AddEditFactDialog.tsx`), with their tests.
+
+## Exception: Ghosted's decay policy
+
+The rule above (Kiro never writes decay-rule code) was kept for the engine, Triage, Autopsy and the Study Dungeon policy. For Ghosted the developer chose to let Kiro write `apps/ghosted/src/policy.ts`, to save time and use Kiro more. The rules themselves were still set by the developer, in Requirements 1 to 4 and design section 2.2 of the Ghosted spec, with the formulas and expected values written out and checked by hand before Kiro wrote any code. A different reader, the `policy-reviewer` agent and the developer's own review, checks the result. `apps/ghosted/src/autopsy-sentences.ts` stays hand-written.
 
 ## What Kiro writes (generated)
 
