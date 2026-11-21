@@ -26,5 +26,5 @@ Each app supplies its own skin (colors, fonts, wording) and policy (decay rules)
 
 ## No backend
 
-There is no `server/` folder and no `templates/` folder. One static site deployed to Vercel.
+There is no `server/` folder and no `templates/` folder. Static sites on Netlify, one per app (each app has its own `netlify.toml`).
 

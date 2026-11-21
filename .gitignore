@@ -9,8 +9,14 @@ __pycache__/
 # Private planning notes. Never commit.
 reports/
 
-# Screenshots show an account email. Remove this line once they are cropped.
-docs/screenshots/
+# Older screenshots may show an account email, so they stay private.
+# Only the six screenshots of the live apps (public pages, sample data) are tracked.
+docs/screenshots/*
+!docs/screenshots/study-dungeon-1280-*.png
+!docs/screenshots/ghosted-1280-*.png
+
+# Playwright MCP page snapshots (generated while Kiro drives a browser)
+.playwright-mcp/
 
 # Local environment and build output
 .env.*
@@ -21,3 +27,12 @@ coverage/
 
 # Note: .kiro/ must never be listed here. The hackathon rules require it to be committed.
 
+
+# Private audit reports (not part of the submission)
+audit/
+
+# Local Netlify folder
+.netlify
+
+# Playwright MCP page snapshots
+.playwright-mcp/

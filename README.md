@@ -1,5 +1,8 @@
 # Decay Engine
 
+- [Study Dungeon](https://decay-engine-study-dungeon.netlify.app): facts you study fade into monsters, so review them before they die.
+- [Ghosted](https://decay-engine-ghosted.netlify.app): a street of windows, one per person, where each light shows how recently you were in touch.
+
 **A hospital for the things in your life: one engine for things that fade, die, and can be brought back.**
 
 Built for [Kiroween 2026](https://kiroween.devpost.com/) in the **Skeleton Crew** category: one reusable foundation, shown with two different apps built on top of it.
@@ -251,7 +254,7 @@ The decay rules are set by me in the specs. I wrote Study Dungeon's policy by ha
 - [x] Engine and tests (701)
 - [x] Study Dungeon (465 app tests, 152 shell tests)
 - [x] Ghosted (665 tests), with the engine unchanged
-- [ ] Deployed sites
+- [x] Deployed sites
 - [ ] Demo video
 - [ ] Kiro write-up
 

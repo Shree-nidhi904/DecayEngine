@@ -27,5 +27,5 @@ Browser local storage behind an adapter interface. No accounts, no login, no dat
 
 ## Hosting
 
-One static Vercel site. No backend. No serverless functions.
+Static Netlify sites, one per app. No backend. No serverless functions.
 

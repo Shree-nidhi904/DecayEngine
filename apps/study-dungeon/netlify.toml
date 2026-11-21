@@ -1,0 +1,11 @@
+# Netlify config for study-dungeon (written with the netlify-deployment power's guide).
+# Netlify's base directory is apps/study-dungeon; pnpm installs the whole workspace,
+# so the engine and shell packages are built from source with the app.
+[build]
+  base = "apps/study-dungeon"
+  command = "pnpm --filter @decay-engine/study-dungeon build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  PNPM_VERSION = "12.21.0"

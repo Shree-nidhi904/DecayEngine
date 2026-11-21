@@ -9,7 +9,7 @@
         "command": "pnpm --filter ./packages/engine exec vitest run"
       },
       "description": "Runs the engine test suite whenever a file in packages/engine is saved.",
-      "matcher": "packages/engine/.*\\.ts$",
+      "matcher": "packages[\\\\/]engine[\\\\/].*\\.ts$",
       "timeout": 120,
       "enabled": true
     }

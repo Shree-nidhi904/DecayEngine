@@ -1260,5 +1260,92 @@ Listed so the write-up does not count it as Kiro work. Done by Claude Code in WS
 | 37 | Save-hook test | 0.72 |
 | | **Total so far** | **790.02** |
 
+### Reconciliation with Kiro's usage panel (Nov 21)
+
+| | Credits |
+|---|---|
+| Kiro's usage panel, all work since the hackathon credits | 1363.18 |
+| Logged for Sessions 1 to 18 (engine and Study Dungeon): about 186.8 by the end of the engine work, plus about 0.5, 39.0 and 322.5 for the later Study Dungeon rounds | about 548.8 |
+| Logged for Ghosted (table above) | 790.0 |
+| **Logged in total** | **about 1338.8** |
+| Not itemised | about 24.4 |
+
+The 24.4 left over is Session 19 (its credits were not shown in the reports I pasted), the small Study Dungeon follow-up rounds that were never recorded, and rounding in the early "about" figures. I have no per-session figure for it, so I am not inventing one.
+
 Work done outside Kiro (Claude Code) used none of these credits.
 
+
+## Session 38: hook retest, Playwright MCP, write-up rewrite (Nov 21, 2026)
+
+- **Goal**: show Kiro usage clearly in the write-up, retest the check-policy-on-save hook, and add a second MCP server.
+- **Kiro feature used**: chat (Kiro IDE), agent hooks, MCP config. Kiro CLI 3.5.0 was installed in WSL by me, before this session.
+- **What Kiro produced**:
+  - `docs/KIRO_WRITEUP.md` rewritten to open with Kiro's share of the work: about 36,600 of about 49,600 lines of TS/TSX/CSS, counted from the files listed in `authorship.md` (an estimate, because Claude Code also edited some Kiro files).
+  - Hook matchers in `check-policy-on-save.json` and `run-engine-tests-on-save.json` changed to accept `/` or `\` in paths.
+  - `playwright` server (`@playwright/mcp@latest`) added to `.kiro/settings/mcp.json`. Not used yet.
+- **Hook retest**: Kiro added `// hook test` to the top of `apps/ghosted/src/policy.ts` and then removed it. **The hook fired both times.** Each time Kiro ran `pnpm --filter ./apps/ghosted exec vitest run src/policy.test.ts`: 44 of 44 passed, including `passes checkPolicy from @decay-engine/engine`. `git diff` shows `policy.ts` unchanged afterwards.
+- **What surprised me**: the hook event gave `file_path` as `apps/ghosted/src/policy.ts` with forward slashes, so the old matcher would also have matched. The slash change is probably not why it works now. Session 37's failure is still unexplained. Kiro's docs say file hooks fire on agent edits only, so the Session 37 guess ("only editor saves") was wrong.
+- **What went wrong**: Kiro's first write of the write-up went to a stray `home/shree/DecayEngine/docs/` folder inside the repo (an absolute WSL path written as if relative). Kiro found it in `git status`, moved the file into `docs/` and removed the folder. The shell tool still often returned empty output and needed a second call to read results from a file.
+- **Credits used**: (add from the usage panel)
+---
+
+## Session 39: policy-reviewer from Kiro CLI on Ghosted's policy (Nov 21, 2026)
+
+- **Goal**: run the same `policy-reviewer` agent from Kiro CLI 3.5.0 in WSL and compare it with the IDE run (Session 36).
+- **Kiro feature used**: Kiro CLI, custom agent (`.kiro/agents/policy-reviewer.md`, loaded unchanged).
+- **What happened**:
+  - I pasted `kiro-cli --agent policy-reviewer` into a CLI chat that was already open. Kiro saw it was already running in `~/DecayEngine`, refused to start a nested session, and offered to run the review itself (0.15 credits).
+  - "review the ghosted policy": the chat handed the work to the `policy-reviewer` agent as a sub-agent ("Orchestrated (1 agent)").
+- **What Kiro produced** (report only, no file changes):
+  - No violations. Six members match the contract, thresholds `{ weak: 60, dead: 10 }`, no clock reads, no side effects or async code, health stays in 0 to 100 and never rises with time.
+  - **It ran the tests itself**: `policy.test.ts` 44 of 44 and `policy.properties.test.ts` 9 of 9. In the IDE (Session 36) I had to run them in WSL and paste the results back. This is the main difference between the CLI and the IDE on my setup.
+  - Test-quality check: no try/catch, skips, real-clock reads or existence-only tests, and expected values come from the spec.
+  - Edge case: `rhythmDays` 0 would make `healthAt` return NaN. Checked afterwards: `person-form.ts` (`RHYTHM_MAX = 365`, whole days from 1) and `import-people.ts` already enforce 1 to 365, so no change is needed.
+  - It said what it did not check: generator coverage in `test/generators.ts`, this log, and design section 2.2 line by line.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: it did not repeat the IDE run's `nextDueAt` finding (hard-coded 60 and 10, Session 36). Checked: `nextDueAt` now reads `ghostedPolicy.thresholds.weak` and `.dead`, so that issue was already fixed and the CLI run was right not to raise it.
+- **Credits used**: 1.74 for the session (0.15 for the first turn, 1.58 for the review; 1 min 29 s).
+---
+
+## Session 40: draft deploy of both apps to Netlify from Kiro CLI (Nov 21, 2026)
+
+- **Goal**: put both apps online as Netlify drafts, without a production deploy yet.
+- **Kiro feature used**: Kiro power `netlify-deployment` (installed in the IDE; its guide set the plan: `netlify.toml`, CLI-first, draft before `--prod`), Kiro IDE chat for the config, Kiro CLI 3.5.0 for the deploy.
+- **What Kiro produced**:
+  - IDE: `apps/study-dungeon/netlify.toml` and `apps/ghosted/netlify.toml` (base is the app folder, `pnpm --filter @decay-engine/<app> build`, publish `dist`, Node 22, pnpm 12.21.0). Both apps built locally first. The hosting lines in `structure.md` and `tech.md` now say Netlify, one site per app.
+  - CLI: created the sites `decay-engine-study-dungeon` and `decay-engine-ghosted`, linked each app folder, and ran `netlify deploy --build` for each (builds 14.9 s and 9.9 s). No `--prod`.
+  - Draft URLs: https://6b01c9cf668564bf7d924029--decay-engine-study-dungeon.netlify.app and https://6b01c9e6baabd8b65f6780e3--decay-engine-ghosted.netlify.app
+  - The CLI added `.netlify` to `.gitignore`.
+- **Checked afterwards (IDE)**: both draft URLs return 200 with the right `<title>` (Study Dungeon, Ghosted), and each page's JS bundle returns 200. Not yet checked in a browser.
+- **What went wrong or surprised me**: the CLI could not find the power by name (`/powers install netlify` and "Netlify Deployment" both failed), because the power was installed in the IDE and its installed name is `netlify-deployment`. Earlier, the IDE session preparing the deploy was cancelled after repeated empty shell results. The monorepo made `netlify` ask which project to use; the CLI passed `--filter @decay-engine/<app>` to skip that.
+- **Credits used**: 3.20 for the CLI session (0.91 for the deploy turn, 1 min 53 s). The IDE prep is not itemised.
+---
+
+## Session 41: live links in the README and Playwright screenshots of both apps from Kiro CLI (Nov 21, 2026)
+
+- **Goal**: put the live URLs at the top of the README, then use the Playwright MCP to screenshot both live apps at 1280px: sample data, time machine at +30 days, Triage with 20 minutes.
+- **Kiro feature used**: Kiro CLI 3.5.0, the `netlify-deployment` power's CLI workflow, and the Playwright MCP server (`@playwright/mcp`, added in Session 38 and not used until now).
+- **What Kiro produced**:
+  - Production deploy of both apps with `netlify deploy --prod --build` (the step after Session 40's drafts). Both return 200: https://decay-engine-study-dungeon.netlify.app and https://decay-engine-ghosted.netlify.app
+  - `README.md`: two lines under the title, one per app, each with a link and one sentence. Kiro put them under the `# Decay Engine` title and not above it, and said so.
+  - Six screenshots in `docs/screenshots/`, all 1280x800:
+    - `study-dungeon-1280-sample-data.png`
+    - `study-dungeon-1280-time-machine-plus-30-days.png`
+    - `study-dungeon-1280-triage-20-minutes.png`
+    - `ghosted-1280-sample-data.png`
+    - `ghosted-1280-moon-clock-plus-30-days.png`
+    - `ghosted-1280-triage-20-minutes.png`
+- **What went wrong or surprised me**:
+  - **Chrome failure**: the first Playwright call failed because the server was set to Google Chrome, which was not at `/opt/google/chrome/chrome`.
+  - **The sudo prompt**: Kiro tried `npx playwright install chrome`. It needs `sudo` to install system dependencies, and the CLI cannot type a password, so the install failed. Kiro stopped and asked me.
+  - **Deleted cache folders**: the same command also removed two Playwright downloads from my cache as "unused browsers": `~/.cache/ms-playwright/chromium-1148` and `ffmpeg-1010`. I did not ask for that and Kiro had not warned me. Nothing in the repo was affected, and Playwright downloads them again when needed. Kiro told me about it right after.
+  - **No `browser_install` tool**: I asked for it, and this MCP server has none (the tool load returned "not found"). Kiro said so and offered two options: Chrome with `sudo` in my own terminal, or switching to Chromium.
+  - **The switch to headless chromium**: the Kiro IDE session changed `.kiro/settings/mcp.json` to launch the server with `--browser chromium --headless`. No `sudo` was needed. On the next try the browser opened.
+  - **Slider is in milliseconds**: Kiro's first attempt to set the time machine to "30" moved it by about 30 ms. The sliders take milliseconds (Study Dungeon 0 to 60 days, Ghosted 0 to 1 year). Kiro then set the value to 2,592,000,000 and fired the input events. It did not drag with the mouse, and said so. Both screenshots show "30 days ahead".
+  - **Ghosted has no 20-minute preset** (15, 30, 60, 120), so Kiro used "Other" and typed 20.
+  - **A wrong first shot**: Kiro looked at each screenshot after saving it. The first Study Dungeon shot was scrolled halfway down with the tour popup over the time machine, so Kiro skipped the tour and retook it. The first Ghosted Triage shot showed 30 min selected and no picks, so Kiro retook that too. The page scrolls smoothly, which made `scrollY` read 1 straight after `scrollTo`.
+- **Not done**: Kiro did not commit anything. Both `netlify.toml` files are still untracked. `docs/screenshots/` is in `.gitignore`, so the screenshots will not be committed unless that line changes. The `.playwright-mcp/` folder (page snapshots the MCP server writes) is now in `.gitignore` too. The time dock covers the bottom of every screenshot at this height.
+- **What I changed by hand**: nothing. (The `mcp.json` change was made by Kiro in the IDE, not by hand.)
+- **Credits used**: 4.81 for the session so far (figure from the usage panel, not itemised by Kiro).
+- **Screenshot file names**: the six files listed above.
+---
