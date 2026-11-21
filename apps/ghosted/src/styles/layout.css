@@ -7,6 +7,10 @@
  * 320px: nothing here sets a width or minimum above 288px (the content box at
  * 320px with 16px gutters). The card grid is minmax(min(100%, 280px), 1fr),
  * and everything stacks in one column under 760px. No animation here.
+ *
+ * Task 5.1 adds the dock's room (--dock-max, the scroll padding and the
+ * bottom padding of <main>), task 5.2 the forecast, and the end of the file
+ * dresses the shell's own controls as the app's buttons.
  */
 
 /* Page: full width up to 1080px, gutters of at least 16px (Req 24.7). */
@@ -168,10 +172,50 @@
   color: var(--dim);
 }
 
+/*
+ * Card buttons: the primary (Reach out or Reconnect) has the first row to
+ * itself; Edit, Remove and History (and Autopsy for a dark window) share the
+ * rows below as equal-width quiet buttons. They wrap evenly, never leaving
+ * one button alone on a row: three sit in one row when the card is wide
+ * enough and one per row when it is not; four always sit two by two.
+ * 264px is three of the widest label ("HISTORY" or "AUTOPSY": 7 characters
+ * at 13px mono with 0.1em spacing, about 64px, plus 8px padding and the
+ * border each side) and two 8px gaps.
+ */
 .gh-card-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+  container-type: inline-size;
+}
+
+.gh-card-actions > .gh-button-primary {
+  inline-size: 100%;
+}
+
+.gh-card-quiet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.gh-card-quiet[data-count="4"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@container (min-width: 264px) {
+  .gh-card-quiet[data-count="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* A label never breaks inside its word; the 44px minimums from .gh-button stay. */
+.gh-card-quiet .gh-button {
+  inline-size: 100%;
+  padding-inline: 8px;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .gh-card-blocked {
@@ -204,6 +248,202 @@
 .gh-card-history-empty {
   margin: 0;
   font-style: italic;
+  color: var(--dim);
+}
+
+/* ----- Hero (task 4.5, the wireframe's .hero and .stats; Req 8) ----- */
+
+.gh-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px 24px;
+  align-items: center;
+  margin-block: 16px 8px;
+  padding: 20px 24px;
+  border: 1px solid var(--border-hero);
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse at 0 0, color-mix(in srgb, var(--sign) 14%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--panel-hi), var(--panel));
+  box-shadow: 0 6px 0 #000;
+}
+
+.gh-hero-main {
+  min-inline-size: 0;
+}
+
+.gh-hero-eyebrow {
+  margin: 0 0 8px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sign);
+}
+
+.gh-hero-title {
+  margin: 0 0 16px;
+  font-size: clamp(30px, 5vw, 46px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.gh-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.gh-hero-action {
+  min-block-size: 48px;
+  padding: 12px 20px;
+  font-size: 15px;
+}
+
+.gh-hero-blocked {
+  margin: 8px 0 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--glow);
+}
+
+.gh-hero-stats {
+  min-inline-size: 0;
+}
+
+/* The shell's counters, sized as the wireframe's big stat boxes. */
+.gh-hero .shell-counters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gh-hero .shell-counter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  text-align: center;
+}
+.gh-hero .shell-counter-count {
+  font-size: clamp(32px, 6vw, 48px);
+  font-weight: 600;
+  line-height: 1;
+}
+.gh-hero .shell-counter-label {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.gh-hero .shell-counter[data-state="alive"] .shell-icon {
+  color: var(--mint);
+}
+.gh-hero .shell-counter[data-state="weak"] .shell-icon {
+  color: var(--flick);
+}
+.gh-hero .shell-counter[data-state="dead"] .shell-icon {
+  color: var(--rust);
+}
+
+/* ----- Triage (task 4.12, the wireframe's .tri and .pick; Req 9) ----- */
+
+.gh-triage {
+  display: grid;
+  gap: 12px;
+  margin-block: 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  box-shadow: 0 6px 0 #000;
+}
+
+.gh-triage-steps-title {
+  margin: 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.gh-triage-steps {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-inline-start: 24px;
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.gh-triage .shell-triage {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.gh-triage .shell-triage-title {
+  color: var(--glow);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gh-pick {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.gh-pick-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--flick);
+}
+
+.gh-pick-name {
+  font-weight: 600;
+}
+
+.gh-triage-five .gh-button {
+  gap: 8px;
+  text-align: start;
+}
+
+.gh-triage-five .gh-glyph {
+  color: var(--flick);
+}
+
+.gh-triage-blocked {
+  margin: 8px 0 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--glow);
+}
+
+/* ----- Toolbar and privacy line (Req 15) ----- */
+
+.gh-privacy {
+  margin: 16px 0 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  text-align: center;
   color: var(--dim);
 }
 
@@ -291,9 +531,12 @@
   background: linear-gradient(180deg, var(--panel), var(--bg));
 }
 /* --dark only as large text: the 26px heading (contrast, design section 7.6). */
-.gh-plot-empty-windows .gh-plot-title,
-.gh-plot-empty-windows .gh-badge {
+.gh-plot-empty-windows .gh-plot-title {
   color: var(--dark);
+}
+/* The 13px badge is small text, so it uses --dim (AA), not --dark. */
+.gh-plot-empty-windows .gh-badge {
+  color: var(--dim);
 }
 
 .gh-plot-still {
@@ -354,8 +597,223 @@
   color: var(--dim);
 }
 
+/* ----- Forecast (task 5.2, Req 22) ----- */
+
+.gh-forecast {
+  display: grid;
+  gap: 12px;
+  margin-block: 20px 0;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+}
+
+.gh-forecast-title {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gh-forecast-horizons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gh-forecast-horizons legend {
+  margin-block-end: 8px;
+  padding: 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.gh-forecast-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.gh-forecast-choice:has(input:checked),
+.gh-forecast-choice:focus-within {
+  border-color: var(--glow);
+}
+
+.gh-forecast-choice input {
+  accent-color: var(--glow);
+}
+
+.gh-forecast-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gh-forecast-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.gh-forecast-entry .gh-state {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.gh-forecast-empty {
+  margin: 0;
+  font-style: italic;
+  color: var(--dim);
+}
+
+/* ----- The dock's room (task 5.1; design sections 5.1 and 9.6; Req 12.7) ----- */
+
+/* The dock is never taller than this (dock.css: max-block-size), and the page keeps that much clear. */
+:root {
+  --dock-max: 180px;
+}
+
+@media (max-width: 520px) {
+  :root {
+    --dock-max: 128px;
+  }
+}
+
+/* A focused or scrolled-to element always stops above the dock. */
+html {
+  scroll-padding-bottom: calc(var(--dock-max) + 12px);
+}
+
+/* The last content can scroll clear of the dock. */
+.gh-main {
+  padding-block-end: calc(var(--dock-max) + 24px);
+}
+
+/*
+ * ----- The shell's own controls, dressed as the app's buttons -----
+ *
+ * The shell's Triage panel (Plan, Start reaching out, the budget choices)
+ * and time machine (the jumps, Play) and the preview banner's "Back to
+ * today" draw their own buttons. Inside the app they take the look of
+ * .gh-button: IBM Plex Mono, 13px, uppercase, 0.1em spacing, at least
+ * 44 × 44 px, and the same focus outline as everything else. Only the
+ * shell's own primary buttons (Plan, Start reaching out, Play) are filled,
+ * so each region keeps one filled control of its own kind (amended Req
+ * 30.4). Scoped under .gh-app so the shell itself is untouched.
+ */
+
+.gh-app .shell-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-button);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--bone);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.gh-app .shell-button:hover,
+.gh-app .shell-button:focus-visible {
+  border-color: var(--glow);
+  background: transparent;
+  color: var(--bone);
+}
+
+.gh-app .shell-button:focus-visible {
+  outline: 2px solid var(--sign);
+  outline-offset: 2px;
+}
+
+.gh-app .shell-button-primary,
+.gh-app .shell-button-primary:hover,
+.gh-app .shell-button-primary:focus-visible {
+  border-color: var(--glow);
+  border-bottom: 3px solid color-mix(in srgb, var(--glow) 55%, #000);
+  background: var(--glow);
+  color: var(--bg);
+}
+
+.gh-app .shell-preview-banner .shell-button {
+  border-color: var(--border-button);
+  background: var(--bg);
+  color: var(--bone);
+}
+
+.gh-app .shell-preview-banner .shell-button:hover,
+.gh-app .shell-preview-banner .shell-button:focus-visible {
+  border-color: var(--glow);
+}
+
+.gh-app .shell-triage-budget {
+  gap: 8px;
+}
+
+.gh-app .shell-triage-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-button);
+  border-radius: 6px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.gh-app .shell-triage-choice:has(input:checked),
+.gh-app .shell-triage-choice:focus-within {
+  border-color: var(--glow);
+}
+
+.gh-app .shell-triage-choice input {
+  accent-color: var(--glow);
+}
+
 /* One column under 760px: nothing sits beside empty space (Req 24.7). */
 @media (max-width: 760px) {
+  .gh-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
   .gh-plot {
     padding: 14px 14px 20px;
   }

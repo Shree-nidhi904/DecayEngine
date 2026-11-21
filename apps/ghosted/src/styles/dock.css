@@ -1,0 +1,229 @@
+/*
+ * The moon-clock dock (task 5.1, design sections 5.1, 5.4 and 9.6; Req 12.1,
+ * 12.3, 12.7, 24.4), ported from the wireframe's .dock, .dock-in, .moon,
+ * .track, .mk and .ticks. Ghosted tokens only, with color-mix for tints.
+ *
+ * The dock is fixed at the bottom and never taller than --dock-max (set in
+ * layout.css, which also gives the page the matching scroll-padding-bottom
+ * and bottom padding); taller content scrolls inside the dock. Below 520px
+ * the moon shrinks, the marker track and its ticks are hidden (the slider and
+ * the jumps reach the same days), and the jumps, Play and "Back to today"
+ * scroll sideways inside the dock instead of widening the page.
+ *
+ * No animation or transition here: the moon's movement is in motion.css.
+ */
+
+/* The street dims as the time machine looks ahead: --age is set on .gh-app (Req 12.2). */
+.gh-age-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--frame);
+  opacity: calc(var(--age) * 0.4);
+}
+
+.gh-dock {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 6;
+  max-block-size: var(--dock-max);
+  overflow-y: auto;
+  padding-block: 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  background: linear-gradient(180deg, transparent, var(--bg) 24%);
+}
+
+.gh-dock-in {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 4px 16px;
+  align-items: start;
+  max-inline-size: 1080px;
+  margin-inline: auto;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+}
+
+.gh-dock-main {
+  display: grid;
+  gap: 8px;
+  min-inline-size: 0;
+}
+
+/* ----- The moon over the rooftops ----- */
+
+.gh-moon {
+  inline-size: 64px;
+  block-size: 92px;
+}
+.gh-moon-star,
+.gh-moon-face {
+  fill: var(--moon);
+}
+/* Slides across the face as --age goes from 0 (full moon) to 1 (Req 12.3). */
+.gh-moon-shade {
+  fill: var(--moon-shade);
+  transform: translateX(calc(60px - var(--age) * 52px));
+}
+.gh-moon-rim {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+.gh-moon-roofs {
+  fill: var(--frame);
+  stroke: var(--wall-edge);
+  stroke-width: 1.5;
+}
+
+/* ----- The shell's time machine, dressed as the wireframe's dock ----- */
+
+.gh-dock .shell-time-machine {
+  min-inline-size: 0;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.gh-dock .shell-time-machine-title {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+
+.gh-dock .shell-time-machine-showing {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--glow);
+}
+
+.gh-dock .shell-time-machine-slider {
+  block-size: 28px;
+  margin: 0;
+  accent-color: var(--glow);
+}
+
+.gh-dock .shell-time-machine-controls {
+  gap: 8px;
+}
+
+/* The marker track under the slider (Req 12.4). */
+.gh-dock-track {
+  position: relative;
+  block-size: 24px;
+}
+
+/* --at = day / 365, set on each marker by MoonDock. */
+.gh-dock-mark {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(8px + (100% - 16px) * var(--at, 0));
+  display: grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  margin-inline-start: -11px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.gh-dock-mark[data-type="fades"] {
+  color: var(--flick);
+}
+.gh-dock-mark[data-type="dark"] {
+  color: var(--rust);
+}
+.gh-dock-mark .gh-glyph {
+  inline-size: 13px;
+  block-size: 13px;
+}
+/* Already passed at the shown day: still there, quieter. */
+.gh-dock-mark[data-passed] {
+  opacity: 0.55;
+}
+
+/*
+ * Markers that fall close together (the first month of the sample street) are
+ * staggered over up to three rows, 24px apart, so no glyph hides behind
+ * another. MoonDock sets data-row on each marker (timeline.ts markerRows) and
+ * data-rows on the track; a marker's day and place along the track never change.
+ */
+.gh-dock-track[data-rows="2"] {
+  block-size: 48px;
+}
+.gh-dock-track[data-rows="3"] {
+  block-size: 72px;
+}
+.gh-dock-mark[data-row="1"] {
+  inset-block-start: 24px;
+}
+.gh-dock-mark[data-row="2"] {
+  inset-block-start: 48px;
+}
+
+.gh-dock-ticks {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+/* The preview banner, as the wireframe's badge: glow words on the dark dock. */
+.gh-dock .shell-preview-banner {
+  position: static;
+  padding: 4px 8px;
+  border: 1px solid var(--glow);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--glow);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.gh-dock .shell-preview-banner-text {
+  font-weight: 500;
+}
+
+/* 320px to 520px: a smaller moon, no track, and controls that scroll sideways in the dock (Req 24.4). */
+@media (max-width: 520px) {
+  .gh-dock-in {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 2px 12px;
+    padding: 8px 12px;
+  }
+  .gh-moon {
+    inline-size: 40px;
+    block-size: 58px;
+  }
+  .gh-dock .shell-time-machine-title {
+    font-size: 18px;
+  }
+  .gh-dock-track,
+  .gh-dock-ticks {
+    display: none;
+  }
+  .gh-dock .shell-time-machine-controls,
+  .gh-dock .shell-preview-banner {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .gh-dock .shell-time-machine-controls .shell-button,
+  .gh-dock .shell-preview-banner .shell-button {
+    flex: none;
+    white-space: nowrap;
+  }
+}

@@ -5,9 +5,14 @@
  * file. Outside it are only the static end states, which reduced motion shows
  * at once.
  *
- * This task (4.1): window flicker, pane light change, boards falling, relight
- * flash. Later tasks add the splash, sign hum, moths, fog, headlights, moon
- * and smooth scrolling inside the same block.
+ * Task 4.1: window flicker, pane light change, boards falling, relight
+ * flash. Task 4.4: moths, fog and headlights (their static states, hidden
+ * moths and headlights and still fog, are in street.css). Task 4.14: the
+ * sign hum and the splash light-up (the sign's steady glow is in sign.css;
+ * the splash is never shown under reduced motion). Task 5.1: the moon's
+ * shade sliding across its face (its static position, read from --age, is in
+ * dock.css). Task 5.9: smooth scrolling, inside the same block, so under
+ * reduced motion scrolling is instant.
  */
 
 /* Static end state: falling boards are simply gone, at once. */
@@ -42,6 +47,149 @@
   /* One warm flash when the light comes back. */
   .gh-pane[data-relight] {
     animation: gh-relight 0.9s;
+  }
+
+  /* Moths around lit Street windows (task 4.4, Req 25.1). Hidden outside this block (street.css). */
+  /* One step more specific than street.css's static rule, whatever the load order. */
+  .gh-win .gh-moths {
+    display: block;
+  }
+  .gh-moths i {
+    animation: gh-moth 6s ease-in-out infinite;
+  }
+  .gh-moths i:nth-child(2) {
+    animation-delay: -2s;
+  }
+  .gh-moths i:nth-child(3) {
+    animation-delay: -4s;
+  }
+
+  /* Fog drifting along the Street (task 4.4, Req 25.1). Still fog outside this block. */
+  .gh-fog {
+    animation: gh-fog 60s linear infinite;
+  }
+
+  /* Headlights sweeping along the kerb (task 4.4, Req 25.1). Not shown outside this block. */
+  .gh-street-scene .gh-headlights {
+    display: block;
+    animation: gh-headlights 18s linear infinite;
+  }
+
+  /* The header sign's slow hum (task 4.14, Req 7.2). Its steady glow is in sign.css. */
+  .gh-sign {
+    animation: gh-sign 5s infinite;
+  }
+
+  /* The moon's shade follows the dock's slider (task 5.1, Req 12.3, 25.1). Without
+     motion it jumps to its place (dock.css). */
+  .gh-moon-shade {
+    transition: transform 0.3s;
+  }
+
+  /* Smooth scrolling (task 5.9, Req 25.1). Without motion, scrolling is instant. */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* The splash: six windows light up one by one (task 4.14, Req 6.1). Each pane
+     stays dark until its turn ("both"), then keeps its light. */
+  .gh-splash-windows .gh-pane {
+    animation: gh-lightup 0.5s both;
+  }
+  .gh-splash-windows .gh-pane:nth-child(1) {
+    animation-delay: 0.3s;
+  }
+  .gh-splash-windows .gh-pane:nth-child(2) {
+    animation-delay: 0.7s;
+  }
+  .gh-splash-windows .gh-pane:nth-child(3) {
+    animation-delay: 1.1s;
+  }
+  .gh-splash-windows .gh-pane:nth-child(4) {
+    animation-delay: 1.4s;
+  }
+  .gh-splash-windows .gh-pane:nth-child(5) {
+    animation-delay: 1.9s;
+  }
+  .gh-splash-windows .gh-pane:nth-child(6) {
+    animation-delay: 2.3s;
+  }
+
+  @keyframes gh-sign {
+    0%,
+    100% {
+      text-shadow:
+        0 0 20px color-mix(in srgb, var(--sign) 65%, transparent),
+        0 0 56px color-mix(in srgb, var(--sign) 30%, transparent);
+    }
+    50% {
+      text-shadow:
+        0 0 10px color-mix(in srgb, var(--sign) 40%, transparent),
+        0 0 30px color-mix(in srgb, var(--sign) 15%, transparent);
+    }
+    92% {
+      opacity: 1;
+    }
+    94% {
+      opacity: 0.55;
+    }
+    96% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes gh-lightup {
+    from {
+      background: var(--panel-hi);
+      box-shadow: none;
+    }
+    to {
+      background: var(--glow);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--glow) 60%, transparent);
+    }
+  }
+
+  @keyframes gh-moth {
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    25% {
+      transform: translate(5px, -4px);
+    }
+    50% {
+      transform: translate(-3px, -7px);
+    }
+    75% {
+      transform: translate(-6px, 2px);
+    }
+  }
+
+  @keyframes gh-fog {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: 100% 0;
+    }
+  }
+
+  @keyframes gh-headlights {
+    0% {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    40% {
+      transform: translateX(340%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(340%);
+      opacity: 0;
+    }
   }
 
   @keyframes gh-flicker {

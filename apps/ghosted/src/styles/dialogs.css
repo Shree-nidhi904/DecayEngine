@@ -1,0 +1,301 @@
+/*
+ * The Ghosted dialogs (tasks 4.6 to 4.9, design sections 4.4 and 9.4):
+ * ConfirmDialog, PersonDialog, ReachOutDialog and ReconnectDialog, plus the
+ * toolbar that holds "Reset all data". Native modal <dialog>s opened by
+ * useModalDialog. Ghosted tokens only, with color-mix for tints (#000 only
+ * for the shell's hard card shadow). At most one filled button per dialog;
+ * the choices are outlined option buttons.
+ *
+ * 320px: a dialog is min(100%, 520px) wide, never more than the viewport
+ * less 32px, and scrolls inside itself,
+ * so the page never scrolls sideways (Req 24.4). No animation or transition
+ * here: the boards falling and the relight flash are in motion.css.
+ */
+
+.gh-dialog {
+  inline-size: min(100%, 520px);
+  max-inline-size: calc(100% - 32px);
+  max-block-size: calc(100% - 32px);
+  overflow-y: auto;
+  padding: 20px;
+  border: 1px solid var(--border-hero);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  color: var(--bone);
+  box-shadow: 0 6px 0 #000;
+}
+
+.gh-dialog::backdrop {
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+}
+
+.gh-dialog-person {
+  inline-size: min(100%, 440px);
+  padding: 16px;
+}
+
+.gh-dialog-title {
+  margin: 0 0 12px;
+  font-size: 24px;
+  letter-spacing: 0.02em;
+}
+
+/* The line focus opens on (tabindex -1, Req 24.2): a question or a message. */
+.gh-dialog-question,
+.gh-dialog-message {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
+
+.gh-dialog-progress {
+  margin: 0 0 8px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.gh-dialog-art {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 16px;
+}
+
+/* The three contacts: outlined option buttons, one per row. */
+.gh-choices {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.gh-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--bone);
+  text-align: start;
+  cursor: pointer;
+}
+
+.gh-choice:hover,
+.gh-choice:focus-visible {
+  border-color: var(--glow);
+}
+
+.gh-choice[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.gh-choice-kind {
+  font-weight: 600;
+}
+
+.gh-choice-effect {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  color: var(--glow);
+}
+
+.gh-dialog-result {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.gh-dialog-more {
+  margin: 0 0 16px;
+  color: var(--dim);
+}
+
+.gh-dialog-blocked {
+  margin: 0 0 12px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--glow);
+}
+
+.gh-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* A confirmation that removes or resets: outlined in --rust, never filled. */
+.gh-button-danger {
+  border-color: var(--rust);
+  color: var(--rust);
+}
+
+.gh-button-danger:hover,
+.gh-button-danger:focus-visible {
+  border-color: var(--rust);
+  background: color-mix(in srgb, var(--rust) 12%, transparent);
+}
+
+/* The person dialog: the card, then Close. */
+.gh-dialog-person .gh-card {
+  box-shadow: none;
+}
+
+.gh-dialog-person .gh-dialog-actions {
+  margin-block-start: 12px;
+}
+
+/* The toolbar under the lists (design section 4.3): quiet buttons only. */
+.gh-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-block-start: 24px;
+}
+
+/* ----- Add and edit a person (task 4.10, Req 17) ----- */
+
+.gh-form {
+  display: grid;
+  gap: 16px;
+}
+
+.gh-form .gh-dialog-title {
+  margin-block-end: 0;
+}
+
+.gh-field {
+  display: grid;
+  gap: 4px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gh-field > label,
+.gh-field > legend {
+  padding: 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.gh-field input[type="text"],
+.gh-field input[type="number"],
+.gh-field input[type="date"] {
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--bone);
+  font: inherit;
+  color-scheme: dark;
+}
+
+.gh-field input[readonly] {
+  border-style: dashed;
+  color: var(--dim);
+}
+
+.gh-field input[aria-invalid="true"] {
+  border-color: var(--rust);
+}
+
+.gh-field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 16px;
+}
+
+.gh-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gh-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 44px;
+  min-inline-size: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  cursor: pointer;
+}
+
+.gh-field-hint {
+  margin: 0;
+  font-size: 15px;
+  color: var(--dim);
+}
+
+/* "This window starts dark": glyph and words, never colour alone. */
+.gh-field-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--rust);
+}
+
+.gh-field-error {
+  margin: 0;
+  font-size: 15px;
+  color: var(--rust);
+}
+
+.gh-save-error {
+  padding: 8px 12px;
+  border: 1px solid var(--rust);
+  border-radius: 6px;
+}
+
+/* ----- Import people (task 5.3, Req 21.5, 21.6) ----- */
+
+.gh-field textarea {
+  inline-size: 100%;
+  min-block-size: 160px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--bone);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.gh-import-count {
+  margin: 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  color: var(--glow);
+}
+
+.gh-import-skipped {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-inline-start: 20px;
+  font-size: 15px;
+  color: var(--rust);
+}

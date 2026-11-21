@@ -11,7 +11,7 @@ import type { GhostedEngine } from "../engine-instance"
 import type { Person, PersonPayload } from "../policy"
 import { previewBlockedText } from "../wording"
 import { T0, day, makeEngine } from "../test/fixtures"
-import { readStyle, ruleBody } from "../test/css"
+import { readStyle, ruleBody, stripComments } from "../test/css"
 
 afterEach(cleanup)
 
@@ -200,6 +200,90 @@ describe("PersonCard buttons (Req 13.3, 13.4)", () => {
     const css = readStyle("layout.css") + readStyle("window.css") + readStyle("street.css")
     expect(css).not.toMatch(/outline\s*:\s*(?:none|0)\b/)
     expect(readStyle("global.css")).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--sign\)/)
+  })
+})
+
+describe("PersonCard button rows (Req 13.3, 13.4; CSS source checks: jsdom does not lay out)", () => {
+  const css = stripComments(readStyle("layout.css"))
+  const columnsOf = (body: string | undefined) => {
+    const value = /grid-template-columns:\s*([^;]+)/.exec(body ?? "")?.[1] ?? ""
+    const repeat = /repeat\(\s*(\d+)/.exec(value)
+    return repeat !== null ? Number(repeat[1]) : value.match(/minmax\(/g)?.length ?? 0
+  }
+
+  it("the primary has the first row to itself and every quiet button sits in the row group below", () => {
+    for (const [lastContactAt, primary, quiet] of [
+      [T0, "Reach out", ["Edit", "Remove", "History"]],
+      [day(-90), "Reconnect", ["Autopsy", "Edit", "Remove", "History"]],
+    ] as const) {
+      const engine = makeEngine()
+      const id = add(engine, { lastContactAt })
+      const { container, unmount } = renderCard(engine, id)
+      const actions = container.querySelector<HTMLElement>(".gh-card-actions")!
+      const [first, second, ...rest] = [...actions.children]
+      expect(rest).toEqual([])
+      expect(first!.textContent).toBe(primary)
+      expect(first!.className).toContain("gh-button-primary")
+      expect(second!.className).toBe("gh-card-quiet")
+      const buttons = [...second!.querySelectorAll("button")]
+      expect(buttons.map((b) => b.textContent)).toEqual(quiet)
+      expect(buttons.every((b) => b.className === "gh-button")).toBe(true)
+      expect(second!.getAttribute("data-count")).toBe(String(quiet.length))
+      unmount()
+    }
+  })
+
+  it("the primary spans the card's width on its own row", () => {
+    expect(columnsOf(ruleBody(css, ".gh-card-actions"))).toBe(1)
+    expect(ruleBody(css, ".gh-card-actions")).toMatch(/display:\s*grid/)
+    expect(ruleBody(css, ".gh-card-actions > .gh-button-primary")).toMatch(/inline-size:\s*100%/)
+  })
+
+  it("the quiet buttons are equal widths and wrap evenly: no layout leaves one button alone on a row", () => {
+    const quiet = ruleBody(css, ".gh-card-quiet")!
+    expect(quiet).toMatch(/display:\s*grid/)
+    expect(quiet).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/)
+
+    const container = /@container\s*\(\s*min-width:\s*(\d+)px\s*\)\s*\{([\s\S]*?\})\s*\}/.exec(css)
+    expect(container).not.toBeNull()
+    const wide = container![2]!
+
+    // Every column count each set of buttons can get, narrow and wide.
+    const layouts: Record<3 | 4, number[]> = {
+      3: [columnsOf(quiet), columnsOf(ruleBody(wide, '.gh-card-quiet[data-count="3"]'))],
+      4: [columnsOf(ruleBody(css, '.gh-card-quiet[data-count="4"]'))],
+    }
+    expect(layouts).toEqual({ 3: [1, 3], 4: [2] })
+    for (const [count, columnCounts] of Object.entries(layouts)) {
+      for (const columns of columnCounts) {
+        const lastRow = Number(count) % columns
+        expect(lastRow, `${count} buttons in ${columns} columns`).toBe(0)
+      }
+    }
+    // Equal widths: every column is minmax(0, 1fr), and each button fills its cell.
+    expect(css).not.toMatch(/\.gh-card-quiet[^{]*\{[^}]*grid-template-columns:[^;]*(?:auto|px|max-content)/)
+    expect(ruleBody(css, ".gh-card-quiet .gh-button")).toMatch(/inline-size:\s*100%/)
+
+    // Three in a row only once three of the widest label fit: "HISTORY" or
+    // "AUTOPSY", 7 characters at 13px mono (0.6em advance) with 0.1em spacing,
+    // plus 8px padding and a 1px border each side, and two 8px gaps.
+    const button = ruleBody(css, ".gh-button")!
+    expect(button).toMatch(/font-size:\s*13px/)
+    expect(button).toMatch(/letter-spacing:\s*0\.1em/)
+    const widest = 7 * (0.6 * 13 + 0.1 * 13) + 2 * 8 + 2 * 1
+    expect(Number(container![1])).toBeGreaterThanOrEqual(3 * widest + 2 * 8)
+  })
+
+  it("quiet labels never break inside a word, and every card button keeps a 44 × 44 px target", () => {
+    const quietButton = ruleBody(css, ".gh-card-quiet .gh-button")!
+    expect(quietButton).toMatch(/overflow-wrap:\s*normal/)
+    expect(quietButton).toMatch(/word-break:\s*normal/)
+    expect(quietButton).toMatch(/hyphens:\s*none/)
+    // Nothing for the card's buttons lowers the minimums set on .gh-button.
+    expect(quietButton).not.toMatch(/min-(?:inline|block)-size|(?:^|[\s;])(?:block-size|height)\s*:/)
+    const button = ruleBody(css, ".gh-button")!
+    expect(button).toMatch(/min-inline-size:\s*44px/)
+    expect(button).toMatch(/min-block-size:\s*44px/)
   })
 })
 

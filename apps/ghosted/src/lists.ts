@@ -105,6 +105,11 @@ export function stateCounts(people: readonly Person[]): Record<ItemState, number
   return counts
 }
 
+/** The first word of a name: "Dan" for "Dan Okafor" (the hero's button, the Street's windows). */
+export function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] || name
+}
+
 /** Freshness as shown: rounded down, so 59.6 never reads as a lit 60 (design section 4.1). */
 export function shownFreshness(health: number): number {
   return Math.floor(health)

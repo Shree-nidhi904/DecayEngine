@@ -72,8 +72,8 @@ export const ghostedPolicy: DecayPolicy<PersonPayload, PersonPolicyData, Contact
   nextDueAt(item: Person, now: number): number | null {
     if (item.state === "dead") return null
     const h = healthAt(item, now)
-    if (h >= 60) return item.policyData.lastContactAt + (2 * spanMs(item)) / 5
-    if (h >= 10) return now
+    if (h >= ghostedPolicy.thresholds.weak) return item.policyData.lastContactAt + (2 * spanMs(item)) / 5
+    if (h >= ghostedPolicy.thresholds.dead) return now
     return null
   },
 

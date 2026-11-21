@@ -180,7 +180,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - **Where the other properties live:** Properties 10 and 11 render components, so they are written with the Window and PersonCard (tasks 4.1 and 4.2). The app-level half of Property 12 needs every write control, so it is task 5.5. The sample expectations of design section 7.5 need `sample-data.ts`, so they are task 4.13. Each test comes right after the code it checks, so every checkpoint can pass
     - _Requirements: 1, 2, 3, 4, 5_
 
-- [ ] 4. Group D: Components, sample data and window art
+- [x] 4. Group D: Components, sample data and window art
   - [x] 4.1 State glyphs, window and house art
     - Create `apps/ghosted/src/components/icons.tsx`: circle, triangle and cross state glyphs (`data-glyph`, `aria-hidden`, `currentColor`) and the contact marker shapes (envelope, diamond, two dots) from design section 5.2
     - Create `apps/ghosted/src/components/Window.tsx` (`WindowProps`, `--lit = health / 100` to 4 decimals, `data-state`, silhouette unless dead, two boards when dead or falling) and `apps/ghosted/src/components/House.tsx` (house roof and body around its windows)
@@ -205,145 +205,150 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Create `apps/ghosted/src/lists.test.ts` (each order and its ties by id, "starts fading in N days", `heroTarget`), `apps/ghosted/src/components/ThreeLists.test.tsx` (badges, lighting classes, empty lines) and `apps/ghosted/src/App.test.tsx` (the nav moves focus to the section's heading)
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 24.7_
 
-  - [ ] 4.4 The Street
+  - [x] 4.4 The Street
     - Create `apps/ghosted/src/street.ts` (`groupHouses`: by trimmed relationship, "Others" last, people by name then id) and `apps/ghosted/src/components/Street.tsx` (window buttons named "<name>, <state word>, freshness <n>"; the legend; the sentence that the light shows how recently you were in touch and does not measure how much anyone matters)
     - Add moths, fog and headlights to `apps/ghosted/src/styles/motion.css`, hidden outside the motion block
     - Wire the Street into `apps/ghosted/src/App.tsx`
     - Create `apps/ghosted/src/street.test.ts` (grouping, "Others", every person exactly once, order) and `apps/ghosted/src/components/Street.test.tsx` (names, legend glyphs and words, the sentence, activation calls `onOpen`)
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 16.1, 25.1_
 
-  - [ ] 4.5 Hero
+  - [x] 4.5 Hero
     - Create `apps/ghosted/src/components/Hero.tsx` with `HeroProps` and the five cases in the table in design section 4.4, the shell `Counters` with Ghosted glyphs and list names, and the preview eyebrow with the primary button blocked
     - Wire it into `apps/ghosted/src/App.tsx`; with no people after the first run, the App renders only the hero, the toolbar, the privacy line and the dock (design section 4.4, "An empty street")
     - Create `apps/ghosted/src/components/Hero.test.tsx`: every case with its wording and plurals ("1 window is flickering"), exactly one filled button in each case, counters with glyph and list name, the preview eyebrow and the disabled reason
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 16.1, 20.1, 20.9_
 
-  - [ ] 4.6 Confirm dialog and remove
+  - [x] 4.6 Confirm dialog and remove
     - Create `apps/ghosted/src/components/ConfirmDialog.tsx` (Cancel first, Escape cancels, focus on the message) and `apps/ghosted/src/styles/dialogs.css`
     - Wire Remove in `apps/ghosted/src/App.tsx`: "Remove <name>? This cannot be undone.", `engine.remove` only on confirm, through `runGatedWrite`
     - Create `apps/ghosted/src/components/ConfirmDialog.test.tsx` and add to `apps/ghosted/src/App.test.tsx`: Cancel and Escape remove nothing; confirm removes; focus goes to the hero heading when the opener is gone
     - _Requirements: 13.5, 24.2, 24.3_
+    - **Added from task 5.4:** ResetData (quiet button, "Reset all data? This cannot be undone.", `resetAllData` removes exactly `RESET_KEYS`, then reload) needs this ConfirmDialog. Create `components/ResetData.tsx` and its tests here, wire it into `App.tsx`, and add the reset cases to `App.first-run.test.tsx` (clears only Ghosted's keys; restarts the first run)
 
-  - [ ] 4.7 Person dialog
+  - [x] 4.7 Person dialog
     - Create `apps/ghosted/src/components/PersonDialog.tsx`: the PersonCard (heading level 2) in a modal `<dialog>` with Close, through `useModalDialog`, focus on the card's heading
     - Wire it into `apps/ghosted/src/App.tsx` for the Street windows and the Still lit rows
     - Create `apps/ghosted/src/components/PersonDialog.test.tsx`: opens with focus on the heading, Escape closes, focus returns to the window that opened it
     - _Requirements: 10.4, 24.2, 24.3_
 
-  - [ ] 4.8 Reach out dialog
+  - [x] 4.8 Reach out dialog
     - Create `apps/ghosted/src/components/ReachOutDialog.tsx` with `ReachOutDialogProps` from design section 4.4: three choices showing "Freshness a → b" from `ghostedPolicy.applyEvent` on the item from `engine.view(clock())`; `engine.tend` through `write`; the result sentence and "Reach out again by <date>…"; Cancel calls nothing; the "went dark before you reached out" case for `ITEM_ALREADY_DEAD`; one filled button at most
     - Wire it into `apps/ghosted/src/App.tsx`
     - Create `apps/ghosted/src/components/ReachOutDialog.test.tsx`: before and after values for each kind, `tend` called with each kind, no control that logs a contact without a kind, the result and next date, Cancel, the went-dark case, focus on the question line
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 24.2_
 
-  - [ ] 4.9 Reconnect dialog
+  - [x] 4.9 Reconnect dialog
     - Create `apps/ghosted/src/components/ReconnectDialog.tsx` with `ReconnectDialogProps`: the boarded window, "Which contact happened?", three options and Cancel, no "No reply yet"; `engine.resurrect` through `write`; boards falling, the relight flash and "<first name>'s window is lit again. Freshness is 100."
     - Wire it into `apps/ghosted/src/App.tsx`
     - Create `apps/ghosted/src/components/ReconnectDialog.test.tsx`: the three options and no "No reply yet"; `resurrect` with each kind; the success text; Cancel calls nothing; under reduced motion the lit window shows at once with the same text
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 4.3, 16.5, 25.2_
 
-  - [ ] 4.10 Add and edit a person
+  - [x] 4.10 Add and edit a person
     - Create `apps/ghosted/src/components/AddEditPersonDialog.tsx` with `AddEditPersonDialogProps` from design section 4.4: the six fields from `person-form.ts`; the live "This window starts dark" hint; errors that name the field and rule, keep the input and focus the first invalid field; `addItem` with `lastContactAt` from `dayStartOf`; `edit` with only the changed fields; the read-only last contact date with "Log a contact to change this"; storage problems shown inside the form, which stays open; Save checks `previewing()` again
     - Wire "Add a person" and Edit into `apps/ghosted/src/App.tsx`
     - Create `apps/ghosted/src/components/AddEditPersonDialog.test.tsx` (the `addItem` payload, the hint, edit sends only changed fields, nothing sent when nothing changed, read-only date, invalid input kept, storage full keeps the form open) and add to `apps/ghosted/src/App.test.tsx` (a rhythm change shows the new freshness right after saving)
+    - **Note from task 5.4 (done before this task):** "Start empty" today only marks the app as started and sets the open dialog to `{ kind: "add" }`, and `App.first-run.test.tsx` checks exactly that (through `data-dialog="add"` on `.gh-app`). This task must add the assertion "Start empty opens the Add dialog" to `apps/ghosted/src/App.first-run.test.tsx`
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6, 17.7, 17.8, 23.3_
+    - **Added from task 5.4:** also add the privacy-line case for an add (see 5.3)
 
-  - [ ] 4.11 Autopsy (waits for task 0.3)
+  - [x] 4.11 Autopsy (waits for task 0.3)
     - Create `apps/ghosted/src/autopsy-chart.ts` (`buildAutopsyChart`: replay of the current life through `ghostedPolicy`, 48 samples plus points around each contact, a line from `payload.lastContactAt` to `diedAt` for a person who started dark, one marker per tend labelled "Message", "Call" or "Meet-up")
     - Create `apps/ghosted/src/components/PersonAutopsy.tsx`: the shell `AutopsyDialog` with `tends={[]}`, `markers`, `renderMarker`, `markerSummary`, `generateCauseSentences(report, payload, { timeZone })`, `focusContentOnOpen`, and Reconnect blocked during a preview
     - Wire Autopsy → Reconnect into `apps/ghosted/src/App.tsx` (the reconnect dialog takes over the autopsy's opener)
     - Create `apps/ghosted/src/autopsy-chart.test.ts` (points, markers, the started-dark line is never a single point) and `apps/ghosted/src/components/PersonAutopsy.test.tsx` (markers and legend, the summary, focus on the title, Reconnect disabled in a preview, a started-dark person shows a line and no "0 days")
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 24.2, 28_
 
-  - [ ] 4.12 Triage panel and session
+  - [x] 4.12 Triage panel and session
     - Create `apps/ghosted/src/components/GhostedTriage.tsx` with `GhostedTriageProps` from design section 4.4: the shell `TriagePanel` with `budgets={[15, 30, 60, 120]}`, `defaultBudget={30}`, `initialBudget={30}`, `maxBudgetMinutes={1440}`; the three steps; pick text with glyph, word and name; the quiet "Today's 5-minute action" button, hidden when nobody qualifies
     - Add the session queue to `apps/ghosted/src/App.tsx` (design section 4.3): Reach out dialogs in pick order, each person looked up again, a dark or removed person skipped and named, "Stop session"
     - Create `apps/ghosted/src/components/GhostedTriage.test.tsx` (choices plus custom with 30 selected, the steps, the pick fields, "goes dark in N days", the 5-minute action quiet or hidden, Start blocked in a preview) and `apps/ghosted/src/App.session.test.tsx` (the queue in order, skipping a person who went dark or was removed)
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 16.1, 27, 30.4_
 
-  - [ ] 4.13 Sample data
+  - [x] 4.13 Sample data
     - Create `apps/ghosted/src/sample-data.ts`: `SampleStep`, `SamplePerson`, `SAMPLE_PEOPLE` exactly as the 12 rows of design section 6.2, and `loadSampleData(engine, now)`, which replays adds, contacts and reconnects at whole days before `now`, then ticks at `now`
     - Create `apps/ghosted/src/sample-data.test.ts` with every row of the table in design section 7.5 (counts, freshness values within 1e-9, hero target, the three list orders, `diedAt` values, Nia lit again, Tomas started dark, Sam's three kinds, rhythms and importance levels, triage at 30 minutes, the 5-minute action, fade markers, forecast at 365, 30 and 7 days)
     - If the replay gives a different result from section 6.3, stop and report it. Never change an expected value to match
     - _Requirements: 20.3, 20.4, 20.5, 20.8, 16.2, 10.2_
 
-  - [ ] 4.14 Splash and neon sign
+  - [x] 4.14 Splash and neon sign
     - Create `apps/ghosted/src/components/NeonSign.tsx` (the page's only `h1`, "Ghosted" in `--logo` with the `--sign` glow, the tagline "People you are losing touch with") and wire it into the header in `apps/ghosted/src/App.tsx`
     - Create `apps/ghosted/src/splash.ts` (`SPLASH_SEEN_FLAG` in sessionStorage, `shouldShowSplash`, `markSplashSeen`) and `apps/ghosted/src/components/Splash.tsx` (six windows lighting one by one, the word as `<p aria-hidden="true">`, one primary "Walk in", focus on the tagline, Escape closes)
     - Add the sign hum and the splash light-up to `apps/ghosted/src/styles/motion.css`; the static glow sits outside the motion block
     - Wire the splash into `apps/ghosted/src/App.tsx`: shown only when `shouldShowSplash(session, prefersReducedMotion())`; closing marks it seen and focuses the hero heading
     - Create `apps/ghosted/src/components/NeonSign.test.tsx`, `apps/ghosted/src/splash.test.ts` (fake session, reduced motion, `null` session) and `apps/ghosted/src/components/Splash.test.tsx` (six panes, Walk in, Escape)
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 7.1, 7.2, 7.3, 7.4, 24.2, 25.1_
+    - **Added from task 5.4:** add to `App.first-run.test.tsx` the splash cases: a loaded sample street in two clicks from first load ("Walk in", then "Load sample street"), focus moves to the hero heading after the splash, and no splash after a reload in the same tab
 
-  - [ ] 4.15 Checkpoint: components
+  - [x] 4.15 Checkpoint: components
     - The developer runs `bash scripts/check.sh` in WSL; every step passes
     - The developer runs `pnpm --filter @decay-engine/ghosted dev` and looks at the splash, the street, a card and each dialog once
 
-- [ ] 5. Group E: Dock, forecast, backup, import, first run, wording and contrast, README
-  - [ ] 5.1 Moon-clock dock
+- [x] 5. Group E: Dock, forecast, backup, import, first run, wording and contrast, README
+  - [x] 5.1 Moon-clock dock
     - Create `apps/ghosted/src/timeline.ts` (`DockMarker`, `dockMarkers` at `realNow`: fade times from `ghostedPolicy.nextDueAt`, dark times from `engine.forecast(today, 365 × DAY_MS)`, `0 < day ≤ 365`, sorted by time then id)
     - Create `apps/ghosted/src/components/MoonDock.tsx` (`MoonDockProps`: moon SVG reading `--age`, the shell `TimeMachine` with `maxDays={365}` and `jumpDays={[30, 90, 180, 365]}`, the marker track as `belowSlider` with named marker buttons, the shell `PreviewBanner` while previewing) and `apps/ghosted/src/styles/dock.css` (fixed at the bottom, `--dock-max`, sideways scroll below 520px)
     - Wire the dock into `apps/ghosted/src/App.tsx`: `--age` on `.gh-app`, every view at `now`, "Back to today" resets the offset and ticks; add `scroll-padding-bottom` and the `main` padding to `layout.css`; add the moon transition to `motion.css`
     - Create `apps/ghosted/src/timeline.test.ts` (markers within 365 days, names such as "Mira Castell goes dark on 3 March") and `apps/ghosted/src/components/MoonDock.test.tsx` (range 365, the four jumps with "+1 year", the banner, Back to today, reduced-motion Play goes to +365 days)
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.6, 12.7, 16.1, 24.4, 25.1, 25.3, 26_
 
-  - [ ] 5.2 Forecast control
+  - [x] 5.2 Forecast control
     - Create `apps/ghosted/src/components/ForecastControl.tsx`: 7, 30 and 90 days with 30 first; `engine.forecast(now, H × DAY_MS)` in engine order, each as "<name> goes dark on <date>" with glyph and word; "Nobody goes dark in the next H days." when empty; the previewed `now` while previewing
     - Wire it into `apps/ghosted/src/App.tsx`
     - Create `apps/ghosted/src/components/ForecastControl.test.tsx` covering each of those points
     - _Requirements: 22.1, 22.2, 22.3, 22.4, 16.1_
 
-  - [ ] 5.3 Backup, restore and import controls
+  - [x] 5.3 Backup, restore and import controls
     - Create `apps/ghosted/src/components/BackupControls.tsx` (copy of Study Dungeon's: Back up as `ghosted-backup-YYYY-MM-DD.json`, works in a preview; Restore checked by `checkBackup`, a refusal announced with nothing changed, "Replace your street with N people from this file? This cannot be undone." before `applyBackup` through `runGatedWrite`, then reload) and `apps/ghosted/src/components/ImportDialog.tsx` (textarea, the format in words, "Imported people get importance 2 and 10 minutes", skipped lines listed as "Line N: <reason>", a storage problem part-way keeps the remaining text)
     - Wire both into the toolbar in `apps/ghosted/src/App.tsx`; add, import and restore set `OWN_PEOPLE_FLAG`
     - Create `apps/ghosted/src/components/BackupControls.test.tsx` (confirm before replace, Cancel changes nothing, Restore blocked in a preview, Back up not blocked) and `apps/ghosted/src/components/ImportDialog.test.tsx` (people added in line order, skipped lines reported, partial import on a full storage)
     - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 12.5, 23.3_
+    - **Added from task 5.4:** add to `App.test.tsx` the case that the privacy line changes to "Everything stays in this browser." after an add (task 4.10), an import and a restore
 
-  - [ ] 5.4 First run, reset and privacy line
+  - [x] 5.4 First run, reset and privacy line (partly done in run 6; the reset, splash and privacy-after-add parts are noted under 4.6, 4.14, 4.10 and 5.3)
     - Wire the first run into `apps/ghosted/src/App.tsx`: land on the hero; "Load sample street" calls `loadSampleData(engine, clock())` through `runGatedWrite`; "Start empty" marks started and opens "Add a person"
     - Create `apps/ghosted/src/components/ResetData.tsx` (quiet button, "Reset all data? This cannot be undone.", `resetAllData` removes exactly `RESET_KEYS`, then reload) and `apps/ghosted/src/components/PrivacyLine.tsx` (the two sentences of Requirement 15)
     - Create `apps/ghosted/src/App.first-run.test.tsx` (lands on the hero; a loaded sample street in two clicks from first load, and in one when the splash is skipped; Start empty opens Add; reset clears only Ghosted's keys and restarts the first run; the empty-street hero with no lists; after the splash, focus is on the hero heading and the splash does not return after a reload with the same session storage) and `apps/ghosted/src/components/PrivacyLine.test.tsx`; add to `apps/ghosted/src/App.test.tsx` that the privacy line changes after add, import and restore
     - _Requirements: 20.1, 20.2, 20.6, 20.7, 20.9, 15.1, 15.2, 6.2, 6.4_
 
-  - [ ] 5.5 Preview never writes (Property 12, app level)
+  - [x] 5.5 Preview never writes (Property 12, app level)
     - Create `apps/ghosted/src/App.preview.test.tsx`: moving the dock to D days shows `engine.view(today + D)` in the hero, Street, lists and cards and sets `--age` to D / 365; the banner shows; every write control is `aria-disabled` with "Future preview · nothing is saved"; Back to today re-enables them
     - Create `apps/ghosted/src/App.preview.property.test.tsx`: `WRITE_ACTIONS` from design section 7.3 on the sample street with `RecordingAdapter`, `{ numRuns: 100 }`; after each action, zero saves, the snapshot and `FlagStorage` byte-for-byte unchanged. It sets its own per-test timeout of 120 000 ms and keeps `numRuns` at 100 (design open issue 3.4)
     - _Requirements: 12.2, 12.5, 12.6, 8.5, 19.5_
 
-  - [ ] 5.6 Storage problems in the App
+  - [x] 5.6 Storage problems in the App
     - Create `apps/ghosted/src/App.storage-errors.test.tsx`: a full or unavailable storage on tend, reconnect, remove, sample load and restore is announced, the open dialog closes, a Triage session ends, and the screen still shows the unchanged state; a tick's problem is announced once until a later tick saves; a non-storage error reaches the crash screen
     - Fix `apps/ghosted/src/App.tsx` if a case fails
     - _Requirements: 23.3, 17.8_
 
-  - [ ] 5.7 Keyboard and focus
+  - [x] 5.7 Keyboard and focus
     - Create `apps/ghosted/src/App.accessibility.test.tsx`: every control reachable with Tab and working with Enter and Space; each dialog focuses its content, keeps focus inside, closes on Escape and returns focus to its opener or the hero heading; every button has a name in words; disabled write controls stay focusable with their reason
     - _Requirements: 24.1, 24.2, 24.3, 12.5_
 
-  - [ ] 5.8 Wording and contrast tests (wording test waits for task 0.3)
+  - [x] 5.8 Wording and contrast tests (wording test waits for task 0.3)
     - Create `apps/ghosted/src/wording.test.ts`: no "doesn't care", "ignored you" or "ghosted you" (any case) in any `wording.ts` string (functions called with sample arguments), any sample person, or the autopsy sentences of the sample's dead people; "connection freshness" is used; the list and state words of Requirement 31.3 are present
     - Create `apps/ghosted/src/contrast.test.ts` with the pairs and ratios of the table in design section 7.6, and the check that `--dark` text is used only in the Empty windows heading
     - _Requirements: 31.1, 31.2, 31.3, 24.6_
 
-  - [ ] 5.9 Look, motion and layout source tests
+  - [x] 5.9 Look, motion and layout source tests
     - Create `apps/ghosted/src/tokens.test.ts` (every colour in the app's CSS and TSX is a Ghosted token or a `color-mix` of tokens; no remote font hosts; no `<img>`, image files or icon libraries), `apps/ghosted/src/motion.test.ts` (every `animation`, `transition` and smooth scroll inside `no-preference`; no `requestAnimationFrame`, `Element.animate` or motion timers in `src/`), `apps/ghosted/src/layout-css.test.ts` (no width above 288px, the dock's sideways scroll, the scroll padding, the focus outline) and `apps/ghosted/src/primary-buttons.test.tsx` (filled buttons per region in each hero case, card state and dialog, as in design section 3.6)
     - If a test finds a real problem, fix the CSS or component, never the test
     - _Requirements: 30.1, 30.2, 30.3, 30.4, 25.1, 25.2, 16.4, 12.7, 24.4, 24.5, 24.7, 7.2, 7.3_
 
-  - [ ] 5.10 README
+  - [x] 5.10 README
     - Edit `README.md`: Ghosted described as built, with its run command `pnpm --filter @decay-engine/ghosted dev`
     - Add the README check to `apps/ghosted/src/config.test.ts`
     - _Requirements: 32.5_
 
-  - [ ] 5.11 Checkpoint: dock, data and checks
+  - [x] 5.11 Checkpoint: dock, data and checks
     - The developer runs `bash scripts/check.sh` in WSL; every step passes
 
-- [ ] 6. Group F: Final checkpoint
-  - [ ] 6.1 Full check
+- [x] 6. Group F: Final checkpoint
+  - [x] 6.1 Full check
     - The developer runs `bash scripts/check.sh` in WSL. Every step passes, and "engine unchanged" prints its success line
     - `git status` shows no change under `packages/engine/`; the existing shell and Study Dungeon tests pass without edits to their assertions
     - _Requirements: 29.1, 29.2, 29.4, 32.2_
 
-  - [ ] 6.2 Manual checks
+  - [x] 6.2 Manual checks
     - Requirement 30.5: side by side with `docs/design/ghosted-wireframe.html` at 1280px and 390px, the same street, windows, sign and dock (the parts left out on purpose are listed in design open issue 2.6)
     - At 320px: no horizontal page scroll; the dock still shows the slider, Back to today and the jumps, scrolling sideways inside the dock if needed; no column beside empty space
     - Keyboard only: the whole flow from the splash to a reconnect, with a visible focus outline everywhere and nothing hidden behind the dock
@@ -351,7 +356,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - `pnpm --filter @decay-engine/ghosted build`, then `preview`: the bundle works from the site root, and the Network tab shows no request to another origin
     - _Requirements: 30.5, 24.1, 24.4, 24.5, 24.7, 12.7, 25.1, 25.2, 25.3, 32.3, 23.2_
 
-  - [ ] 6.3 Screenshots
+  - [x] 6.3 Screenshots
     - Take screenshots of the 1280px and 390px side-by-side checks, the 320px dock, a reconnect and an autopsy, and save them in `docs/screenshots/`
     - Crop the account email out of every screenshot before saving it
     - Record the file names in the matching `docs/KIRO_LOG.md` session

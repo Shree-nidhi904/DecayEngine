@@ -85,9 +85,25 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * The glyph and the state word. The word wraps only at its space ("boarded
+ * up"), never inside a word: .gh-app sets overflow-wrap: anywhere for long
+ * names, so this label switches it back off. When the glyph and the word do
+ * not fit on one line, the glyph sits above the word (flex-wrap). Each
+ * window column is wide enough for "flickering" at 11px (House.tsx,
+ * WINDOW_COLUMN_PX; checked in Street.test.tsx).
+ */
 .gh-win-meta {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 4px;
   font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   font-size: 11px;
+  letter-spacing: normal;
+  text-transform: none;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .gh-win-meta .gh-glyph {
@@ -99,4 +115,97 @@
 .gh-win:hover .gh-win-name,
 .gh-win:focus-visible .gh-win-name {
   color: var(--glow);
+}
+
+/*
+ * The Street plot (task 4.4), the wireframe's .plot.street, its heading in
+ * --sign and its night-sky gradient made from tokens.
+ */
+.gh-street {
+  background: linear-gradient(180deg, var(--panel), var(--wall-lo) 70%, var(--wall));
+}
+.gh-street .gh-plot-title {
+  color: var(--sign);
+}
+
+/* Fog and headlights sit behind the houses and never widen the page. */
+.gh-street-scene {
+  position: relative;
+  overflow: hidden;
+}
+.gh-street-scene .gh-houses {
+  position: relative;
+  z-index: 1;
+}
+
+/* Still fog (reduced motion keeps it still; motion.css lets it drift). */
+.gh-fog {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 30% at 20% 85%, color-mix(in srgb, var(--dim) 10%, transparent), transparent 70%),
+    radial-gradient(ellipse 50% 25% at 75% 90%, color-mix(in srgb, var(--dim) 8%, transparent), transparent 70%);
+  background-size: 200% 100%;
+}
+
+/* A passing car's light along the kerb: only shown with motion (motion.css). */
+.gh-headlights {
+  display: none;
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  z-index: 2;
+  inline-size: 30%;
+  block-size: 12px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--glow) 35%, transparent), transparent 70%);
+}
+
+/* Moths beside a lit window: only shown with motion (motion.css). */
+.gh-win {
+  position: relative;
+}
+.gh-moths {
+  display: none;
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: 20px;
+  block-size: 20px;
+  pointer-events: none;
+}
+.gh-moths i {
+  position: absolute;
+  inline-size: 3px;
+  block-size: 3px;
+  border-radius: 50%;
+  background: var(--bone);
+  opacity: 0.7;
+}
+.gh-moths i:nth-child(1) {
+  inset-block-start: 2px;
+  inset-inline-start: 4px;
+}
+.gh-moths i:nth-child(2) {
+  inset-block-start: 10px;
+  inset-inline-start: 14px;
+}
+.gh-moths i:nth-child(3) {
+  inset-block-start: 16px;
+  inset-inline-start: 6px;
+}
+
+/* The legend: each glyph with its word (Req 10.3, 16.1). */
+.gh-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 12px 0 0;
+  list-style: none;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
 }

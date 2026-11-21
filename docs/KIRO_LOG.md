@@ -894,12 +894,12 @@ For each session, record:
   - `resurrect`: always `{ ok: true, policyData: { lastContactAt: now } }`.
   - Imports only types from `@decay-engine/engine`. No clock, no randomness, no side effects.
   - `policy.test.ts`, `autopsy-sentences.ts`, the engine and the shell were not touched.
-- **What I changed by hand**: (fill in after review)
+- **What I changed by hand**: nothing in the code. I reviewed the file against Requirements 1 to 4 line by line (outside Kiro) and fixed the stale "hand-written" paragraph in design section 2, which Kiro had pointed out. The `check-policy-on-save` hook (which should fire when an agent saves `policy.ts`) was not seen firing in Kiro's report; that is still unconfirmed.
 - **What went wrong or surprised me**:
   - **Stale text in design.md**: section 2's intro still says `policy.ts` is "Hand-written by the developer" and that Kiro never edits it. Tasks.md 0.2, requirements and `authorship.md` say Kiro writes it. The formulas do not conflict; only that paragraph is out of date.
   - **One order choice, to confirm**: Requirement 3.1 (health 60 or more) and 3.3 (state dead) overlap if a dead item ever had health 60 or more. The code checks `state === "dead"` first, so a dead item is never due.
   - Kiro's shell printed nothing again. Saving the typecheck output to a file and reading it back worked: `tsc --noEmit`, exit 0.
-- **Verification (in WSL)**: Ghosted typecheck clean (Kiro, through the file). Tests: (add the result of `pnpm --filter @decay-engine/ghosted test`; expect the 5 `it.todo` only, since the real tests are task 3.x)
+- **Verification (in WSL)**: Ghosted typecheck clean (Kiro, through the file). Tests (mine, in WSL): 5 `it.todo` and nothing else at the time, as expected. After that I tested the policy through the real engine with a temporary test (since deleted): `checkPolicy` passes, exactly 60 on day 36, weak on day 37, exactly 10 and still weak on day 81, dead on day 82, a text on day 45 gives 90 and fades again on day 72, and a reconnect gives health 100. Later, in Session 29, I broke the policy nine ways and the real tests caught eight (the ninth was an equivalent mutant).
 - **Credits used**: 5.64 (2 min 34 s)
 - **Screenshot**: (add file names)
 
@@ -927,7 +927,7 @@ Written after the fact for the sessions that came before Session 20, from Kiro's
 | Design part 3 (sections 7 to 9) | 10.88 | 5 min | Testing strategy, the engine-unchanged script, error and accessibility notes, 13 correctness properties |
 | Tasks | 14.62 | 6 min | `tasks.md`: groups 0 and A to F, every requirement 1 to 32 in at least one task (checked with a script) |
 
-Spec stage total: about 121 credits (not counting Session 19, 20 or task 1.1 in Session 22).
+Spec stage total: 107.13 credits (3.12 + 7.01 + 7.95 + 5.41 + 6.75 + 13.52 + 24.81 + 13.06 + 10.88 + 14.62), not counting Sessions 19, 20 or 22.
 
 ### Corrections that came out of the review rounds
 
@@ -958,7 +958,7 @@ Spec stage total: about 121 credits (not counting Session 19, 20 or task 1.1 in 
 - **File-save hooks fire for agent-made changes only** (kiro.dev/docs/hooks/types). The `check-policy-on-save` hook watches `policy.ts`, which until Session 20 nobody but me edited, so it may never have fired.
 - **Study Dungeon source files were rewritten under me** (the attribution comments, "Claude" replaced by "-" in 45 files). I left them as they are.
 - Kiro's shell printed nothing for some commands again.
-- **Credits used**: about 121 for this session (table above).
+- **Credits used**: 107.13 for this session (table above).
 - **Screenshot**: (add file names: the steering file with its front matter, the requirements and design files, the hook panel)
 
 ---
@@ -1067,7 +1067,7 @@ Listed so the write-up does not count it as Kiro work. Done by Claude Code in WS
   - Kiro made one choice the spec does not cover, and said so: a line with more than four fields is skipped with a reason, and empty trailing fields are fine. I accepted it.
   - A skipped line's reason holds only the reason; the import dialog (task 5.3) adds "Line N: ".
   - Kiro's steering file still asks it to log each session, which I overrode in the prompts, so these entries are written from its reports.
-- **Credits used**: 13.56 (5 min 24 s); the earlier cancelled attempt is Session 26 (1.95).
+- **Credits used**: 18.25 in total: 4.69 (1 min 26 s) for the round where Kiro asked its eight questions, plus 13.56 (5 min 24 s) for writing the files. The earlier cancelled attempt is Session 26 (1.95).
 
 ---
 
@@ -1082,7 +1082,7 @@ Listed so the write-up does not count it as Kiro work. Done by Claude Code in WS
   - The jsdom URL failure above: Kiro could not have seen it without a terminal.
   - Kiro could only read shell files that `index.ts` exports (no folder listing without a terminal); it said so, and the test itself reads the whole shell tree, so it covers the rest.
   - The problem card uses the shell's hard `0 6px 0 #000` shadow, which task 5.9's token test may flag.
-- **Credits used**: 23.55 (6 min 33 s).
+- **Credits used**: 32.52 in total: 8.97 (2 min 35 s) for the round where Kiro asked its twelve questions, plus 23.55 (6 min 33 s) for writing the files.
 
 ---
 
@@ -1127,3 +1127,138 @@ Listed so the write-up does not count it as Kiro work. Done by Claude Code in WS
   - Kiro could not run anything, so a type error and an accessible-name bug reached my checkpoint. The tests did their job: they found the bug.
   - This was the biggest run so far.
 - **Credits used**: 77.5 (21 min 2 s).
+
+---
+
+## Session 31: Ghosted tasks 4.13, 4.4, 4.5 and part of 5.4, sample data, the Street, the Hero and first run (Nov 21, 2026)
+
+- **Goal**: the 12-person sample street (4.13), the Street (4.4), the Hero (4.5) and the first-run wiring (5.4), so the app can be seen working. Four tasks in one run, with the terminal forbidden in the prompt.
+- **Kiro feature used**: spec tasks, steering, tests built from the spec's tables.
+- **What Kiro produced** (`apps/ghosted/src/`): `sample-data.ts` and `sample-data.test.ts` (the 12 rows of design 6.2, every row of 7.5, crossings compared within one minute); `street.ts`, `components/Street.tsx` (houses by relationship, "Others" last, legend, moths, fog and headlights only inside the reduced-motion block) and tests; `components/Hero.tsx` (five cases, one filled button each, the shell `Counters` with glyphs and list names) and its test; `components/PrivacyLine.tsx` and its test; `App.first-run.test.tsx`; and the wiring in `App.tsx`. With no people the app shows only the hero and the privacy line.
+- **Where Kiro stopped, and what I decided**:
+  - **Reset all data** needs `ConfirmDialog` (task 4.6): leave it until 4.6, with a note there.
+  - **Splash cases** need the splash (4.14): a note there.
+  - **Privacy line after add, import and restore** needs 4.10 and 5.3: notes there.
+  - Task 5.4 stays unticked, with those notes added to tasks.md.
+- **One reading of the spec, accepted**: design 7.5 gives the Triage values to three decimals and asks for "within 1e-6", which can never pass for Dan (101.1358…). Kiro tested within 1e-6 of the exact value and within 5e-4 of the printed number, and changed no expected value.
+- **Verification (in WSL, outside Kiro)**: this time the first run was clean: Ghosted typecheck, 327 tests passed, and the full `check.sh` passed.
+- **A look at the real page (mine, outside Kiro)**: I started the Ghosted dev server and took screenshots with the cached Chromium at 1280 and 390 px, next to the approved wireframe. Both widths load with no sideways scroll, "Load sample street" works, and the sample street shows 4 lit, 4 fading and 4 empty, as the table says. It matches the wireframe's structure and colours. Flaws seen: the state words under the Street windows wrap mid-word ("flickeri / ng" and "boarded / up"); the person cards wrap "History" onto a second row; the header is still a plain "Ghosted" (the neon sign and splash are task 4.14); no dock yet (5.1). The only console message is one 404, probably the favicon.
+- **What I changed by hand**: nothing in the code.
+- **What went wrong or surprised me**: Kiro again ran two shell commands by mistake (`ls`, `echo skip`) in a no-terminal run; harmless. Without a terminal it could not catch layout problems, which a real page showed immediately.
+- **Credits used**: 55.09 (17 min 28 s).
+
+---
+
+## Session 32: Ghosted two layout fixes and tasks 4.6 to 4.9, the dialogs (Nov 21, 2026)
+
+- **Goal**: fix two layout flaws found by looking at the real page (the Street's state words broke mid-word, the person cards wrapped "History" onto its own row), then build the confirm dialog with reset, the person dialog, the Reach out dialog and the Reconnect dialog (tasks 4.6 to 4.9). Terminal forbidden in the prompt.
+- **Kiro feature used**: spec tasks, steering.
+- **What Kiro produced** (`apps/ghosted/src/`):
+  - **Layout**: the Street words broke because `.gh-app` sets `overflow-wrap: anywhere` and every label inherited it; labels now reset it and wrap only at the space (window columns 88 px, so "flickering" fits even at 320 px). Card buttons: the primary has its own row and the quiet buttons share the next row at equal widths (three in one row from 264 px, four always two by two, 44 px minimum). Each fix has a CSS-source test.
+  - **Dialogs**: `components/ConfirmDialog.tsx`, `ResetData.tsx` (reset removes exactly `RESET_KEYS`, then reloads), `PersonDialog.tsx`, `ReachOutDialog.tsx` (three real choices with "Freshness a → b" from the policy's own `applyEvent`), `ReconnectDialog.tsx` (boarded window, three options, boards fall and the window relights; no "No reply yet"), a test for each, `styles/dialogs.css`, and `test/dialog-polyfill.ts` (copied). The reset cases were added to `App.first-run.test.tsx`.
+- **Choices beyond the spec, accepted**: `ResetData` keeps its own confirm state, so the App's `{ kind: "reset" }` dialog type is unused; extra props (`formatDate`, `focusHeading`); outlined rust confirm buttons; Reconnect calls `onWrite` even when the engine refuses, because the engine still saves the failed attempt. Wording Kiro invented: "What did you do to reach <first name>?", "Reach out to <name>", "Reconnect with <name>". One text it flagged as reading oddly ("Reach out again by <today>" after a text leaves someone still flickering) is still open.
+- **Verification (in WSL, outside Kiro)**: Ghosted typecheck clean; the first run had 1 failing test of 375; after my fix, 376 passed, and the full `check.sh` passed.
+- **What I changed by hand**: one test, `ReconnectDialog.test.tsx`. It asserted that no timers are pending after the pick, but React's own scheduler holds timers under the fake clock (the count was 2 before the click and the click adds one), so the assertion was about React, not the component. It now checks that the end state is on the page without advancing any timer, plus a source check that `ReconnectDialog.tsx` itself schedules no `setTimeout`, `setInterval` or `requestAnimationFrame`.
+- **Looked at the real page (mine, outside Kiro)**: new screenshots at 1280 px with the Chromium cache. Both layout fixes worked (state words on one line; Reach out on its own row with Edit, Remove and History below). I opened the dialogs: focus lands on the dialog's question (not a button); Reach out shows "Freshness 28 → 68" for a message and "28 → 100" for a call or meet-up; Reconnect relights the window and the page behind it updated (5 lit, 3 empty). Freshness is shown floored (28 for 28.89).
+- **What went wrong or surprised me**: two more mistaken shell calls (`echo skip`, `true`), harmless. Kiro again could not run anything, so one test was wrong in a way only a run showed.
+- **Credits used**: 82 (21 min 57 s).
+
+---
+
+## Session 33: Ghosted tasks 4.10, 4.12, 4.11 and 4.14, Add and Edit, Triage, autopsy, splash and neon sign (Nov 21, 2026)
+
+- **Goal**: finish Group D: the Add and Edit dialog (4.10), the Triage wrapper and session (4.12), the autopsy with its chart (4.11), and the splash and neon sign (4.14). Four tasks in one run, terminal forbidden.
+- **Kiro feature used**: spec tasks, steering.
+- **What Kiro produced** (`apps/ghosted/src/`): `components/AddEditPersonDialog.tsx`, `GhostedTriage.tsx`, `PersonAutopsy.tsx`, `NeonSign.tsx`, `Splash.tsx`, `autopsy-chart.ts`, `styles/sign.css`, `App.session.test.tsx` (the Triage session opens the Reach out dialog for each pick) and a test file for each new module, plus the wiring in `App.tsx`, `wording.ts` and `splash.ts`. The Add dialog applies the form rules, shows "This window starts dark" before saving when `startsDark` says so, and shows the last contact read-only when editing. The autopsy uses the shell's `AutopsyDialog` with call, message and meet-up markers, focus on the content, and the sentences from `autopsy-sentences.ts`; Reconnect is disabled in a preview. The splash lights six windows one by one, then the Monoton sign and "Walk in"; once per tab, skipped under reduced motion.
+- **Decisions beyond the spec, accepted**: the Edit dialog takes `lastContactAt` (the last logged contact, the date the card shows, since the add date would be wrong after any contact) and `relationships` (for the tag list); the Add form defaults are importance 2, 10 minutes and today's date; the splash is marked seen as soon as it shows; where `matchMedia` does not exist (jsdom) the default is no splash, so existing App tests do not open one; the splash's light-up uses `animation-fill-mode: both` instead of the design's `forwards`, which would have shown every pane lit during its delay.
+- **Where Kiro stopped**: one existing assertion would now fail (Start empty opens the Add dialog, which has its own filled Save, so the hero test saw two filled buttons). Kiro did not edit it and offered two options. I chose the one it recommended: narrow that assertion to buttons outside any dialog, which is what Requirement 8.6 is about.
+- **Verification (in WSL, outside Kiro)**: typecheck clean; the one predicted failure of 459 tests; after my one-line change to that assertion, 459 passed and the full `check.sh` passed.
+- **What I changed by hand**: that single assertion in `App.first-run.test.tsx`, and I deleted `App.splash-snippet.tmp`, a stray file Kiro created by mistake and could not delete (its file tools cannot delete).
+- **Looked at the real page (mine, outside Kiro)**: screenshots at 1280 px. The splash and neon sign match the wireframe; after "Walk in" focus moves to a heading and the sign is the page's one h1; the autopsy of the started-dark person shows a freshness line from the last contact to the day he was added and "Already dark when added: no contact for 370 days, about 3.1 times your usual rhythm."; the Add dialog and the Triage panel work. Cosmetic items for later: the shell's Triage buttons ("Plan", "Start reaching out") and radios use a different font and case from the app's own buttons; the splash tagline shows a focus box because focus is moved there on purpose; the favicon 404 remains.
+- **What went wrong or surprised me**: Kiro again could not delete a file it created by mistake, and it flagged an existing test that its change broke instead of editing it, which is the behaviour I asked for.
+- **Credits used**: 106.26 (26 min 8 s).
+
+---
+
+## Session 34: Ghosted tasks 5.1, 5.2, 5.3, the moon-clock dock, forecast, backup and import (Nov 21, 2026)
+
+- **Goal**: the dock (5.1), the forecast control (5.2), backup, restore and import controls (5.3) and a cosmetic pass making the shell's own controls match the app's buttons. Terminal forbidden in the prompt.
+- **Kiro feature used**: spec tasks, steering.
+- **What Kiro produced** (`apps/ghosted/src/`): `timeline.ts` (the dock's markers: start-fading times from the policy's next-due, go-dark times from `engine.forecast`) and test; `components/MoonDock.tsx` (the shell `TimeMachine` with a 365-day range and jumps +30, +90, +180 and +1 year, the moon's shade following `--age`, the preview banner, every write disabled while previewing), `ForecastControl.tsx` (7, 30 and 90 days; the 30-day list for the sample street is Sunita, Meera and Dan, the 7-day list says nobody), `BackupControls.tsx`, `ImportDialog.tsx`, their tests, `styles/dock.css`, `shell-controls-css.test.ts`, and the wiring in `App.tsx`. Import adds people one line at a time through the write gate; if storage fills part-way it keeps what was added and leaves the remaining lines in the box. New `App.test.tsx` cases check that an add, an import and a restore each change the privacy line.
+- **Decisions beyond the spec, accepted**: `MoonDock` takes a `timeZone` prop for marker dates; the import dialog shows a storage problem inside itself; `BackupControls` has `timeZone` and `download` props and the App reloads after the restore confirmation; a `.gh-age-dim` layer dims the street as `--age` rises; the backup download link is revoked with a 1-second `setTimeout`, as in Study Dungeon (task 5.9's motion test must not count it).
+- **Verification (in WSL, outside Kiro)**: for the first time nothing needed fixing: Ghosted typecheck clean, 530 tests passed, and the full `check.sh` passed on the first run.
+- **What I changed by hand**: nothing.
+- **Looked at the real page (mine, outside Kiro)**: screenshots at 1280 px, driven by the jump buttons. Today: 4 windows flickering. At +90 days (19 Feb 2027): 2 flickering, the nav reads "Fading 2, Empty windows 10, Still lit 0", the moon is high. At +180 days: "Nobody is fading." At +365 days (21 Nov 2027): a thin crescent moon, every window boarded up, "Empty windows 12". "Back to today" restores the hero. The only visual flaw: the fade and dark markers in the first month overlap in a cluster at the left of the track. One console message, the favicon 404.
+- **What went wrong or surprised me**: nothing broke. Kiro's choices were all small and listed.
+- **Credits used**: 94.72 (22 min 54 s).
+
+---
+
+## Session 35: Tasks 5.4 to 5.10 and dock marker stagger
+
+- **What I asked Kiro**: finish 5.4 (first run, privacy line), then 5.5 (app-level Property 12), 5.6 (storage errors, crash screen), 5.7 (accessibility), 5.8 (wording), 5.9 (motion, layout, tap targets), 5.10 (README), plus staggering the dock markers.
+- **What Kiro did**: wrote the tests and the small changes listed in its report (new files: App.preview.property/App.preview/App.storage-errors/App.accessibility tests, wording, contrast, tokens, motion, layout-css, primary-buttons, dock-stagger tests, test/css-rules.ts; `markerRows` in timeline.ts; row rules in dock.css; smooth scrolling in motion.css; README). It could not run anything (no terminal), so it left the boxes unticked.
+- **Kiro stopped for a decision**: the Empty windows count badge (13px, `--dark`) failed AA contrast (3.69 against 4.5). I chose option (a): the badge uses `--dim`; the 26px heading keeps `--dark`. I updated one assertion in ThreeLists.test.tsx to match.
+- **My checks (outside Kiro)**: typecheck clean; Ghosted 663 tests pass (32 s); full `check.sh` passes (engine 701, shell 152, Study Dungeon 465, Ghosted 663; engine unchanged). Property 12 at the app level runs in 7.5 s. Kiro's worry that "connection freshness" was never shown on screen: the street note already says it in plain words, so nothing was added.
+- **What went wrong or surprised me**: nothing failed on the first real run. The only fix was the badge colour above.
+- **Credits used**: 115.63 (28 min 27 s).
+
+---
+
+## Session 36: policy-reviewer agent on Ghosted's policy
+
+- **What I asked Kiro**: "Use the policy-reviewer agent to review the ghosted policy." Read-only.
+- **What Kiro did**: reviewed `apps/ghosted/src/policy.ts` against the type contract, the steering and the spec, and ran `policy.test.ts` (44 tests pass, `checkPolicy` returns `{ passed: true, failures: [] }`). It changed no files. Its report had the sections Contract, Purity and time, Spec match, and Tests.
+- **Finding**: one minor. `nextDueAt` writes the numbers 60 and 10 instead of reading `thresholds.weak` and `thresholds.dead`. The output is correct today because the spec fixes those numbers (Req 3), so I accepted it as a known minor issue and did not change the Kiro-written policy.
+- **Everything else matched** (six members, no async, no clock or randomness, health stays in 0 to 100, tests use a fixed time).
+- **What went wrong or surprised me**: the reviewer's first test run printed only "RUN" and it re-ran the tests as a background process to read the result. That matches Kiro's shell trouble in other sessions.
+- **Credits used**: 6.2 (3 min 11 s).
+
+---
+
+## Session 37: does the check-policy-on-save hook fire for an agent edit?
+
+- **What I asked Kiro**: a one-time authorised edit: add the comment "// hook test" at the top of `apps/ghosted/src/policy.ts`, then remove it, and report whether a hook fired. No terminal.
+- **What happened**: no hook fired. Kiro's edit tool said "Replaced text" and nothing else came back: no `checkPolicy` run and no test output. The line was removed again.
+- **My check (outside Kiro)**: `git diff` shows `policy.ts` unchanged. The hook file is valid: trigger `PostFileSave`, matcher `apps/[^/]+/src/policy\.ts$`, enabled. So the matcher is not the cause.
+- **Finding**: in my setup this file-save hook did not fire on an edit made by the agent. The likely reason is that it only reacts to saves made by me in the editor. I have not tested a manual save yet.
+- **Credits used**: 0.72 (28 s).
+
+---
+
+## Work outside Kiro on Nov 21 (not a Kiro session): 320px dock fix
+
+- **What I did**: opened the app in a real browser (Playwright with Chromium) at 1280, 390 and 320 px as part of task 6.2.
+- **What I found**: no horizontal page scroll at any width, but at 390 and 320 px the Moon Clock slider and jump buttons ran off the right edge. The time machine was 592 px wide inside a 210 px column, because its no-wrap jump buttons set its minimum width.
+- **Fix**: one line in `dock.css`, `min-inline-size: 0` on `.gh-dock .shell-time-machine`, so the jump buttons scroll inside the dock as the design says. I added `dock-narrow.test.ts` (a CSS source check) and confirmed it fails without the fix. The 5.9 layout tests had missed this because jsdom cannot lay out.
+- **After**: only the buttons meant to scroll sideways extend past the edge. Full `check.sh` passes (Ghosted 665 tests). Task 6.1 is ticked. Tasks 6.2 (the rest) and 6.3 are open.
+
+---
+
+## Credits so far (Kiro's own "Est. Credits Used" figures for Ghosted)
+
+| Session | What | Credits |
+|---|---|---|
+| 19 | Hook, scaffold, policy-reviewer agent | not shown in the pasted reports |
+| 20 | Policy (task 0.2) | 5.64 |
+| 21 | Steering, requirements, design, tasks (spec stages, with cancelled attempts) | 107.13 |
+| 22 | Task 1.1 TimeMachine | 10.82 |
+| 23 | Task 1.2 TriagePanel | 7.58 |
+| 24 | Tasks 1.3 and 1.4 AutopsyDialog | 12.86 |
+| 25 | Tasks 2.1 to 2.5 | 34.48 |
+| 26 | Tasks 2.6 to 2.11, cancelled | 1.95 |
+| 27 | Tasks 2.6 and 2.7 (4.69 questions + 13.56 files) | 18.25 |
+| 28 | Tasks 2.8 to 2.10 (8.97 questions + 23.55 files) | 32.52 |
+| 29 | Tasks 3.1 to 3.5 | 20.67 |
+| 30 | Tasks 3.6 and 4.1 to 4.3 | 77.50 |
+| 31 | Tasks 4.13, 4.4, 4.5, part of 5.4 | 55.09 |
+| 32 | Layout fixes and tasks 4.6 to 4.9 | 82.00 |
+| 33 | Tasks 4.10 to 4.12 and 4.14 | 106.26 |
+| 34 | Tasks 5.1 to 5.3 | 94.72 |
+| 35 | Tasks 5.4 to 5.10, dock stagger | 115.63 |
+| 36 | policy-reviewer on Ghosted policy | 6.20 |
+| 37 | Save-hook test | 0.72 |
+| | **Total so far** | **790.02** |
+
+Work done outside Kiro (Claude Code) used none of these credits.
+

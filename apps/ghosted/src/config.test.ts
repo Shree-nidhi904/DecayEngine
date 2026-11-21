@@ -1,10 +1,10 @@
 // Package and build configuration (task 2.9; Req 30.2, 32.1, 32.3, 32.4).
-// The files are read as text, never imported. The README check is added in
-// task 5.10.
+// The files are read as text, never imported. Task 5.10 added the README
+// check (Req 32.5) at the end.
 
 import { describe, expect, it } from "vitest"
 import { join } from "node:path"
-import { APP_DIR, readText } from "./test/source-files"
+import { APP_DIR, REPO_DIR, readText } from "./test/source-files"
 
 type PackageJson = { scripts?: Record<string, string>; dependencies?: Record<string, string> }
 
@@ -33,5 +33,39 @@ describe("vite.config.ts", () => {
 
   it('serves from the site root with base "/" (Req 32.3)', () => {
     expect(viteConfig).toMatch(/\bbase\s*:\s*["']\/["']/)
+  })
+})
+
+describe("README.md (Req 32.5)", () => {
+  const readme = readText(join(REPO_DIR, "README.md"))
+  /** The "App 2: Ghosted" section, up to the next section. */
+  const ghosted = (() => {
+    const start = readme.indexOf("## App 2: Ghosted")
+    const end = readme.indexOf("\n## ", start + 1)
+    return start === -1 ? "" : readme.slice(start, end === -1 ? undefined : end)
+  })()
+
+  it("gives Ghosted's run command", () => {
+    expect(readme).toContain("pnpm --filter @decay-engine/ghosted dev")
+  })
+
+  it("describes Ghosted as built, with the engine unchanged", () => {
+    expect(ghosted).not.toBe("")
+    expect(ghosted).toMatch(/\*\*Built\.\*\*/)
+    expect(ghosted).toContain("zero changes to `packages/engine`")
+    expect(readme).toMatch(/^- \[x\] Ghosted\b/m)
+  })
+
+  it("names the shell's three optional additions", () => {
+    for (const prop of ["maxDays", "jumpDays", "budgets", "defaultBudget", "markers", "renderMarker", "markerSummary"]) {
+      expect(ghosted, prop).toContain(`\`${prop}\``)
+    }
+  })
+
+  it("keeps Study Dungeon's section and run command, and claims no Expiry Reaper build (the third app was dropped)", () => {
+    expect(readme).toContain("## App 1: Study Dungeon")
+    expect(readme).toContain("pnpm --filter @decay-engine/study-dungeon dev")
+    expect(readme).not.toMatch(/\[x\] Expiry Reaper/i)
+    expect(readme).not.toContain("## App 3")
   })
 })

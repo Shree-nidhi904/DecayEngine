@@ -5,7 +5,7 @@
 // the first name, and the glyph with the state word (light, glyph and word).
 
 import type { CSSProperties } from "react"
-import { shownFreshness, shownState } from "../lists"
+import { firstName, shownFreshness, shownState } from "../lists"
 import type { Person } from "../policy"
 import { stateWords } from "../wording"
 import { StateGlyph } from "./icons"
@@ -30,12 +30,23 @@ export function windowName(person: Person): string {
   return `${person.payload.name}, ${stateWords[shownState(person)]}, freshness ${shownFreshness(person.health)}`
 }
 
-const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name
+/**
+ * Width of one window column. The wireframe used 76px; 88px leaves room for
+ * the longest state word, "flickering", at the label's 11px on one line,
+ * even when a three-column house is squeezed to the street's width at 320px.
+ * Three columns are 288px, the content box at 320px, so the street never
+ * scrolls sideways (Req 24.4).
+ */
+export const WINDOW_COLUMN_PX = 88
+
+/** A house's widest size: its columns plus the wall's padding (the CSS caps it at 100%). */
+export function houseWidth(columns: number): number {
+  return columns * WINDOW_COLUMN_PX + 24
+}
 
 export function House({ name, people, onOpen, relitId }: HouseProps) {
   const columns = houseColumns(people.length)
-  // The wireframe's widths: 76px per column plus the wall's padding, never wider than the street.
-  const style = { "--c": String(columns), "--w": `${columns * 76 + 24}px` } as CSSProperties
+  const style = { "--c": String(columns), "--w": `${houseWidth(columns)}px` } as CSSProperties
 
   return (
     <div className="gh-house" style={style}>
@@ -55,6 +66,14 @@ export function House({ name, people, onOpen, relitId }: HouseProps) {
                   onClick={() => onOpen(person)}
                 >
                   <Window health={person.health} state={state} size="street" relight={person.id === relitId} />
+                  {/* Moths around a lit window (task 4.4): shown and moving only without reduced motion (motion.css). */}
+                  {person.state === "alive" && (
+                    <span className="gh-moths" aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                  )}
                   <span className="gh-win-name">{firstName(person.payload.name)}</span>
                   <span className="gh-win-meta gh-state" data-state={state}>
                     <StateGlyph state={state} />

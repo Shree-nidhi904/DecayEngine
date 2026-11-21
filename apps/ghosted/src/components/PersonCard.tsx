@@ -46,6 +46,11 @@ export interface PersonCardProps extends PersonActions {
   formatDate: (ms: number) => string
   /** 3 inside the lists, 2 inside the person dialog. */
   headingLevel?: 2 | 3
+  /**
+   * Inside the person dialog: the heading gets tabindex -1 and data-autofocus,
+   * so useModalDialog moves focus to it when the dialog opens (Req 24.2).
+   */
+  focusHeading?: boolean
 }
 
 type ContactKind = ContactEvent["kind"]
@@ -64,6 +69,7 @@ export function PersonCard({
   blocked,
   formatDate,
   headingLevel = 3,
+  focusHeading = false,
   onReachOut,
   onReconnect,
   onAutopsy,
@@ -119,7 +125,12 @@ export function PersonCard({
             <StateGlyph state={state} />
             {stateWords[state]}
           </p>
-          <Heading id={headingId} className="gh-card-name">
+          <Heading
+            id={headingId}
+            className="gh-card-name"
+            tabIndex={focusHeading ? -1 : undefined}
+            data-autofocus={focusHeading ? "" : undefined}
+          >
             {person.payload.name}
           </Heading>
           {relationship !== "" && <p className="gh-card-rel">{relationship}</p>}
@@ -143,27 +154,30 @@ export function PersonCard({
       </div>
       <p className="gh-bar-key">{cardText.barKey(weak, deadMark)}</p>
 
+      {/* The primary button has the first row to itself; the quiet ones share the next, equal widths (layout.css). */}
       <div className="gh-card-actions">
         {dead
           ? writeButton(cardText.reconnect, () => onReconnect(person), true, "reconnect")
           : writeButton(cardText.reachOut, () => onReachOut(person), true, "reach-out")}
-        {dead && (
-          <button type="button" className="gh-button" data-action="autopsy" onClick={() => onAutopsy(person)}>
-            {cardText.autopsy}
+        <div className="gh-card-quiet" data-count={dead ? 4 : 3}>
+          {dead && (
+            <button type="button" className="gh-button" data-action="autopsy" onClick={() => onAutopsy(person)}>
+              {cardText.autopsy}
+            </button>
+          )}
+          {writeButton(cardText.edit, () => onEdit(person), false, "edit")}
+          {writeButton(cardText.remove, () => onRemove(person), false, "remove")}
+          <button
+            type="button"
+            className="gh-button"
+            data-action="history"
+            aria-expanded={historyOpen}
+            aria-controls={historyId}
+            onClick={() => setHistoryOpen((open) => !open)}
+          >
+            {cardText.history}
           </button>
-        )}
-        {writeButton(cardText.edit, () => onEdit(person), false, "edit")}
-        {writeButton(cardText.remove, () => onRemove(person), false, "remove")}
-        <button
-          type="button"
-          className="gh-button"
-          data-action="history"
-          aria-expanded={historyOpen}
-          aria-controls={historyId}
-          onClick={() => setHistoryOpen((open) => !open)}
-        >
-          {cardText.history}
-        </button>
+        </div>
       </div>
       {blocked !== undefined && (
         <p id={blockedId} className="gh-card-blocked">

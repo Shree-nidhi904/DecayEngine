@@ -99,7 +99,8 @@ describe("ThreeLists", () => {
 
     const css = readStyle("layout.css")
     expect(ruleBody(css, ".gh-plot-fading")).toMatch(/var\(--flick\)/)
-    expect(css).toMatch(/\.gh-plot-empty-windows \.gh-plot-title,\s*\.gh-plot-empty-windows \.gh-badge\s*\{[^}]*color:\s*var\(--dark\)/)
+    expect(css).toMatch(/\.gh-plot-empty-windows \.gh-plot-title\s*\{[^}]*color:\s*var\(--dark\)/)
+    expect(css).toMatch(/\.gh-plot-empty-windows \.gh-badge\s*\{[^}]*color:\s*var\(--dim\)/)
     expect(ruleBody(css, ".gh-plot-still")).toMatch(/var\(--glow\)/)
   })
 

@@ -1,0 +1,122 @@
+/*
+ * The header's neon sign and the splash (task 4.14, design sections 4.4 and
+ * 5.3; Req 6.1, 7.1-7.4). Ported from the wireframe's header, h1.logo, .tag,
+ * .splash, .sp-in and .sp-win. Ghosted tokens only, with color-mix in place
+ * of the wireframe's rgba() of --sign.
+ *
+ * Static states only. The sign's glow is declared here, so under reduced
+ * motion the sign is steady and still glows (Req 7.3). The hum and the
+ * splash light-up are in motion.css, inside
+ * @media (prefers-reduced-motion: no-preference).
+ */
+
+/* ----- Header ----- */
+
+.gh-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 24px 8px;
+}
+
+.gh-sign-wrap {
+  text-align: center;
+}
+
+.gh-sign {
+  margin: 0;
+  font-family: var(--logo);
+  font-size: clamp(40px, 9vw, 76px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--sign);
+  text-shadow:
+    0 0 20px color-mix(in srgb, var(--sign) 65%, transparent),
+    0 0 56px color-mix(in srgb, var(--sign) 30%, transparent);
+}
+
+.gh-tagline {
+  margin: 12px 0 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ----- Splash: a full-screen modal dialog ----- */
+
+.gh-splash {
+  position: fixed;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  max-inline-size: none;
+  max-block-size: none;
+  margin: 0;
+  padding: 20px;
+  border: 0;
+  background: var(--bg);
+  color: var(--bone);
+}
+
+.gh-splash[open] {
+  display: grid;
+  place-items: center;
+}
+
+.gh-splash::backdrop {
+  background: var(--bg);
+}
+
+.gh-splash-in {
+  text-align: center;
+}
+
+.gh-splash-windows {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-block-end: 24px;
+}
+
+/* The wireframe's splash panes: small, plain, no silhouette. */
+.gh-splash-windows .gh-pane {
+  display: block;
+  inline-size: 26px;
+  block-size: 36px;
+  border-width: 1px;
+  border-color: var(--line);
+  border-radius: 3px;
+}
+
+.gh-splash-windows .gh-sil {
+  display: none;
+}
+
+.gh-splash-word {
+  margin: 0;
+  font-family: var(--logo);
+  font-size: clamp(46px, 11vw, 92px);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--sign);
+  text-shadow:
+    0 0 22px color-mix(in srgb, var(--sign) 70%, transparent),
+    0 0 60px color-mix(in srgb, var(--sign) 35%, transparent);
+}
+
+.gh-splash-tagline {
+  margin: 16px 0 24px;
+  font-style: italic;
+  color: var(--dim);
+}
+
+.gh-splash-enter {
+  min-block-size: 48px;
+  padding: 12px 24px;
+  font-size: 15px;
+}

@@ -225,6 +225,186 @@ export const cardText = {
   historyFreshness: (n: number) => `freshness ${n}`,
 } as const
 
+/** The Street (task 4.4, Req 10). The note under the heading is freshnessText.streetNote. */
+export const streetText = {
+  title: "The Street",
+  /** The house for people without a relationship tag (Req 10.2). */
+  others: "Others",
+} as const
+
+/** The hero (task 4.5, Req 8, design section 4.4 Hero). */
+export const heroText = {
+  welcome: "Welcome to the street.",
+  /** "1 window is flickering", "4 windows are flickering" (Req 8.1). */
+  flickering: (n: number) => (n === 1 ? "1 window is flickering" : `${n} windows are flickering`),
+  nobodyFading: "Nobody is fading.",
+  allLit: "Every window is lit.",
+  noWindows: "No windows yet.",
+  loadSample: "Load sample street",
+  startEmpty: "Start empty",
+  reachOutTo: (firstName: string) => `Reach out to ${firstName}`,
+  seeEmpty: "See the empty windows",
+  lookAtStreet: "Look at the street",
+  addPerson: "Add a person",
+  /** The eyebrow while the time machine looks ahead (Req 8.5). */
+  previewEyebrow: (date: string) => `Future preview · ${date}`,
+} as const
+
+/** The privacy line below the lists (Req 15). */
+export const privacyText = {
+  sample: "Everything stays in this browser. Names here are made up.",
+  own: "Everything stays in this browser.",
+} as const
+
+/** Buttons shared by the dialogs (tasks 4.6 to 4.9). */
+export const dialogText = {
+  cancel: "Cancel",
+  close: "Close",
+  done: "Done",
+} as const
+
+/** Removing a person (task 4.6, Req 13.5). */
+export const removeText = {
+  confirm: (name: string) => `Remove ${name}? This cannot be undone.`,
+  confirmLabel: "Remove",
+} as const
+
+/** Reset all data (task 4.6, Req 20.7). */
+export const resetText = {
+  button: "Reset all data",
+  confirm: "Reset all data? This cannot be undone.",
+  confirmLabel: "Reset all data",
+} as const
+
+/** The Reach out dialog (task 4.8, Req 18, design section 4.4 ReachOutDialog). */
+export const reachOutText = {
+  title: (name: string) => `Reach out to ${name}`,
+  question: (firstName: string) => `What did you do to reach ${firstName}?`,
+  /** Each choice's effect, from the policy (Req 18.1). */
+  effect: (before: number, after: number) => `Freshness ${before} → ${after}`,
+  brighter: (firstName: string, before: number, after: number) =>
+    `${firstName} is a little brighter. Freshness ${before} → ${after}.`,
+  litAgain: (firstName: string) => `${firstName} is lit again.`,
+  nextBy: (date: string) => `Reach out again by ${date} to keep the window lit.`,
+  wentDark: (name: string) => `${name}'s window went dark before you reached out.`,
+  /** In a Triage session (Req 9.5). */
+  progress: (position: number, total: number) => `Person ${position} of ${total}`,
+  stopSession: "Stop session",
+} as const
+
+/** The Reconnect dialog (task 4.9, Req 14). */
+export const reconnectText = {
+  title: (name: string) => `Reconnect with ${name}`,
+  question: "Which contact happened?",
+  success: (firstName: string) => `${firstName}'s window is lit again. Freshness is 100.`,
+} as const
+
+/** Add and edit a person (task 4.10, Req 17). The rules themselves are personFormRules. */
+export const personFormText = {
+  addTitle: "Add a person",
+  editTitle: (name: string) => `Edit ${name}`,
+  name: "Name",
+  relationship: "Relationship",
+  rhythm: "Usual rhythm in days",
+  lastContact: "Last contact",
+  /** Under the read-only date in the edit form (Req 17.5). */
+  lastContactLocked: "Log a contact to change this",
+  importance: "Importance",
+  costMinutes: "Minutes it takes to reach out",
+  /** The live hint while adding (Req 17.3). */
+  startsDark: "This window starts dark",
+  save: "Save",
+  /** Announced by the App after a save. */
+  added: (name: string) => `${name} was added to the street.`,
+  edited: (name: string) => `${name} was saved.`,
+} as const
+
+/** The toolbar under the lists (design section 4.3). */
+export const toolbarText = {
+  addPerson: "Add a person",
+} as const
+
+/** The Triage panel's own words around the shell panel (task 4.12, Req 9.2, 9.4). */
+export const triageText = {
+  stepsLabel: "How the picks are made",
+  /** The quiet button (Req 9.4): "Today's 5-minute action: Reach out to Dan". */
+  fiveMinute: (firstName: string) => `Today's 5-minute action: Reach out to ${firstName}`,
+} as const
+
+/** The Triage session (Req 9.5, design section 4.3). */
+export const sessionText = {
+  finished: "Session finished.",
+  /** One skipped person in the closing message. */
+  skippedDark: (name: string) => `${name} (the window went dark)`,
+  skippedRemoved: (name: string) => `${name} (removed)`,
+  skipped: (list: string) => `Skipped: ${list}.`,
+} as const
+
+/** The splash (task 4.14, Req 6). The word "Ghosted" is appText.name. */
+export const splashText = {
+  /** Ported from the wireframe's splash line. */
+  tagline: "Some windows are going dark. Let's see whose.",
+  walkIn: "Walk in",
+} as const
+
+/**
+ * The moon-clock dock (task 5.1, Req 12.4). The time machine's own words
+ * (title, slider, jumps, Play) are ghostedWording.timeMachine, and the banner
+ * is ghostedWording.preview.
+ */
+export const dockText = {
+  /** The marker track's group name. */
+  markers: "Who fades and goes dark in the next year",
+  /** A marker's accessible name: "Mira Castell starts fading on 3 March". */
+  fades: (name: string, date: string) => `${name} starts fading on ${date}`,
+  /** A marker's accessible name: "Mira Castell goes dark on 3 March". */
+  dark: (name: string, date: string) => `${name} goes dark on ${date}`,
+  /** Under the track, from the wireframe (hidden from screen readers; the slider says the date). */
+  ticks: ["Today", "3 months", "6 months", "9 months", "1 year"],
+} as const
+
+/** The forecast control (task 5.2, Req 22). */
+export const forecastText = {
+  title: "Forecast",
+  horizonLabel: "Look ahead",
+  horizon: (n: number) => days(n),
+  /** "<name> goes dark on <date>" (Req 22.2). */
+  entry: (name: string, date: string) => `${name} goes dark on ${date}`,
+  /** Req 22.3. */
+  nobody: (n: number) => `Nobody goes dark in the next ${days(n)}.`,
+} as const
+
+/** Back up and restore (task 5.3, Req 21.2-21.4). The refusal reasons are backupRefusals. */
+export const backupText = {
+  backUp: "Back up",
+  restore: "Restore",
+  fileName: (isoDate: string) => `ghosted-backup-${isoDate}.json`,
+  nothing: "There is nothing to back up yet.",
+  saved: (fileName: string) => `Backup saved as ${fileName}.`,
+  /** Before anything is replaced (design section 9.3). */
+  confirm: (n: number) =>
+    `Replace your street with ${n === 1 ? "1 person" : `${n} people`} from this file? This cannot be undone.`,
+  confirmLabel: "Replace my street",
+} as const
+
+/** The import dialog (task 5.3, Req 21.5, 21.6). The format and the defaults are importText. */
+export const importDialogText = {
+  open: "Import people",
+  title: "Import people",
+  label: "People, one per line",
+  placeholder: "Mira Castell | Cousin | 30 | 2023-10-02",
+  ready: (n: number) =>
+    n === 0 ? "No valid lines yet." : n === 1 ? "1 person ready to import." : `${n} people ready to import.`,
+  /** One skipped line (Req 21.6). */
+  skipped: (line: number, reason: string) => `Line ${line}: ${reason}`,
+  submit: "Import",
+  /** Announced by the App after an import. */
+  imported: (n: number) => (n === 1 ? "1 person was added to the street." : `${n} people were added to the street.`),
+  /** After a storage problem part-way (design section 9.2). */
+  stopped: (added: number) =>
+    `Stopped after ${added === 1 ? "1 person" : `${added} people`}. The lines not yet added are still here.`,
+} as const
+
 /** The three lists and the section navigation (task 4.3, Req 11). */
 export const listsText = {
   navLabel: "Sections",
