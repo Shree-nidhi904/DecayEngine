@@ -374,6 +374,13 @@
   color: var(--shell-text-dim);
 }
 
+/* The optional line under the picks (picksNote). No margin: the panel's
+   flex gap gives it the same space above and below. */
+.shell-triage-note {
+  margin: 0;
+  color: var(--shell-text-dim);
+}
+
 /* Autopsy dialog */
 .shell-autopsy {
   width: min(36rem, calc(100vw - 2rem));

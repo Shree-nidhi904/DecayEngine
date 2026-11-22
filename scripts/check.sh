@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs every check the project has, in order, and prints a short summary:
 # install, the engine-unchanged check, typecheck (shell, app, Ghosted),
-# tests (engine, shell, app, Ghosted), and the app and Ghosted builds.
+# tests (engine, shell, app, Ghosted), the app and Ghosted builds, and the landing page (site/).
 # "app" is Study Dungeon.
 # Run it from anywhere in WSL:  bash scripts/check.sh
 # Exit code is 0 only when every step passes.
@@ -53,6 +53,7 @@ step "build app"          pnpm --filter @decay-engine/study-dungeon build
 step "typecheck ghosted"  pnpm --filter @decay-engine/ghosted typecheck
 step "test ghosted"       pnpm --filter @decay-engine/ghosted test
 step "build ghosted"      pnpm --filter @decay-engine/ghosted build
+step "landing page"       bash scripts/check-site.sh
 
 echo
 if [ "$failed" -eq 0 ]; then

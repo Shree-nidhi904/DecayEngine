@@ -15,6 +15,7 @@ import { cleanup, fireEvent, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryStorage, makeAppKit } from "./test/app-kit"
 import { day } from "./test/fixtures"
+import { expandDock } from "./test/dock"
 import { TOUR_TARGET_ATTRIBUTE } from "./components/Tour"
 import { RESET_KEYS, STARTED_FLAG, TOUR_DONE_FLAG, ENGINE_STORAGE_KEY } from "./first-run"
 import { SOUND_SETTING_KEY } from "./sound"
@@ -54,6 +55,10 @@ describe("the tour", () => {
     await user.keyboard("{Enter}")
     expect(stepTitle()).toBe("The time machine")
     expect(outlined()).toEqual([document.querySelector(".shell-time-machine")])
+    // Found in the collapsed dock, which is how the dock starts (Req 19.11).
+    const dock = document.querySelector(".sd-dock")!
+    expect(dock.hasAttribute("data-open")).toBe(false)
+    expect(dock.contains(outlined()[0]!)).toBe(true)
     expect(document.activeElement).toBe(button("Done"))
 
     // Not done yet: only the first-run flag is stored.
@@ -65,6 +70,20 @@ describe("the tour", () => {
     expect(kit.storage.entries()).toEqual({ [STARTED_FLAG]: "1", [TOUR_DONE_FLAG]: "1" })
     // Focus goes to the page, not lost on a removed button.
     expect(document.activeElement).toBe(screen.getByRole("main"))
+  })
+
+  it("the time machine step also finds the time machine in the expanded dock (Req 19.11)", () => {
+    const kit = makeAppKit(new MemoryStorage())
+    kit.renderApp(day(60))
+    fireEvent.click(button("Start empty"))
+    expandDock()
+    fireEvent.click(button("Next"))
+    fireEvent.click(button("Next"))
+    fireEvent.click(button("Next"))
+    expect(stepTitle()).toBe("The time machine")
+    const dock = document.querySelector(".sd-dock")!
+    expect(dock.hasAttribute("data-open")).toBe(true)
+    expect(outlined()).toEqual([dock.querySelector(".shell-time-machine")])
   })
 
   it("Back returns to the previous step", async () => {

@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, screen } from "@testing-library/react"
 import { MemoryStorage, makeAppKit } from "./test/app-kit"
 import { day } from "./test/fixtures"
+import { expandDock } from "./test/dock"
 import { previewBlockedText } from "./wording"
 
 afterEach(cleanup)
@@ -65,6 +66,24 @@ describe("first run", () => {
     expect(screen.getByText("4 facts are weakening")).toBeTruthy()
   })
 
+  it("after Load sample data the hero shows the loss forecast line; after Start empty there is none (task P4, Req 20.1, 20.8)", () => {
+    // The worked example in design "Loss Forecast Line": binary search weakens at +6.74 days and
+    // helicase dies at +5.29 days; nothing else changes state in the next 7 days.
+    const kit = makeAppKit(new MemoryStorage())
+    kit.renderApp(day(60))
+    fireEvent.click(button("Load sample data"))
+    expect(document.querySelector(".sd-hero-loss")!.textContent).toBe(
+      "If you do nothing, in the next 7 days 1 fact weakens and 1 dies."
+    )
+    cleanup()
+
+    const empty = makeAppKit(new MemoryStorage())
+    empty.renderApp(day(60))
+    fireEvent.click(button("Start empty"))
+    expect(screen.getByText("No facts yet. Use Add fact to put your first one in the Crypt.")).toBeTruthy()
+    expect(document.querySelector(".sd-hero-loss")).toBeNull()
+  })
+
   it("is skipped when the flag is missing but facts already exist: the flag is set and nothing is added", () => {
     const kit = makeAppKit(new MemoryStorage())
     kit.add("old", "solid", day(0))
@@ -74,6 +93,18 @@ describe("first run", () => {
     expect(kit.storage.entries()).toEqual({ [FLAG]: "1" })
     expect(kit.engine.view(day(1)).map((f) => f.id)).toEqual(["old"])
     expect([countOf("Crypt"), countOf("Dungeon"), countOf("Graveyard")]).toEqual(["1", "0", "0"])
+  })
+
+  it("has no time dock while it shows; after Start empty the dock is there, collapsed (Req 19.1)", () => {
+    const kit = makeAppKit(new MemoryStorage())
+    kit.renderApp(day(60))
+    expect(document.querySelector(".sd-dock")).toBeNull()
+    fireEvent.click(button("Start empty"))
+    expect(document.querySelector(".sd-dock")!.hasAttribute("data-open")).toBe(false)
+    expect(button("Coming up").getAttribute("aria-expanded")).toBe("false")
+    // Nothing about the dock is stored until the toggle is used.
+    expect(kit.session).not.toBeNull()
+    expect((kit.session as MemoryStorage).entries()).toEqual({})
   })
 
   it("is skipped when the flag is set, even with no facts", () => {
@@ -125,6 +156,7 @@ describe("reset all data", () => {
   it("is disabled while previewing: it says why and opens nothing", () => {
     const kit = setup()
     const before = kit.storage.entries()
+    expandDock()
     fireEvent.click(button("+7 days"))
     const reset = button("Reset all data")
     expect(reset.getAttribute("aria-disabled")).toBe("true")

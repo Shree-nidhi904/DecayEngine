@@ -193,6 +193,22 @@ export const heroText = {
   stats: "Your stats",
   souls: (n: number) => (n === 1 ? "soul banished" : "souls banished"),
   streak: (n: number) => (n === 1 ? "day in a row" : "days in a row"),
+  /**
+   * The loss forecast line under the hero heading (task P4, Requirement 20,
+   * design "Loss Forecast Line", Wording). "The next 7 days" is a rolling
+   * window, never "this week". The noun follows the first count shown; the
+   * verb after "and" agrees with the second count.
+   */
+  lossForecast: (weaken: number, die: number) => {
+    if (weaken === 0 && die === 0) return "Nothing will weaken or die in the next 7 days."
+    const facts = (n: number) => (n === 1 ? "1 fact" : `${n} facts`)
+    const weakens = (n: number) => (n === 1 ? "weakens" : "weaken")
+    const dies = (n: number) => (n === 1 ? "dies" : "die")
+    const start = "If you do nothing, in the next 7 days"
+    if (die === 0) return `${start} ${facts(weaken)} ${weakens(weaken)}.`
+    if (weaken === 0) return `${start} ${facts(die)} ${dies(die)}.`
+    return `${start} ${facts(weaken)} ${weakens(weaken)} and ${die} ${dies(die)}.`
+  },
 } as const
 
 /**
@@ -329,8 +345,10 @@ export const timelineText = {
   none: (maxDays: number) => `No more changes in the next ${maxDays} days.`,
   empty: "Nothing to predict yet.",
   ticks: ["Today", "15d", "30d", "45d", "60d"],
-  unfold: "Open the time machine",
-  fold: "Fold the time machine",
+  /** The dock's toggle (task 21.1, Req 19.3): the same words in both states, and in both apps. */
+  toggle: "Coming up",
+  /** Shown in the collapsed dock only (Req 19.12). */
+  hint: "Drag to look ahead",
 } as const
 
 /** Answering in a fight or a challenge when the answer is checked (answer-check.ts). */
@@ -343,6 +361,7 @@ export const answerText = {
   rightMark: "right",
   wrongMark: "your pick",
   setting: "Answer by",
+  fewFacts: "There are too few other facts to pick from, so type this one.",
   options: { choices: "Picking from four", typed: "Typing it", self: "Trust me (show the answer)" },
   sleepsUntil: (date: string) => `It sleeps until ${date}. Next time it will sleep even longer.`,
 } as const

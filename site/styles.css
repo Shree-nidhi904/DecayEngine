@@ -1,0 +1,169 @@
+/*
+ * The landing page's styles (task P3). Written by Claude Code, outside Kiro, at the developer's request.
+ * Dark only, system fonts, the two apps' accent colours. Motion is only the flickering lights, and only
+ * under prefers-reduced-motion: no-preference.
+ */
+:root {
+  --bg: #07060d;
+  --panel: #100e1a;
+  --panel-hi: #1a1727;
+  --line: #2a2640;
+  --bone: #efe9f5;
+  --dim: #b4aecb;
+  --glow: #ffd479;
+  --pumpkin: #ff8a2b;
+  --sign: #ff7ab8;
+  --display: Georgia, "Times New Roman", serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--bg); }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(700px 360px at 50% -80px, rgb(255 212 121 / 0.12), transparent 70%),
+    var(--bg);
+  background-repeat: no-repeat;
+  color: var(--bone);
+  font-family: var(--display);
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+a { color: inherit; }
+a:focus-visible { outline: 3px solid var(--glow); outline-offset: 3px; border-radius: 4px; }
+
+.skip {
+  position: absolute;
+  inset-inline-start: 16px;
+  inset-block-start: -64px;
+  padding: 10px 14px;
+  background: var(--glow);
+  color: #1a1206;
+  font-family: var(--mono);
+  text-decoration: none;
+  border-radius: 6px;
+}
+.skip:focus { inset-block-start: 16px; }
+
+.top, main, .foot {
+  max-width: 1000px;
+  margin-inline: auto;
+  padding-inline: max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px));
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding-block: 24px 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.top p { margin: 0; }
+.event { color: var(--dim); }
+
+.hero { padding-block: 56px 40px; }
+
+.lights { display: flex; gap: 10px; margin-block-end: 28px; }
+.l {
+  display: block;
+  inline-size: 22px;
+  block-size: 30px;
+  border: 2px solid #3a3560;
+  border-radius: 3px 3px 2px 2px;
+  background: #151128;
+}
+.l1, .l2, .l4 { background: var(--glow); border-color: #b98f3c; box-shadow: 0 0 18px rgb(255 212 121 / 0.45); }
+.l3 { background: #ff9a4a; border-color: #b0641f; }
+.l5 { background: #1d1733; }
+.l6 { background: #151128; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .l3 { animation: flick 3.4s steps(1, end) infinite; }
+  @keyframes flick {
+    0%, 12%, 20%, 62%, 100% { opacity: 1; }
+    14%, 18%, 64% { opacity: 0.35; }
+  }
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: clamp(34px, 7vw, 64px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: 0.01em;
+}
+.lede { margin: 0; max-width: 34em; font-size: clamp(19px, 2.6vw, 23px); color: var(--dim); }
+
+h2 { margin: 0 0 8px; font-size: 22px; font-weight: 600; }
+
+.three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 28px;
+  padding-block: 24px 40px;
+  border-block-start: 1px solid var(--line);
+}
+.three p { margin: 0; color: var(--dim); font-size: 17px; }
+
+.apps { padding-block: 8px 40px; }
+.apps > h2 { margin-block-end: 18px; }
+
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+
+.card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  box-shadow: 0 6px 0 #000;
+  text-decoration: none;
+}
+.card:hover { border-color: var(--accent); }
+.sd { --accent: var(--pumpkin); }
+.gh { --accent: var(--sign); }
+
+.tag { font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.head { font-size: 26px; line-height: 1.2; font-weight: 600; }
+.body { color: var(--dim); font-size: 17px; }
+.go {
+  justify-self: start;
+  margin-block-start: 6px;
+  padding: 12px 18px;
+  min-block-size: 44px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #1a0f08;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 3px 0 rgb(0 0 0 / 0.55);
+}
+
+.how { padding-block: 8px 48px; }
+.how ul { margin: 12px 0 0; padding-inline-start: 1.2em; }
+.how li { margin-block-end: 10px; color: var(--dim); }
+.how strong { color: var(--bone); }
+
+.foot { padding-block: 24px 40px; border-block-start: 1px solid var(--line); }
+.foot nav { display: flex; flex-wrap: wrap; gap: 8px 24px; font-family: var(--mono); font-size: 14px; }
+.foot a { color: var(--dim); padding-block: 10px; text-underline-offset: 4px; }
+.foot a:hover { color: var(--bone); }
+
+@media (max-width: 760px) {
+  body { font-size: 17px; }
+  .three { grid-template-columns: minmax(0, 1fr); }
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .hero { padding-block: 40px 28px; }
+}

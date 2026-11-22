@@ -12,10 +12,16 @@
 // While previewing, the eyebrow names the previewed day and every button
 // here is blocked: visible, focusable, aria-disabled with the reason, and
 // its activation does nothing (Req 8.5). Engine calls: none.
+//
+// Task P4 (Req 35): when the App passes `loss`, one plain line straight after
+// the h2 says how many windows start to flicker and go dark in the next 7
+// days. The App works it out at the real time and leaves it out while
+// previewing and on the first run.
 
 import { useId, useMemo, type ReactNode, type RefObject } from "react"
 import { Counters } from "@decay-engine/shell"
 import { firstName, heroTarget, stateCounts, type BlockedReason, type SectionId } from "../lists"
+import type { LossForecast } from "../loss-forecast"
 import type { Person } from "../policy"
 import { ghostedShellTheme } from "../theme"
 import { ghostedWording, heroText } from "../wording"
@@ -39,6 +45,13 @@ export interface HeroProps {
   /** The App marks started and opens "Add a person". */
   onStartEmpty: () => void
   onAdd: () => void
+  /**
+   * The loss forecast for the next 7 days at the real time (task P4, Req 35).
+   * The App passes undefined while previewing and on the first run;
+   * lossForecast gives null when nobody is lit or flickering. Either way the
+   * line is not shown.
+   */
+  loss?: LossForecast | null
 }
 
 export type HeroCase = "first-run" | "empty" | "fading" | "dark" | "lit"
@@ -56,6 +69,7 @@ export function Hero({
   onLoadSample,
   onStartEmpty,
   onAdd,
+  loss,
 }: HeroProps) {
   const id = useId()
   const headingId = `${id}-message`
@@ -122,6 +136,10 @@ export function Hero({
         <h2 id={headingId} ref={headingRef} tabIndex={-1} className="gh-hero-title">
           {message}
         </h2>
+        {/* A plain line: no live region, role or tabindex, so a tick never announces it (Req 35.10). */}
+        {loss !== undefined && loss !== null && (
+          <p className="gh-hero-loss">{heroText.lossForecast(loss.fade, loss.dark)}</p>
+        )}
         <div className="gh-hero-actions">
           {button(primary, true, "primary")}
           {quiet !== null && button(quiet, false, "quiet")}

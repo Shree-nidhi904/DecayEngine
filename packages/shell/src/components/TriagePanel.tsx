@@ -54,6 +54,13 @@ export interface TriagePanelProps<Payload, PolicyData> {
    * the list's first entry with `budgets`.
    */
   defaultBudget?: number;
+  /**
+   * A line under the picks, between the picks list and the start button.
+   * Called with the picks in the order shown, each time the shown result is
+   * worked out. Returns the text, or null for no line. Omitted: no line, and
+   * the panel renders exactly as without this prop.
+   */
+  picksNote?: (picks: TriageCandidate<Payload, PolicyData>[]) => string | null;
 }
 
 /** Whole days from `now` to `diesAt`, rounded up, never below 0. */
@@ -89,6 +96,7 @@ export function TriagePanel<Payload, PolicyData>({
   initialBudget,
   budgets,
   defaultBudget,
+  picksNote,
 }: TriagePanelProps<Payload, PolicyData>) {
   const text = wording.triage;
   const ids = {
@@ -144,6 +152,8 @@ export function TriagePanel<Payload, PolicyData>({
     if (result.picks.length === 0 && result.others.length === 0) {
       results = <p className="shell-triage-empty">{text.empty}</p>;
     } else {
+      // The optional line under the picks: only while there are picks, and only when it has text.
+      const note = result.picks.length > 0 ? (picksNote?.(result.picks) ?? null) : null;
       results = (
         <>
           <h3 id={ids.picks} className="shell-triage-heading">
@@ -163,6 +173,7 @@ export function TriagePanel<Payload, PolicyData>({
                   </li>
                 ))}
               </ol>
+              {note !== null && note !== "" && <p className="shell-triage-note">{note}</p>}
               <div>
                 <button
                   type="button"

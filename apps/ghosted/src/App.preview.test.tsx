@@ -50,6 +50,12 @@ function renderSample() {
 }
 
 const region = (name: string) => screen.getByRole("region", { name })
+
+/** Moves the dock 30 days ahead with its jump. The dock starts collapsed (task L2), so it is expanded first, as a user would. */
+function jumpAhead() {
+  fireEvent.click(screen.getByRole("button", { name: "Coming up" }))
+  fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
+}
 const heroHeading = () => within(screen.getByRole("main")).getAllByRole("heading", { level: 2 })[0]!
 
 /** What the hero must say for these people (design section 4.4, the hero's cases). */
@@ -92,7 +98,7 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
     expect(streetNames()).toEqual(engine.view(T0).map(windowName).sort())
     expect(ahead.map(windowName).sort()).not.toEqual(streetNames())
 
-    fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
+    jumpAhead()
 
     expect(heroHeading().textContent).toBe(heroMessage(ahead))
     // T0 is 14 Nov 2023 (UTC), so 30 days later is 14 Dec 2023.
@@ -115,7 +121,7 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
 
   it("sets --age to 30 / 365 and shows the banner", () => {
     const { app } = renderSample()
-    fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
+    jumpAhead()
     expect(app.style.getPropertyValue("--age")).toBe((30 / 365).toFixed(4))
     const dock = document.querySelector<HTMLElement>(".gh-dock")!
     expect(within(dock).getByRole("status").textContent).toContain(previewBlockedText)
@@ -125,7 +131,7 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
   it('every write control is aria-disabled with "Future preview · nothing is saved", and stays focusable', () => {
     const { adapter } = renderSample()
     const saves = adapter.saves
-    fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
+    jumpAhead()
 
     const controls = writeControls()
     // Toolbar (4), hero (1), Triage's start, and every card's write buttons.
@@ -143,7 +149,7 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
 
   it("the autopsy still opens in a preview, with its Reconnect disabled and the reason (Req 19.5)", () => {
     renderSample()
-    fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
+    jumpAhead()
     // Leo Marchetti has been dark since 96 days before today.
     const leo = within(region("Empty windows")).getByRole("article", { name: "Leo Marchetti" })
     fireEvent.click(within(leo).getByRole("button", { name: "Autopsy" }))
@@ -155,10 +161,56 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
     expect(screen.queryByRole("dialog", { name: /^Reconnect with / })).toBeNull()
   })
 
+  it("the loss forecast line is gone while previewing and back with the same words after Back to today (task P4, Req 35.7)", () => {
+    renderSample()
+    const line = () => document.querySelector<HTMLElement>(".gh-hero-loss")
+    // Today's sample street: Sunita starts to flicker at +2.4 days (design section 12.5).
+    const today = heroText.lossForecast(1, 0)
+    expect(line()!.textContent).toBe(today)
+
+    jumpAhead()
+
+    expect(line()).toBeNull()
+    expect(screen.getByText(heroText.previewEyebrow("14 Dec 2023"))).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to today" }))
+
+    expect(line()!.textContent).toBe(today)
+    expect(heroHeading().nextElementSibling).toBe(line())
+  })
+
+  it("the Triage saves line follows the previewed picks: 15 days ahead it shows at 30 minutes, while Start stays blocked (task P5, Req 36.8)", () => {
+    renderSample()
+    const triage = () => document.querySelector<HTMLElement>(".gh-triage")!
+    const line = () => triage().querySelector<HTMLElement>(".shell-triage-note")
+    const ONE = "A call or meet-up with these people keeps 1 window from going dark in the next 7 days."
+    // Today nobody flickering goes dark within 7 days (design section 13.7).
+    expect(line()).toBeNull()
+
+    // 15 days ahead with the slider (it works while the dock is collapsed, Req 34.4).
+    fireEvent.change(screen.getByRole("slider"), { target: { value: String(15 * DAY_MS) } })
+    // 30 minutes: Dan and Meera; Meera goes dark 6.7 days later, and a call keeps her lit.
+    expect(line()!.textContent).toBe(ONE)
+    const start = within(triage()).getByRole("button", { name: "Start reaching out" })
+    expect(start.getAttribute("aria-disabled")).toBe("true")
+    expect(start.getAttribute("title")).toBe(previewBlockedText)
+
+    // 15 minutes: Dan and Sam, neither at risk.
+    fireEvent.click(within(triage()).getByRole("radio", { name: "15 min" }))
+    fireEvent.click(within(triage()).getByRole("button", { name: "Plan" }))
+    expect(line()).toBeNull()
+    fireEvent.click(within(triage()).getByRole("radio", { name: "30 min" }))
+    fireEvent.click(within(triage()).getByRole("button", { name: "Plan" }))
+    expect(line()!.textContent).toBe(ONE)
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to today" }))
+    expect(line()).toBeNull()
+  })
+
   it("Back to today shows today's street again and re-enables every write control", () => {
     const { engine, app } = renderSample()
     const today = engine.view(T0)
-    fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
+    jumpAhead()
     expect(document.querySelectorAll('[aria-disabled="true"]').length).toBeGreaterThan(0)
 
     fireEvent.click(screen.getByRole("button", { name: "Back to today" }))

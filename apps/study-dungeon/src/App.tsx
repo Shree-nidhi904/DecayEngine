@@ -8,6 +8,8 @@ import {
 import type { TriageCandidate } from "@decay-engine/engine"
 import type { StudyDungeonEngine } from "./engine-instance"
 import { useSettleTicks, type Scheduler } from "./ticking"
+import { CLOCK_BEHIND_NOTICE_MS, clockBehindText, heldClock } from "./clock-guard"
+import { browserSessionStorage, type SessionFlagStorage } from "./dock-state"
 import type { Fact, FactPayload, FactPolicyData } from "./policy"
 import { ThreeLists, type FactAction } from "./components/ThreeLists"
 import { AddEditFactDialog } from "./components/AddEditFactDialog"
@@ -106,6 +108,13 @@ export interface AppProps {
    * Defaults to "choices". Tests of other behaviour pass "self".
    */
   defaultAnswerCheck?: AnswerCheck
+  /**
+   * Where the time dock keeps its expanded choice for the tab (task 21.1,
+   * dock-state.ts). Defaults to window.sessionStorage, or null when it
+   * cannot be reached; null keeps the choice in React state only. Tests
+   * pass an in-memory fake.
+   */
+  session?: SessionFlagStorage | null
 }
 
 /** The one dialog open at a time, if any. */
@@ -134,7 +143,7 @@ const browserReload = () => window.location.reload()
 
 export function App({
   engine,
-  clock = Date.now,
+  clock: clockProp = Date.now,
   tickScheduler,
   frameScheduler,
   frameClock,
@@ -145,7 +154,15 @@ export function App({
   timeZone,
   createAudioContext,
   defaultAnswerCheck,
+  session: sessionProp,
 }: AppProps) {
+  // The dock's session storage (task 21.1). `session` below is the Triage session.
+  const [dockSession] = useState(() => (sessionProp === undefined ? browserSessionStorage() : sessionProp))
+
+  // The clock never runs behind the newest saved event (clock-guard.ts): the engine refuses a
+  // write dated before one it holds, so a device clock that moved back would crash every tick.
+  const clock = useMemo(() => heldClock(clockProp, engine), [clockProp, engine])
+
   // Every write uses the real time (design.md, Normal Mode). The app may read
   // the clock; the engine never does.
   const writeNow = clock
@@ -282,11 +299,20 @@ export function App({
     [announce]
   )
   // Called after every tick, failed or not (startTicking calls onError first).
-  const handleTick = useCallback((now: number) => {
-    if (!tickFailed.current) tickProblemShown.current = false
-    tickFailed.current = false
-    setRealNow(now)
-  }, [])
+  const clockNoticeShown = useRef(false)
+  const handleTick = useCallback(
+    (now: number) => {
+      if (!tickFailed.current) tickProblemShown.current = false
+      tickFailed.current = false
+      // Held behind the real clock by a saved event from the future: say so once.
+      if (now - clockProp() > CLOCK_BEHIND_NOTICE_MS && !clockNoticeShown.current) {
+        clockNoticeShown.current = true
+        announce(clockBehindText, true)
+      }
+      setRealNow(now)
+    },
+    [announce, clockProp]
+  )
   useSettleTicks(engine, previewing, handleTick, {
     getNow: clock,
     scheduler: tickScheduler,
@@ -760,6 +786,7 @@ export function App({
           frames={frameScheduler}
           clock={frameClock}
           prefersReducedMotion={prefersReducedMotion}
+          session={dockSession}
         />
       )}
     </div>

@@ -161,6 +161,7 @@ export function FightDialog({
       {checked && step !== "answer" && (
         <AnswerPanel
           choices={check === "choices" ? choices : null}
+          explainTyped={check === "choices" && choices === null}
           answer={fact.payload.answer}
           answered={done}
           onAnswer={answer}

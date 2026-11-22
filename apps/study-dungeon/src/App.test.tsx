@@ -13,14 +13,17 @@
 
 import "./test/dialog-polyfill"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { DecayEngine, InMemoryAdapter, type StoredSnapshot } from "@decay-engine/engine"
 import type { FrameScheduler } from "@decay-engine/shell"
 import { App } from "./App"
 import { DAY_MS, studyDungeonPolicy, type FactPayload, type FactPolicyData, type Knowledge, type ReviewEvent } from "./policy"
 import type { Scheduler } from "./ticking"
 import { previewBlockedText } from "./wording"
-import { day } from "./test/fixtures"
+import { T0, day } from "./test/fixtures"
+import { MemoryStorage, makeAppKit } from "./test/app-kit"
+import { loadSampleData } from "./sample-data"
+import { dockToggle, expandDock } from "./test/dock"
 
 afterEach(cleanup)
 
@@ -89,6 +92,7 @@ function makeKit() {
         prefersReducedMotion={() => false}
         formatDate={(ms) => new Date(ms).toISOString().slice(0, 10)}
         defaultAnswerCheck="self"
+        session={new MemoryStorage()}
       />
     )
   }
@@ -123,6 +127,48 @@ const entries = (listName: string) =>
     .getAllByRole("listitem")
     .map((li) => [...li.querySelectorAll("span")].map((s) => s.textContent))
 
+describe("hero: the loss forecast line follows writes and ticks (task P4, Req 20.9)", () => {
+  const lossLine = () => document.querySelector<HTMLElement>(".sd-hero-loss")
+
+  it("a right answer to helicase changes the line (the version dependency)", () => {
+    const kit = makeAppKit()
+    loadSampleData(kit.engine, T0)
+    kit.renderApp(T0)
+    expect(lossLine()!.textContent).toBe("If you do nothing, in the next 7 days 1 fact weakens and 1 dies.")
+
+    fireEvent.click(tab("Dungeon"))
+    // The question is also in the Triage panel, so take the one inside a card.
+    const card = screen
+      .getAllByText("Enzyme that unwinds DNA?")
+      .map((el) => el.closest("article"))
+      .find((a): a is HTMLElement => a !== null)!
+    fireEvent.click(within(card).getByRole("button", { name: "Fight" }))
+    const fight = screen.getByRole("dialog", { name: "Fight" })
+    fireEvent.click(within(fight).getByRole("button", { name: "Show answer" }))
+    fireEvent.click(within(fight).getByRole("button", { name: "I knew it" }))
+
+    // Health 100 and half-life 8: it weakens at 8 × 0.737 = 5.90 days and dies at 26.58 days.
+    const helicase = kit.engine.view(T0).find((f) => f.payload.question === "Enzyme that unwinds DNA?")!
+    expect(helicase.state).toBe("alive")
+    expect(helicase.policyData.halfLifeDays).toBe(8)
+    expect(lossLine()!.textContent).toBe("If you do nothing, in the next 7 days 2 facts weaken.")
+  })
+
+  it("a settle tick moves the line (the realNow dependency)", () => {
+    // One solid fact added at T0 weakens at T0 + 636 738 273.36 ms.
+    const kit = makeAppKit()
+    kit.add("s1", "solid", T0)
+    kit.renderApp(T0 + 31_878_000)
+    // The crossing is 7 days + 60.3 s away.
+    expect(lossLine()!.textContent).toBe("Nothing will weaken or die in the next 7 days.")
+
+    kit.setClock(T0 + 31_998_000)
+    act(() => kit.fireTick())
+    // Now 7 days − 59.7 s away.
+    expect(lossLine()!.textContent).toBe("If you do nothing, in the next 7 days 1 fact weakens.")
+  })
+})
+
 describe("time machine: the lists follow the previewed day", () => {
   it("a solid fact added on day 0 is in the Dungeon at +30 days and the Graveyard at +34", () => {
     const kit = makeKit()
@@ -134,6 +180,8 @@ describe("time machine: the lists follow the previewed day", () => {
     expect([countOf("Crypt"), countOf("Dungeon"), countOf("Graveyard")]).toEqual(["1", "0", "0"])
 
     // +30: 100 × 0.5^(30/10) = 12.5, weak (10 ≤ 12.5 < 60). Shown rounded down.
+    // The jumps are in the expanded dock (task 21).
+    expandDock()
     fireEvent.click(button("+30 days"))
     expect(showing()).toBe("2026-10-31 · 30 days ahead")
     expect(banner()).not.toBeNull()
@@ -174,6 +222,7 @@ describe("time machine: writes are blocked while previewing", () => {
       history: ["a2", "a1", "w1", "d1"].map((id) => kit.engine.history(id)),
     }
     expect(kit.tickSpy.mock.calls).toEqual([[day(10)]])
+    expandDock()
     fireEvent.click(button("+7 days"))
     return { kit, before }
   }
@@ -234,6 +283,30 @@ describe("time machine: writes are blocked while previewing", () => {
     expectBlocked(start)
     fireEvent.click(start)
     expect(dialogs()).toEqual([])
+    expect(kit.adapter.saves).toBe(before.saves)
+  })
+
+  it("collapsing the dock during a preview keeps the offset, the banner and the blocked writes (Req 19.4)", () => {
+    const { kit, before } = setupPreviewed()
+    // Today is day 10 (11 Oct); +7 days is 18 Oct.
+    expect(showing()).toBe("2026-10-18 · 7 days ahead")
+
+    fireEvent.click(dockToggle())
+    expect(dockToggle().getAttribute("aria-expanded")).toBe("false")
+
+    expect(showing()).toBe("2026-10-18 · 7 days ahead")
+    expect((slider() as HTMLInputElement).value).toBe(String(7 * DAY_MS))
+    expect(banner()).not.toBeNull()
+    expect(button("Back to today")).toBeTruthy()
+    expectBlocked(button("Add fact"))
+    fireEvent.click(button("Add fact"))
+    expect(dialogs()).toEqual([])
+
+    // The slider still moves the preview while collapsed.
+    fireEvent.change(slider(), { target: { value: String(8 * DAY_MS) } })
+    expect(showing()).toBe("2026-10-19 · 8 days ahead")
+    expect(banner()).not.toBeNull()
+    expectBlocked(button("Add fact"))
     expect(kit.adapter.saves).toBe(before.saves)
   })
 

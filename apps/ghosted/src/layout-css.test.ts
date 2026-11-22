@@ -87,8 +87,21 @@ describe("the dock (Req 12.7, 24.4)", () => {
     expect(rule("layout.css", ":root").decls.get("--dock-max")).toBe("180px")
     const narrow = rulesOf(narrowBlock(styleText("layout.css")), "layout.css")
     expect(narrow.find((r) => r.selectors.includes(":root"))?.decls.get("--dock-max")).toBe("128px")
-    expect(rule("layout.css", "html").decls.get("scroll-padding-bottom")).toBe("calc(var(--dock-max) + 12px)")
-    expect(rule("layout.css", ".gh-main").decls.get("padding-block-end")).toBe("calc(var(--dock-max) + 24px)")
+    // Task L2 (Req 34.7, 34.12): the dock's measured height, --dock-h, with --dock-max until it is measured.
+    expect(rule("layout.css", "html").decls.get("scroll-padding-bottom")).toBe("calc(var(--dock-h, var(--dock-max)) + 12px)")
+    expect(rule("layout.css", ".gh-main").decls.get("padding-block-end")).toBe("calc(var(--dock-h, var(--dock-max)) + 24px)")
+  })
+
+  it("the screen-reader-only class hides its content from view without removing it (task L2, Req 34.6)", () => {
+    const decls = rule("layout.css", ".gh-sr-only").decls
+    expect(decls.get("position")).toBe("absolute")
+    expect(decls.get("inline-size")).toBe("1px")
+    expect(decls.get("block-size")).toBe("1px")
+    expect(decls.get("overflow")).toBe("hidden")
+    expect(decls.get("clip-path")).toBe("inset(50%)")
+    // Never display: none or visibility: hidden, which would hide it from screen readers too.
+    expect(decls.has("display")).toBe(false)
+    expect(decls.has("visibility")).toBe(false)
   })
 })
 
@@ -120,6 +133,8 @@ describe("tap targets of at least 44 × 44px (Req 13.4, 24.1)", () => {
     ["layout.css", ".gh-forecast-choice"],
     ["dialogs.css", ".gh-radio"],
     ["street.css", ".gh-win"],
+    // Task L2: the dock's "Coming up" toggle (Req 34.3).
+    ["dock.css", ".gh-dock-toggle"],
   ]
 
   it.each(BOTH)("%s %s: min-inline-size and min-block-size at least 44px", (file, selector) => {
@@ -132,5 +147,36 @@ describe("tap targets of at least 44 × 44px (Req 13.4, 24.1)", () => {
     const decls = rule("dialogs.css", ".gh-choice").decls
     expect(decls.get("inline-size")).toBe("100%")
     expect(px(decls.get("min-block-size"))).toBeGreaterThanOrEqual(44)
+  })
+})
+
+describe("the Triage saves line (task P5, Req 36.10)", () => {
+  const noteRules = () => RULES.filter((r) => r.selectors.some((s) => s.includes(".shell-triage-note")))
+
+  it("is styled in layout.css with no margin of its own, so the shell panel's 12px gap sits above and below it", () => {
+    const decls = rule("layout.css", ".gh-triage .shell-triage-note").decls
+    expect(decls.get("color")).toBe("var(--dim)")
+    for (const name of decls.keys()) expect(name, `.gh-triage .shell-triage-note sets ${name}`).not.toMatch(/^margin/)
+  })
+
+  it("no rule in the app's CSS hides it, at any width, or gives it a margin", () => {
+    expect(noteRules().length).toBeGreaterThan(0)
+    for (const r of noteRules()) {
+      const where = `${r.file}: ${r.selectors.join(", ")}`
+      expect(r.decls.get("display"), where).not.toBe("none")
+      expect(r.decls.get("visibility"), where).not.toBe("hidden")
+      expect([...r.decls.keys()].filter((name) => /^margin/.test(name)), where).toEqual([])
+    }
+  })
+
+  it("no rule in the app's CSS changes the shell panel's gap or display", () => {
+    const panel = RULES.filter((r) => r.selectors.some((s) => /(^|\s)\.shell-triage$/.test(s)))
+    expect(panel.length).toBeGreaterThan(0)
+    for (const r of panel) {
+      const where = `${r.file}: ${r.selectors.join(", ")}`
+      expect(r.decls.has("gap"), where).toBe(false)
+      expect(r.decls.has("row-gap"), where).toBe(false)
+      expect(r.decls.has("display"), where).toBe(false)
+    }
   })
 })

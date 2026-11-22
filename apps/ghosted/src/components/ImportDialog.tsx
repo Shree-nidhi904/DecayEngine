@@ -27,7 +27,7 @@
 
 import { useId, useMemo, useState, type FormEvent } from "react"
 import type { GhostedEngine } from "../engine-instance"
-import { IMPORT_COST_MINUTES, IMPORT_IMPORTANCE, parseImport, type ImportedPerson } from "../import-people"
+import { IMPORT_COST_MINUTES, IMPORT_IMPORTANCE, duplicateReasons, parseImport, type ImportedPerson } from "../import-people"
 import { storageProblemText } from "../storage-errors"
 import { dialogText, importDialogText, importText, previewBlockedText } from "../wording"
 import { runGatedWrite } from "../write-guard"
@@ -36,7 +36,7 @@ import "../styles/layout.css"
 import "../styles/dialogs.css"
 
 export interface ImportDialogProps {
-  engine: Pick<GhostedEngine, "addItem">
+  engine: Pick<GhostedEngine, "addItem" | "view">
   /** The real clock: "today" for the date rule, a missing date, and the time of each add. */
   clock: () => number
   /** Day starts of the dates. Tests pass "UTC". */
@@ -53,11 +53,19 @@ export interface ImportDialogProps {
 type Line = { raw: string; person?: ImportedPerson; skipped?: string }
 
 /** Reads each line on its own, so every person keeps its line (for "Line N" and for what is left after a stop). */
-function readLines(text: string, at: number, timeZone: string | undefined): Line[] {
-  return text.split(/\r?\n/).map((raw) => {
+function readLines(
+  text: string,
+  at: number,
+  timeZone: string | undefined,
+  existing: readonly { name: string; relationship: string }[]
+): Line[] {
+  const lines: Line[] = text.split(/\r?\n/).map((raw) => {
     const { people, skipped } = parseImport(raw, at, timeZone)
     return { raw, person: people[0], skipped: skipped[0]?.reason }
   })
+  // Task P6: a line that repeats someone (this paste or the street) is skipped with its reason.
+  const repeats = duplicateReasons(lines.map((l) => l.person), existing)
+  return lines.map((l, index) => (repeats[index] === undefined ? l : { raw: l.raw, skipped: repeats[index] }))
 }
 
 export function ImportDialog({ engine, clock, timeZone, previewing, onImported, onClose }: ImportDialogProps) {
@@ -65,14 +73,17 @@ export function ImportDialog({ engine, clock, timeZone, previewing, onImported, 
   const id = useId()
   const [text, setText] = useState("")
   const [problem, setProblem] = useState<string | null>(null)
-  const lines = useMemo(() => readLines(text, clock(), timeZone), [text, clock, timeZone])
+  const lines = useMemo(
+    () => readLines(text, clock(), timeZone, engine.view(clock()).map((p) => p.payload)),
+    [text, clock, timeZone, engine]
+  )
   const ready = lines.filter((l) => l.person !== undefined).length
   const skipped = lines.flatMap((l, index) => (l.skipped === undefined ? [] : [{ line: index + 1, reason: l.skipped }]))
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const at = clock()
-    const current = readLines(text, at, timeZone)
+    const current = readLines(text, at, timeZone, engine.view(at).map((p) => p.payload))
     if (!current.some((l) => l.person !== undefined)) return
     setProblem(null)
 

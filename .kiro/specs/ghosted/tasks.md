@@ -383,36 +383,98 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - _Requirements: 33.2, 33.6_
 
 - [ ] 8. Group H: A compact moon dock (task L2, design section 11)
-  - [ ] 8.1 Session flag and wording
+  - [x] 8.1 Session flag and wording
     - New `dock-state.ts` (`readDockExpanded`, `writeDockExpanded`, key `ghosted.dock-expanded` on the `session` prop) and `dock-state.test.ts`
-    - `wording.ts`: `dockText.toggle`, `dockText.markerList`, `dockText.fadesIn`, `dockText.darkIn`; `wording.test.ts` arguments for the two functions
+    - `wording.ts`: `dockText.toggle` ("Coming up"), `dockText.hint` ("Drag to look ahead"), `dockText.markerList`, `dockText.fadesIn`, `dockText.darkIn`. In `wording.test.ts`: arguments for the two functions, and a case for the exact toggle and hint words
     - `timeline.ts`: `markerSoonLabel`; cases in `timeline.test.ts`
-    - _Requirements: 34.5, 34.6, 34.10_
-  - [ ] 8.2 The dock collapses
-    - `MoonDock.tsx`: `expanded` state from the session flag; `data-expanded`; the toggle in `belowSlider`; the markers, ticks and list only while expanded; the banner in both states; the App passes `session`
+    - _Requirements: 34.5, 34.6, 34.10, 34.11_
+  - [x] 8.2 The dock collapses
+    - `MoonDock.tsx`: `expanded` state from the session flag; `data-expanded`; the toggle in `belowSlider`; the markers, ticks and list only while expanded; the "Drag to look ahead" hint only while collapsed; the banner in both states; the App passes `session`
     - `dock.css`: the collapsed bar (small moon, controls hidden), the toggle at 44 px and quiet, the chevron's transition inside `no-preference`
-    - _Requirements: 34.1, 34.2, 34.3, 34.4, 34.8, 34.9_
-  - [ ] 8.3 Marker labels
+    - _Requirements: 34.1, 34.2, 34.3, 34.4, 34.8, 34.9, 34.11_
+  - [x] 8.3 Marker labels
     - The tip span in each marker, shown on `:hover` and `:focus-visible`; the visually hidden `<ol>`; `.gh-sr-only` in `layout.css`
     - _Requirements: 34.6_
-  - [ ] 8.4 The page's bottom room
-    - `useDockHeight` sets `--dock-h` on the root element; `layout.css` uses `var(--dock-h, var(--dock-max))` for the scroll padding and `.gh-main`'s bottom padding
-    - _Requirements: 34.7_
-  - [ ] 8.5 Update the existing tests to match
+  - [x] 8.4 The page's bottom room
+    - `useDockHeight` feature-detects `ResizeObserver` and sets `--dock-h` on the root element only when it exists. `layout.css` uses `var(--dock-h, var(--dock-max))` for the scroll padding and for `.gh-main`'s bottom padding
+    - Tests stub `ResizeObserver` explicitly (a fake on `globalThis`, removed afterwards): with it, `--dock-h` equals the fired size; without it, `--dock-h` is not set. No assertion is weakened
+    - _Requirements: 34.7, 34.12_
+  - [x] 8.5 Update the existing tests to match
     - The tests listed in design section 11.6. Change them to match the new behaviour; never loosen an assertion, skip a test or change an expected value to pass (`no-fake-tests.md`)
     - _Requirements: 34.1-34.10_
-  - [ ] 8.6 Check
+  - [x] 8.6 Check
     - `bash scripts/check.sh` passes (at least 701 / 152 / 465 / 665 plus the new tests); `scripts/check-engine-unchanged.sh` passes
-    - Browser check at 320, 390 and 1280 px on a draft deploy or a developer-started server: collapsed by default, nothing covered by the bar, the toggle works, the labels show on hover and focus. Then re-run the L1 check (Req 33.2) with the new dock
+    - Screenshots at 1280×800, 390×844 and 320×640 with the sample data, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server. Check: collapsed by default with the hint, nothing covered by the bar, the toggle works, the labels show on hover and focus. Then re-run the L1 check (Req 33.2) with the new dock
+    - Ghosted is built and checked before any Study Dungeon task (21.x) starts. If Study Dungeon is not done in time, Ghosted ships on its own
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 34.7, 33.2_
+
+- [ ] 9. Group I: The loss forecast line (task P4, design section 12)
+  - [x] 9.1 Wording and the pure count
+    - `wording.ts`: `heroText.lossForecast(fade, dark)` with the sentences of design section 12.3 ("in the next 7 days", never "this week")
+    - New `loss-forecast.ts`: `LOSS_FORECAST_DAYS = 7`, `LossForecast`, `lossForecast(peopleToday, forecastToday, today)`, built on the existing `dockMarkers` (no policy formula repeated)
+    - New `loss-forecast.test.ts`: every case in the design 12.6 table (sample, zero, counted once, both boundaries in and out, only dark, no people, exact words)
+    - New `loss-forecast.property.test.ts`: Property 14, `{ numRuns: 100 }`, with `personAt(scenario())`
+    - `wording.test.ts`: the new `SAMPLE_CALLS` entry and the "no die or dead" case. `BANNED` is unchanged
+    - _Requirements: 35.2, 35.3, 35.4, 35.5, 35.6, 35.11_
+  - [x] 9.2 The hero shows the line
+    - `App.tsx`: the `loss` memo on `[engine, realNow, version]`, passed as `loss={previewing || firstRun ? undefined : loss}`
+    - `components/Hero.tsx`: optional `loss` prop; the `<p className="gh-hero-loss">` straight after the `h2`; no `aria-live`, `role` or `tabindex`
+    - `styles/layout.css`: `.gh-hero-loss` in `--dim`, body type, an 8 px top margin. No rule hides it at any width
+    - _Requirements: 35.1, 35.7, 35.8, 35.9, 35.10, 35.12, 35.13_
+  - [x] 9.3 Update the existing tests to match
+    - The tests in the design 12.6 "Changed existing tests" table. First search the tests for `gh-hero-main`, `.gh-hero` and the hero's `textContent`. Change tests to match; never loosen an assertion, skip a test or change an expected value to make it pass (`no-fake-tests.md`)
+    - _Requirements: 35.1, 35.7, 35.8, 35.9, 35.10_
+    - **Status (Session 47):** every row of the 12.6 table is done (`wording.test.ts`, `Hero.test.tsx`, `App.test.tsx` including the tick case, `App.preview.test.tsx`, `App.first-run.test.tsx`, `App.accessibility.test.tsx`; `contrast.test.ts` unchanged). Ticked after Claude Code ran the full-text search for `gh-hero` over the test files (six files, none compares the hero's whole text) and the full Ghosted suite (739 passed). Read and found nothing that compares the hero's whole text: `Hero.test.tsx`, `App.test.tsx`, `App.first-run.test.tsx`, `App.preview.test.tsx`, `App.accessibility.test.tsx`, `primary-buttons.test.tsx`, the first part of `App.storage-errors.test.tsx`. Not read: `App.session.test.tsx`, `App.preview.property.test.tsx`, the rest of `App.storage-errors.test.tsx`. Run `grep -rn "gh-hero" apps/ghosted/src --include=*.test.tsx` and tick this once nothing else turns up
+  - [x] 9.4 Check
+    - Starts after task 8.6, so Requirement 33.2 is measured with the compact dock
+    - `bash scripts/check.sh` passes (the 8.6 counts plus the new tests); `scripts/check-engine-unchanged.sh` passes
+    - Requirement 33.2 again at 1280×800 and 390×844 with the sample data and the line in place, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server. If the first row of windows does not fit at 390×844, tighten only the hero's padding and margins in `layout.css`, then measure again. If it still does not fit, stop and report the measured heights of the sign, the hero and the Street heading (design 12.7.5). Never hide the line on small screens
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 35.12, 35.13, 33.2_
+
+- [ ] 10. Group J: What this session saves (task P5, design section 13)
+  - P5 starts only after task 9.4 (the P4 check) is ticked.
+  - [x] 10.1 Shell addition: the `picksNote` prop (shared with Study Dungeon task 23)
+    - `packages/shell/src/components/TriagePanel.tsx`: the optional `picksNote` prop of design 13.2, rendered as `<p className="shell-triage-note">` straight after the picks `<ol>` and before the start button's wrapper, only while there are picks and the text is not empty. No `aria-live`, `role` or `tabindex`
+    - `packages/shell/src/shell.css`: `.shell-triage-note { margin: 0; color: var(--shell-text-dim); }`. The 12 px gap above and below comes from `.shell-triage`'s flex gap
+    - New `packages/shell/src/components/TriagePanel.note.test.tsx`: every case in the design 13.8 shell list
+    - `scripts/check-engine-unchanged.sh`: add `TriagePanel\.note` to the allowed test files; the comment and the failure message name Requirement 36. Nothing else in the script changes
+    - No existing shell test file is edited; the shell and Study Dungeon suites must pass unchanged
+    - _Requirements: 36.1, 36.6, 36.9, 36.10, 36.11, 29.4_
+  - [x] 10.2 Wording and the pure count
+    - `wording.ts`: `triageText.saves(n)` with the sentences of design 13.5
+    - New `triage-saves.ts`: `SAVE_EVENT`, `savedPicks(picks, now)`, `triageSaves(picks, now)`, using `LOSS_FORECAST_DAYS` from `loss-forecast.ts` (no new number) and only `ghostedPolicy.applyEvent` and `healthAt` (no formula written out)
+    - New `triage-saves.test.ts`: every case in the design 13.8 table (no picks, zero not at risk, zero at risk but not kept, one, many, a text is not enough, both boundaries, missing `diesAt`, counted once, budget, sample at +15 days, exact words)
+    - `wording.test.ts`: the new `SAMPLE_CALLS` entry, the "no die or dead" case extended to `triageText.saves(`, and an exact-words case. `BANNED` is unchanged
+    - _Requirements: 36.2, 36.3, 36.4, 36.5, 36.6_
+  - [x] 10.3 The property test
+    - New `triage-saves.property.test.ts`: Property 15, `{ numRuns: 100 }`, with `scenario()` and `personAt` from `test/generators.ts` (unchanged) and the rhythm mix of design 13.8; a call and, separately, a meet-up through the real engine
+    - Its coverage check at a fixed seed (counted, at risk and not kept, not at risk, each at least 5% of picks). Never lower `numRuns` or a threshold to pass
+    - _Requirements: 36.4, 36.13_
+  - [x] 10.4 Triage shows the line
+    - `components/GhostedTriage.tsx`: the `picksNote` callback of design 13.6 on `[now]`, passed to `TriagePanel`
+    - `styles/layout.css`: `.gh-triage .shell-triage-note` in `--dim`, body type, no margin, no media query
+    - `contrast.test.ts`: the one new row of design 13.6
+    - No change to `policy.ts`, `autopsy-sentences.ts` or `packages/engine/`
+    - _Requirements: 36.1, 36.7, 36.8, 36.9, 36.10, 36.12_
+  - [x] 10.5 Update the existing tests to match
+    - First run `grep -rn "shell-triage\|gh-triage\|Reach out to these" apps/ghosted/src packages/shell/src --include=*.test.*`, or ask the developer to run it, and read every match
+    - The tests in the design 13.8 "Changed existing tests" table: `GhostedTriage.test.tsx`, `App.test.tsx` (budget field and the `version` case), `App.preview.test.tsx`, `App.accessibility.test.tsx` (no `aria-live`, not in the Tab order), `layout-css.test.ts`. Change tests to match; never loosen an assertion, skip a test or change an expected value to make it pass (`no-fake-tests.md`)
+    - _Requirements: 36.1, 36.6, 36.7, 36.8, 36.9, 36.10_
+    - **Status (Session 59):** 10.1 to 10.5 written with file reads and edits only; nothing was run (no tests, typecheck or check scripts), so 10.6 runs them first. The search was done with the workspace search tool (the same pattern over `apps/ghosted/src` and `packages/shell/src` test files), not a shell `grep`. No matching test compares the whole Triage panel's text, so no existing assertion was changed; only new cases were added (and `DAY_MS` to one import). The coverage thresholds of the property test (5% each) were not measured: if one fails, change the generator mix, never the threshold or `numRuns`
+  - [ ] 10.6 Check
+    - `bash scripts/check.sh` passes (at least engine 701, shell 152, Study Dungeon 542, Ghosted 753, plus the new tests); `scripts/check-engine-unchanged.sh` passes with the new shell test file
+    - A browser look at 1280×800 and 390×844 on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server, with the sample street and the moon clock at +15 days: at 30 minutes the line reads the 13.7 sentence under the picks; at 15 minutes there is none. Measure the gap from the last pick's bottom to the line and from the line to "Start reaching out" (at least 8 px each), and check the line is fully visible and not clipped at both widths. Today, with no preview, there is no line at any budget (13.7)
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 36.10, 36.11, 36.12, 29.4_
 
 ## Notes
 
 - **Module not written by Kiro.** `autopsy-sentences.ts` was written by Claude Code outside Kiro (task 0.3); Kiro writes only its tests and never edits it. `policy.ts` is written by Kiro in task 0.2 as a documented exception; after that, Kiro changes it only through a task that names it, and if a test seems to need a change Kiro stops and reports it.
 - **Checkpoints.** The developer runs every `bash scripts/check.sh` in WSL. A Kiro task is done when its tests prove the behaviour; the checkpoint confirms the whole suite.
 - **Optional tasks.** Study Dungeon's plan marks no task with `*`, so none is marked here. Its only cut-first task (sound) is out of scope for Ghosted.
-- **Shell scope.** Only the files in task 1.1 to 1.4 change in `packages/shell/`. Task 2.10's check fails on any other shell change; if one seems needed, stop and report it (Requirement 29.4).
+- **Shell scope.** Only the files in tasks 1.1 to 1.4 and 10.1 change in `packages/shell/`. Task 2.10's check fails on any other shell change; if one seems needed, stop and report it (Requirement 29.4).
 - **Engine.** No task touches `packages/engine/`.
 - **Tests.** Fixed `T0` plus offsets, never the real clock; property tests at `{ numRuns: 100 }` or more; never skip, weaken or change an expected value to make a test pass.
 - **Kiro log.** Every Kiro session on these tasks adds a session to `docs/KIRO_LOG.md` in the existing format (`authorship.md`).

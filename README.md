@@ -1,5 +1,7 @@
 # Decay Engine
 
+**Start here: [decay-engine-landing.netlify.app](https://decay-engine-landing.netlify.app)**, one page with the pitch and both live apps.
+
 - [Study Dungeon](https://decay-engine-study-dungeon.netlify.app): facts you study fade into monsters, so review them before they die.
 - [Ghosted](https://decay-engine-ghosted.netlify.app): a street of windows, one per person, where each light shows how recently you were in touch.
 
@@ -252,7 +254,7 @@ The decay rules are set by me in the specs. **Not all of the code was written in
 - [x] Engine spec: requirements, design, tasks
 - [x] Steering, hooks and the `policy-reviewer` agent
 - [x] Engine and tests (701)
-- [x] Study Dungeon (465 app tests, 152 shell tests)
+- [x] Study Dungeon (542 app tests, 152 shell tests)
 - [x] Ghosted (665 tests), with the engine unchanged
 - [x] Deployed sites
 - [ ] Demo video

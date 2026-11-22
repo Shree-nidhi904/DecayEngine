@@ -290,6 +290,18 @@
   letter-spacing: 0.02em;
 }
 
+/*
+ * Task P4 (Req 35.10, 35.13): the loss forecast line under the hero heading.
+ * Body type (Spectral, inherited) in --dim, an 8px top margin. No width, no
+ * animation, and no rule hides it at any width.
+ */
+.gh-hero-loss {
+  margin: 8px 0 12px;
+  color: var(--dim);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
 .gh-hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -404,6 +416,15 @@
   color: var(--glow);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* Task P5 (Req 36.9, 36.10): the line under the picks. No margin: the shell
+   panel's 12px gap sits above and below it, so it never touches the pick
+   above or "Start reaching out" below. Never hidden at any width. */
+.gh-triage .shell-triage-note {
+  color: var(--dim);
+  font-size: 17px;
+  line-height: 1.5;
 }
 
 .gh-pick {
@@ -712,14 +733,33 @@
   }
 }
 
+/*
+ * Task L2 (Req 34.7, 34.12): the room follows the dock's measured height,
+ * --dock-h, which MoonDock sets on the root element. Before the first
+ * measurement, or without ResizeObserver, the room is --dock-max, as before.
+ */
+
 /* A focused or scrolled-to element always stops above the dock. */
 html {
-  scroll-padding-bottom: calc(var(--dock-max) + 12px);
+  scroll-padding-bottom: calc(var(--dock-h, var(--dock-max)) + 12px);
 }
 
 /* The last content can scroll clear of the dock. */
 .gh-main {
-  padding-block-end: calc(var(--dock-max) + 24px);
+  padding-block-end: calc(var(--dock-h, var(--dock-max)) + 24px);
+}
+
+/* Read by screen readers, not shown (task L2: the dock's marker list, Req 34.6). */
+.gh-sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /*
@@ -831,5 +871,43 @@ html {
   }
   .gh-cards {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
+ * Task P4, found in the 9.4 check (Nov 22): at 390x844 the loss line made the hero 342px
+ * tall and the first row of windows ended 49px below the top of the collapsed dock (Req 33.2),
+ * and the line touched the buttons (0px gap). Up to 520px only the hero's own padding, gaps
+ * and type are tightened (design 12.7.5); the line is never hidden. The line keeps 8px
+ * below it, to the buttons. (Written by Claude Code, outside Kiro, at the developer's request.)
+ */
+@media (max-width: 520px) {
+  .gh-hero {
+    gap: 8px;
+    margin-block: 8px 8px;
+    padding: 10px 14px;
+  }
+  .gh-hero-title {
+    margin-block-end: 6px;
+    font-size: 26px;
+  }
+  .gh-hero-loss {
+    margin: 4px 0 8px;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .gh-hero-actions {
+    gap: 8px;
+  }
+  .gh-hero-action {
+    min-block-size: 44px;
+    padding: 8px 16px;
+  }
+  .gh-hero .shell-counters {
+    gap: 8px;
+  }
+  .gh-hero .shell-counter {
+    gap: 4px;
+    padding: 8px 6px;
   }
 }

@@ -134,6 +134,7 @@ export function ChallengeDialog({
       {checked && (
         <AnswerPanel
           choices={check === "choices" ? choices : null}
+          explainTyped={check === "choices" && choices === null}
           answer={fact.payload.answer}
           answered={result !== null}
           onAnswer={answer}

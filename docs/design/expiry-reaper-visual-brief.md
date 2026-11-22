@@ -1,5 +1,7 @@
 # Expiry Reaper: visual brief
 
+> **Dropped on Nov 22, 2026. Expiry Reaper was not built.** Ghosted is the reuse proof. This brief is kept for the record only.
+
 Written **before** Kiro scaffolds Expiry Reaper. Its job in the project is to prove reuse: the engine and shell must not change at all. The look must still be its own, so it needs this brief from the start.
 
 There is **no wireframe yet**. Make one (outside Kiro, like the other two) before the build, or have Kiro build directly from this brief and record that in the Kiro log. Tokens: `.kiro/steering/design-tokens.md`, Expiry Reaper section.

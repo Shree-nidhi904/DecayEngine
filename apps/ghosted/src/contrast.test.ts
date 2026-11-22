@@ -129,11 +129,16 @@ describe("the shell controls the app restyled (Triage, the dock's time machine a
     { file: "layout.css", selector: ".gh-app .shell-preview-banner .shell-button", text: "bone", on: ["bg"] },
     { file: "layout.css", selector: ".gh-triage .shell-triage-title", text: "glow", on: PANELS },
     { file: "layout.css", selector: ".gh-triage-steps", text: "dim", on: PANELS },
+    // Task P5: the saves line under the Triage picks.
+    { file: "layout.css", selector: ".gh-triage .shell-triage-note", text: "dim", on: PANELS },
     { file: "layout.css", selector: ".gh-pick-state", text: "flick", on: PANELS },
     { file: "dock.css", selector: ".gh-dock .shell-time-machine-title", text: "bone", on: PANELS },
     { file: "dock.css", selector: ".gh-dock .shell-time-machine-showing", text: "glow", on: PANELS },
     { file: "dock.css", selector: ".gh-dock .shell-preview-banner", text: "glow", on: PANELS },
     { file: "dock.css", selector: ".gh-dock-ticks", text: "dim", on: PANELS },
+    // Task L2: the collapsed bar's hint, and a marker's label on its own --panel-hi.
+    { file: "dock.css", selector: ".gh-dock-hint", text: "dim", on: PANELS },
+    { file: "dock.css", selector: ".gh-dock-mark-tip", text: "bone", on: ["panel-hi"] },
   ]
 
   it.each(TEXT)("$selector: --$text passes AA (4.5) on its background", ({ file, selector, text, on }) => {

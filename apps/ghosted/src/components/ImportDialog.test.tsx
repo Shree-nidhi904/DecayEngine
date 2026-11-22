@@ -178,3 +178,40 @@ describe("Cancel, Escape and the gate", () => {
     expect(textarea.value).toBe("Mira Castell | Cousin | 30")
   })
 })
+
+describe("repeated people are skipped, with a reason (task P6, written by Claude Code, outside Kiro)", () => {
+  it("skips a line that repeats an earlier line in the paste, and adds the first", () => {
+    const { engine, dialog, paste, importNow } = setup()
+    paste(["Mira Castell | Cousin | 30", "Ana Ruiz | Work | 14", "mira castell | cousin | 21"].join("\n"))
+    expect(within(dialog).getByRole("status").textContent).toBe("2 people ready to import.")
+    expect([...dialog.querySelectorAll(".gh-import-skipped li")].map((li) => li.textContent)).toEqual([
+      "Line 3: same name and relationship as line 1",
+    ])
+    importNow()
+    expect(names(engine)).toEqual(["Mira Castell", "Ana Ruiz"])
+  })
+
+  it("skips someone already on the street, so pasting the same list twice adds no one", () => {
+    const first = setup()
+    first.paste("Mira Castell | Cousin | 30\nAna Ruiz | Work | 14")
+    first.importNow()
+    cleanup()
+
+    const again = setup({ engine: first.engine })
+    again.addItem.mockClear() // the same engine, so the spy still holds the first import's calls
+    again.paste("Mira Castell | Cousin | 30\nAna Ruiz | Work | 14")
+    expect([...again.dialog.querySelectorAll(".gh-import-skipped li")].map((li) => li.textContent)).toEqual([
+      "Line 1: already on your street (same name and relationship)",
+      "Line 2: already on your street (same name and relationship)",
+    ])
+    expect(again.addItem).not.toHaveBeenCalled()
+    expect(names(again.engine)).toEqual(["Mira Castell", "Ana Ruiz"])
+  })
+
+  it("still adds two people with the same name and different relationships", () => {
+    const { engine, paste, importNow } = setup()
+    paste("Sam Lee | Cousin | 30\nSam Lee | Work | 14")
+    importNow()
+    expect(names(engine)).toEqual(["Sam Lee", "Sam Lee"])
+  })
+})

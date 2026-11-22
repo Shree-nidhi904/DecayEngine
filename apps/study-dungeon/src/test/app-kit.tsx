@@ -66,6 +66,11 @@ export type AppKitOptions = {
    * it / I forgot), which the tests written before answer checking use.
    */
   answerCheck?: AppProps["defaultAnswerCheck"]
+  /**
+   * The dock's session storage (task 21.1). Defaults to a new in-memory one
+   * per kit, so an expanded dock in one test never leaks into the next.
+   */
+  session?: AppProps["session"]
 }
 
 export function makeAppKit(
@@ -86,6 +91,7 @@ export function makeAppKit(
   }
   const ticks = fakeTickScheduler()
   const reload = vi.fn()
+  const session = options.session === undefined ? new MemoryStorage() : options.session
   let clockNow = 0
 
   function renderApp(at: number) {
@@ -104,6 +110,7 @@ export function makeAppKit(
         timeZone="UTC"
         createAudioContext={options.createAudioContext}
         defaultAnswerCheck={options.answerCheck ?? "self"}
+        session={session}
       />
     )
   }
@@ -111,6 +118,7 @@ export function makeAppKit(
   return {
     engine,
     storage,
+    session,
     reload,
     add,
     renderApp,

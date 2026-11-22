@@ -8,12 +8,16 @@
 //   number, list name), then souls banished and the streak.
 // Counts read engine.view(now), so they follow the time machine. Souls and
 // the streak are about the past, so they read the real time (realNow).
+// Task P4 (Requirement 20): straight after the h2, one line says how many
+// facts weaken and die in the next 7 days at the real time; hidden while
+// previewing, with no facts and when every fact is dead.
 
 import { useMemo, type ReactNode } from "react"
 import { Counters } from "@decay-engine/shell"
 import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
 import { groupByState, sortDungeon } from "../lists"
+import { LOSS_FORECAST_DAYS, lossForecast } from "../loss-forecast"
 import { allHistory, countSoulsBanished, currentStreak } from "../stats"
 import { studyDungeonShellTheme } from "../theme"
 import { formatHealth } from "../lists"
@@ -25,8 +29,8 @@ import { studyDungeonIcons } from "./icons"
 import "../styles/hero.css"
 
 export interface HeroSectionProps {
-  /** Read-only methods only. */
-  engine: Pick<StudyDungeonEngine, "view" | "history">
+  /** Read-only methods only. `forecast` is for the loss forecast line (task P4). */
+  engine: Pick<StudyDungeonEngine, "view" | "history" | "forecast">
   /** The time shown (today or the previewed day): the counts and the weakest fact. */
   now: number
   /** The real time: souls banished and the streak. */
@@ -112,6 +116,20 @@ export function HeroSection({
     }
     return { weaken, die }
   }, [engine, now, realNow, previewing, version])
+  // The loss forecast line (task P4, Requirement 20): at the real time, again
+  // after every write (version) and every settle tick (realNow); hidden while
+  // previewing, where the preview forecast above is shown instead (Req 20.7).
+  // Its own 7-day forecast keeps the 7-day boundary exact. It stores nothing.
+  const loss = useMemo(
+    () =>
+      previewing
+        ? null
+        : lossForecast(engine.view(realNow), engine.forecast(realNow, LOSS_FORECAST_DAYS * DAY_MS), realNow),
+    [engine, realNow, version, previewing]
+  )
+  // A plain line: no live region, role or tabindex, so a tick never announces it (Req 20.10).
+  const lossLine =
+    loss === null ? null : <p className="sd-hero-sub sd-hero-loss">{heroText.lossForecast(loss.weaken, loss.die)}</p>
   const daysAhead = Math.floor((now - realNow) / DAY_MS)
   const prefix = previewing ? <span className="sd-hero-when">{heroExtraText.inDays(daysAhead)}</span> : null
 
@@ -127,6 +145,7 @@ export function HeroSection({
           {prefix}
           <span>{heroText.weakening(groups.weak.length)}</span>
         </h2>
+        {lossLine}
         {!previewing && (
           <p className="sd-hero-sub">
             {heroExtraText.startWith(creatureOf(weakest.id).name, formatHealth(weakest.health))}
@@ -148,24 +167,35 @@ export function HeroSection({
     )
   } else if (groups.alive.length > 0) {
     message = (
-      <h2 className="sd-hero-message sd-hero-message-calm">
-        {prefix}
-        <span>{heroText.allQuiet}</span>
-      </h2>
+      <>
+        <h2 className="sd-hero-message sd-hero-message-calm">
+          {prefix}
+          <span>{heroText.allQuiet}</span>
+        </h2>
+        {lossLine}
+      </>
     )
   } else if (total === 0) {
+    // No facts: lossLine is always null here (Req 20.8).
     message = (
-      <h2 className="sd-hero-message sd-hero-message-calm">
-        {prefix}
-        <span>{heroText.noFacts}</span>
-      </h2>
+      <>
+        <h2 className="sd-hero-message sd-hero-message-calm">
+          {prefix}
+          <span>{heroText.noFacts}</span>
+        </h2>
+        {lossLine}
+      </>
     )
   } else {
+    // Every fact dead: lossLine is always null here (Req 20.8).
     message = (
-      <h2 className="sd-hero-message sd-hero-message-calm">
-        {prefix}
-        <span>{heroText.onlyDead}</span>
-      </h2>
+      <>
+        <h2 className="sd-hero-message sd-hero-message-calm">
+          {prefix}
+          <span>{heroText.onlyDead}</span>
+        </h2>
+        {lossLine}
+      </>
     )
   }
 

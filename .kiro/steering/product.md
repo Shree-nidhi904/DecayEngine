@@ -22,7 +22,7 @@ A policy defines how something decays and how it revives. A skin defines what it
 
 - **Study Dungeon**: Facts you're forgetting come back as monsters. Decay is caused by time passing without review. Defeat them by answering right.
 - **Ghosted**: A street of windows. The light shows connection freshness (not "how much someone cares"). Fades as days pass without contact. Comes back when they reply.
-- **Expiry Reaper**: Food, medicine, and documents as jars of time. Fades as the expiry date gets close. Exists only to prove reuse with zero engine changes.
+- **Expiry Reaper**: dropped on Nov 22, 2026 (not built). Ghosted is the reuse proof: a new policy and a new skin, with zero engine changes. The brief stays in `docs/design/expiry-reaper-visual-brief.md` for the record.
 
 ## Feature tiers
 

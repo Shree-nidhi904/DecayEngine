@@ -303,3 +303,10 @@
     height: 80px;
   }
 }
+
+/* Task P6 (Claude Code, outside Kiro, at the developer's request): why a pick-from-four fight asks you to type. */
+.sd-answer-note {
+  margin: 0.5rem 0 0;
+  color: var(--color-bone-dim);
+  font-size: 0.85rem;
+}

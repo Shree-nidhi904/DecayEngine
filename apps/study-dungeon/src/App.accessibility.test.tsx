@@ -24,6 +24,7 @@ import userEvent from "@testing-library/user-event"
 import { makeAppKit } from "./test/app-kit"
 import { day } from "./test/fixtures"
 import { announced, announcer } from "./test/round7-helpers"
+import { dockToggle, expandDock } from "./test/dock"
 import { landmarkText } from "./wording"
 
 afterEach(cleanup)
@@ -54,6 +55,21 @@ function escape() {
   const dialog = screen.getByRole("dialog")
   fireEvent.keyDown(dialog, { key: "Escape" })
 }
+
+describe("the hero's loss forecast line (task P4, Req 20.10)", () => {
+  it("is a plain paragraph: not inside any live region and not in the Tab order", () => {
+    // At day 10: the alive fact weakens 7.37 days later, the weak one dies at day 35.22, so nothing changes.
+    setup()
+    const line = document.querySelector<HTMLElement>(".sd-hero-loss")!
+    expect(line.textContent).toBe("Nothing will weaken or die in the next 7 days.")
+    expect(line.tagName).toBe("P")
+    expect(line.closest("[aria-live]")).toBeNull()
+    expect(line.closest("[role='status'], [role='alert']")).toBeNull()
+    expect(line.hasAttribute("role")).toBe(false)
+    expect(line.hasAttribute("tabindex")).toBe(false)
+    expect(line.querySelector("a, button, input, select, textarea, summary, [tabindex]")).toBeNull()
+  })
+})
 
 describe("Escape closes each dialog and returns focus to its opener", () => {
   const cases: [string, () => HTMLElement, string][] = [
@@ -205,6 +221,8 @@ describe("landmarks and names", () => {
 describe("keyboard", () => {
   it("Tab reaches every control on the main screen", async () => {
     setup()
+    // The jumps and Play are in the expanded dock (task 21.4).
+    expandDock()
     const user = userEvent.setup({ delay: null })
     const reached = new Set<Element>()
     for (let i = 0; i < 200; i++) {
@@ -216,6 +234,11 @@ describe("keyboard", () => {
     for (const expected of ["Add fact", "Fight the weakest", "+7 days", "Play", "Triage", "Reset all data"]) {
       expect(names).toContain(expected)
     }
+    // The dock's toggle is reached too, named in words (its glyph is hidden from screen readers).
+    expect(reached.has(dockToggle())).toBe(true)
+    const toggleCopy = dockToggle().cloneNode(true) as HTMLElement
+    toggleCopy.querySelectorAll('[aria-hidden="true"]').forEach((el) => el.remove())
+    expect(toggleCopy.textContent).toBe("Coming up")
     expect(reached.has(screen.getByRole("slider", { name: "Days ahead" }))).toBe(true)
     expect(reached.has(screen.getByRole("switch", { name: "Sound effects" }))).toBe(true)
     // The selected tab is the one in the Tab order (arrow keys move between tabs).

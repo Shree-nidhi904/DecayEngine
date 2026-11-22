@@ -5,6 +5,12 @@
 // (design open issue 1.5). splitCsv and fieldsOf are copied unchanged. No
 // import from apps/study-dungeon (Req 21.1).
 //
+// Task P6 (Claude Code, outside Kiro, at the developer's request) changed that
+// for one case: pasting the same list twice used to double everyone. A line is
+// now skipped when its name AND relationship match an earlier line or someone
+// already on the street (`duplicateReasons`). Two people with the same name
+// and different relationships are still both added.
+//
 // One person per line, fields by position (Req 21.5):
 //   name | relationship | rhythm days | last contact (YYYY-MM-DD)
 // The relationship and the date may be empty: "Mira | | 30". Tabs work too
@@ -119,4 +125,32 @@ export function parseImport(text: string, importedAt: number, timeZone?: string)
     })
   })
   return { people, skipped }
+}
+
+/** Someone already on the street, as far as the duplicate rule needs. */
+export type KnownPerson = { name: string; relationship: string }
+
+const personKey = (p: KnownPerson): string => `${p.name.trim().toLowerCase()}|${p.relationship.trim().toLowerCase()}`
+
+/**
+ * Task P6. For each entry (a parsed person, or undefined for a blank or skipped line), the reason it
+ * repeats someone, or undefined. "Repeats" means the same name and relationship, ignoring case and
+ * surrounding spaces: with someone in `existing`, or with an earlier entry. The first one is kept.
+ * Pure; the line numbers in the reasons are 1-based positions in `entries`.
+ */
+export function duplicateReasons(
+  entries: ReadonlyArray<KnownPerson | undefined>,
+  existing: readonly KnownPerson[]
+): Array<string | undefined> {
+  const known = new Set(existing.map(personKey))
+  const firstLine = new Map<string, number>()
+  return entries.map((entry, index) => {
+    if (entry === undefined) return undefined
+    const key = personKey(entry)
+    if (known.has(key)) return importText.alreadyOnStreet
+    const earlier = firstLine.get(key)
+    if (earlier !== undefined) return importText.repeatsLine(earlier)
+    firstLine.set(key, index + 1)
+    return undefined
+  })
 }

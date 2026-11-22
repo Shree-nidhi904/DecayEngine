@@ -21,4 +21,31 @@ describe("dock at narrow widths (task 6.2)", () => {
     )
     expect(rule).toBeDefined()
   })
+
+  it("while collapsed, hides the shell's jumps and Play at every width, outside any media block (task L2, Req 34.2)", () => {
+    const css = styleText("dock.css")
+    const rules = rulesOf(css, "dock.css")
+    const hidden = rules.find(
+      (r) =>
+        r.selectors.includes(".gh-dock:not([data-expanded]) .shell-time-machine-controls") &&
+        r.decls.get("display") === "none"
+    )
+    expect(hidden).toBeDefined()
+    // At every width: the rule is not inside a @media block.
+    const at = css.search(/\.gh-dock:not\(\[data-expanded\]\) \.shell-time-machine-controls,/)
+    expect(at).toBeGreaterThan(-1)
+    // Every brace opened before the rule is closed again, so it is not nested in a block.
+    let depth = 0
+    for (const ch of css.slice(0, at)) depth += ch === "{" ? 1 : ch === "}" ? -1 : 0
+    expect(depth, "not nested in @media").toBe(0)
+  })
+
+  it("while collapsed, the time machine stacks title and date beside the toggle, then the slider and hint, up to 760px", () => {
+    const css = styleText("dock.css")
+    const start = css.search(/@media\s*\(\s*max-width:\s*760px\s*\)\s*\{/)
+    expect(start).toBeGreaterThan(-1)
+    const narrow = rulesOf(css.slice(css.indexOf("{", start) + 1), "dock.css")
+    const grid = narrow.find((r) => r.selectors.includes(".gh-dock:not([data-expanded]) .shell-time-machine"))
+    expect(grid?.decls.get("grid-template-columns")).toBe("minmax(0, 1fr) auto")
+  })
 })

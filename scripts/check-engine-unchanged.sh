@@ -116,14 +116,16 @@ else
   base="$(git rev-parse HEAD)"
   label="${base:0:12}, HEAD (no Ghosted commit yet)"
 fi
-# 29.4, 26.5, 27.4, 28.4: shell changes only in these files. Every existing shell test
-# file is outside the list, so editing one fails here.
-allowed='^packages/shell/src/(index\.ts|types\.ts|shell\.css|components/(TimeMachine|TriagePanel|AutopsyDialog)\.tsx|components/(TimeMachine\.range|TriagePanel\.budgets|AutopsyDialog\.markers|AutopsyDialog\.focus)\.test\.tsx)$'
+# 29.4, 26.5, 27.4, 28.4, 36.11: shell changes only in these files. Every existing shell test
+# file is outside the list, so editing one fails here. Requirement 36.11 (task P5) adds
+# only the new test file TriagePanel.note.test.tsx; its source changes are in
+# TriagePanel.tsx and shell.css, already listed.
+allowed='^packages/shell/src/(index\.ts|types\.ts|shell\.css|components/(TimeMachine|TriagePanel|AutopsyDialog)\.tsx|components/(TimeMachine\.range|TriagePanel\.budgets|TriagePanel\.note|AutopsyDialog\.markers|AutopsyDialog\.focus)\.test\.tsx)$'
 changed="$( { git diff --name-only "$base" -- packages/shell; git ls-files --others --exclude-standard -- packages/shell; } | sort -u )"
 outside="$(printf '%s\n' "$changed" | grep -Ev "$allowed" | grep -v '^$' || true)"
 if [ -n "$outside" ]; then
   echo "$outside" >&2
-  echo "check-engine-unchanged: packages/shell changed outside Requirements 26 to 28 since $label." >&2
+  echo "check-engine-unchanged: packages/shell changed outside Requirements 26 to 28 and 36 since $label." >&2
   exit 1
 fi
 

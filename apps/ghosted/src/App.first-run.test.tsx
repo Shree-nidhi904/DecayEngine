@@ -114,6 +114,17 @@ describe("first run", () => {
     expect(screen.getByText("Everything stays in this browser. Names here are made up.")).toBeTruthy()
   })
 
+  it("no loss forecast line on the first run, nor on the empty street after Start empty (task P4, Req 35.8)", () => {
+    const { container } = renderApp()
+    expect(heroHeading().textContent).toBe("Welcome to the street.")
+    expect(container.querySelector(".gh-hero-loss")).toBeNull()
+
+    fireEvent.click(screen.getByRole("button", { name: "Start empty" }))
+
+    expect(heroHeading().textContent).toBe("No windows yet.")
+    expect(container.querySelector(".gh-hero-loss")).toBeNull()
+  })
+
   it("the empty-street hero stays after a reload with the same storage: the first run is over", () => {
     const engine = makeEngine()
     const storage = new FakeStorage()

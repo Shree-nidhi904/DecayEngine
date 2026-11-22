@@ -7,7 +7,6 @@ Dark, calm, readable. Spooky elements must support the function, not decorate.
 Each app has its own metaphor:
 - **Study Dungeon**: Candle/monster = health
 - **Ghosted**: Lit window = connection freshness
-- **Expiry Reaper**: Jar of time
 
 Show decay in the world first (creature, orb, candle, the room aging). A health bar is allowed alongside, never alone, and it always shows the weak and dead marks. See `design-tokens.md` and `docs/design/study-dungeon-visual-pass.md`.
 
@@ -38,7 +37,6 @@ The three lists (alive/weak/dead) have different names in each app:
 |-----|------------|-----------|-----------|
 | Study Dungeon | Crypt | Dungeon | Graveyard |
 | Ghosted | Still lit | Fading | Empty windows |
-| Expiry Reaper | Still fresh | Expiring soon | Expired |
 
 ## Typography
 
@@ -49,7 +47,6 @@ The three lists (alive/weak/dead) have different names in each app:
 ### Display fonts (per app)
 - **Study Dungeon**: Pirata One (Google Fonts)
 - **Ghosted**: Monoton + Josefin Sans (Google Fonts)
-- **Expiry Reaper**: Special Elite (Google Fonts)
 - **Home page**: Cormorant SC (Google Fonts)
 
 All fonts are open-licensed through Google Fonts.
@@ -89,7 +86,7 @@ Each app has its own palette:
 --mint: #8fe3c4;
 ```
 
-### Expiry Reaper
+### Expiry Reaper (dropped, not built)
 ```css
 --bg: #05090b;
 --panel: #0e1a1f;

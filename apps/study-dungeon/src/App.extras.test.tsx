@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, screen, within } from "@testing-library/react"
 import { makeAppKit } from "./test/app-kit"
 import { day } from "./test/fixtures"
+import { expandDock } from "./test/dock"
 import { previewBlockedText } from "./wording"
 
 afterEach(cleanup)
@@ -41,6 +42,8 @@ describe("today's raid", () => {
     const kit = makeAppKit()
     kit.add("w1", "solid", day(0))
     kit.renderApp(day(8))
+    // The jumps are in the expanded dock (task 21.4, changed by Kiro).
+    expandDock()
     fireEvent.click(button("+7 days"))
     const raid = button("Start today's 5-minute raid")
     expect(raid.getAttribute("title")).toBe(previewBlockedText)

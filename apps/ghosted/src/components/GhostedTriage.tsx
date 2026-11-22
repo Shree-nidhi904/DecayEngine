@@ -25,6 +25,7 @@ import type { GhostedEngine } from "../engine-instance"
 import { compareIds, firstName, type BlockedReason } from "../lists"
 import type { Person, PersonPayload, PersonPolicyData } from "../policy"
 import { ghostedShellTheme } from "../theme"
+import { triageSaves } from "../triage-saves"
 import { ghostedWording, stateWords, triageSteps, triageText } from "../wording"
 import { StateGlyph } from "./icons"
 import "../styles/layout.css"
@@ -84,6 +85,16 @@ export function GhostedTriage({ engine, now, version, blocked, onStartSession, o
   const triage = useCallback((budget: number) => engine.triage(budget, now), [engine, now, version])
   const action = useMemo(() => fiveMinuteAction(engine, now), [engine, now, version])
   const renderText = useCallback((item: Item<PersonPayload, PersonPolicyData>) => <PickText item={item} />, [])
+  // "What this session saves" (task P5, Req 36, design section 13.6): the line
+  // under the picks, from the picks the panel shows, at the same `now` as
+  // triage (so in a preview too, Req 36.8). No line for 0 (Req 36.6).
+  const picksNote = useCallback(
+    (picks: GhostedCandidate[]) => {
+      const n = triageSaves(picks, now)
+      return n === 0 ? null : triageText.saves(n)
+    },
+    [now]
+  )
 
   return (
     <div className="gh-triage">
@@ -110,6 +121,7 @@ export function GhostedTriage({ engine, now, version, blocked, onStartSession, o
         initialBudget={GHOSTED_DEFAULT_BUDGET}
         budgets={GHOSTED_BUDGETS}
         defaultBudget={GHOSTED_DEFAULT_BUDGET}
+        picksNote={picksNote}
       />
       {action !== undefined && (
         <div className="gh-triage-five">

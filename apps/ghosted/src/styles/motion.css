@@ -86,6 +86,12 @@
     transition: transform 0.3s;
   }
 
+  /* The dock toggle's chevron turns as the dock expands or collapses (task L2,
+     Req 34.8). Without motion it simply points the other way (dock.css). */
+  .gh-dock-chevron {
+    transition: transform 0.2s;
+  }
+
   /* Smooth scrolling (task 5.9, Req 25.1). Without motion, scrolling is instant. */
   html {
     scroll-behavior: smooth;

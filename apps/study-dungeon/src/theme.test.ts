@@ -14,6 +14,7 @@ import {
   removeConfirmText,
   sessionText,
   studyDungeonWording,
+  timelineText,
 } from "./wording"
 
 // Study Dungeon palette, copied from .kiro/steering/theme-and-wording.md.
@@ -211,6 +212,14 @@ describe("time machine, preview and triage text", () => {
     expect(formatPreviewDate(Date.UTC(2026, 9, 31, 23), { timeZone: "Asia/Kolkata" })).toBe("1 Nov 2026")
   })
 
+  it('names the dock toggle "Coming up" and gives the collapsed hint "Drag to look ahead" (Req 19.3, 19.12)', () => {
+    expect(timelineText.toggle).toBe("Coming up")
+    expect(timelineText.hint).toBe("Drag to look ahead")
+    // One name for both states: the old open and fold labels are gone.
+    expect(Object.keys(timelineText)).not.toContain("unfold")
+    expect(Object.keys(timelineText)).not.toContain("fold")
+  })
+
   it("names the session's progress, stop and skips", () => {
     expect(sessionText.progress(2, 3)).toBe("Fight 2 of 3")
     expect(sessionText.stop).toBe("Stop session")
@@ -249,6 +258,17 @@ describe("fight and challenge text", () => {
     expect(heroText.weakening(1)).toBe("1 fact is weakening")
     expect(firstRunText.loadSample).toBe("Load sample data")
     expect(firstRunText.startEmpty).toBe("Start empty")
+  })
+
+  it('gives the loss forecast line in the words of Requirement 20.6, "in the next 7 days", never "this week" (task P4)', () => {
+    expect(heroText.lossForecast(0, 0)).toBe("Nothing will weaken or die in the next 7 days.")
+    expect(heroText.lossForecast(1, 0)).toBe("If you do nothing, in the next 7 days 1 fact weakens.")
+    expect(heroText.lossForecast(0, 2)).toBe("If you do nothing, in the next 7 days 2 facts die.")
+    expect(heroText.lossForecast(1, 1)).toBe("If you do nothing, in the next 7 days 1 fact weakens and 1 dies.")
+    expect(heroText.lossForecast(3, 2)).toBe("If you do nothing, in the next 7 days 3 facts weaken and 2 die.")
+    for (const [weaken, die] of [[0, 0], [1, 0], [3, 0], [0, 1], [0, 2], [1, 1], [2, 1], [3, 2]] as const) {
+      expect(heroText.lossForecast(weaken, die)).not.toMatch(/\bthis week\b/i)
+    }
   })
 
   it("sums up the autopsy chart in words, health rounded down", () => {

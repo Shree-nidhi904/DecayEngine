@@ -6,8 +6,7 @@ packages/shell/        shared frame: hero, counters, item card, history,
                        autopsy, Triage panel, time machine
 apps/study-dungeon/
 apps/ghosted/
-apps/expiry-reaper/
-site/                  landing page; one site, one tab per app
+site/                  landing page: static HTML and CSS, one page, links both apps (task P3)
 docs/                  logs and guides
 ```
 

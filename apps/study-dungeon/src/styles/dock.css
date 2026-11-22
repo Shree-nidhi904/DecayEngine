@@ -216,48 +216,116 @@
   font-family: var(--font-mono);
 }
 
+/*
+ * ---- The compact dock (task L2, tasks 21.2 and 21.3; Req 19.1-19.4, 19.7-19.9) ----
+ * Changed by Kiro, as the spec names this file (see docs/KIRO_LOG.md).
+ *
+ * The dock is collapsed unless it has data-open, at every width. The
+ * collapsed bar holds the small candle, the title, the date line, the slider,
+ * the hint and the "Coming up" toggle; the shell's jumps and Play are hidden
+ * and the timeline is not rendered (TimeDock.tsx). The collapsed bar is never
+ * capped: its height is its content, and the page's bottom room follows the
+ * measured --dock-h (world.css). No transition or animation here (Req 19.8).
+ */
+
+/* The toggle: in the flow under the slider, at least 44 × 44px at every width (Req 19.3). Quiet, never filled. */
 .sd-dock-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--color-stone-hi);
+  border: 1px solid #4a3858;
+  border-radius: 22px;
+  color: var(--color-pumpkin);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sd-dock-toggle-glyph {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sd-dock-hint {
+  margin: 0;
+  color: var(--color-bone-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sd-dock .sd-dock-panel {
+  grid-column: 1 / -1;
+}
+
+/* Collapsed: the shell's jumps and Play are not shown, so they are out of the Tab order too (Req 19.2). */
+.sd-dock:not([data-open]) .shell-time-machine-controls {
   display: none;
+}
+
+/* Collapsed: the candle at its small size, at every width (Req 19.1). */
+.sd-dock:not([data-open]) .sd-candle {
+  height: 44px;
+}
+
+/* Collapsed, up to 999px: title and date, then the slider, then the toggle beside the hint. */
+.sd-dock:not([data-open]) .shell-time-machine {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "title showing"
+    "slider slider"
+    "toggle hint";
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.sd-dock:not([data-open]) .shell-time-machine-title {
+  grid-area: title;
+}
+
+.sd-dock:not([data-open]) .shell-time-machine-showing {
+  grid-area: showing;
+}
+
+.sd-dock:not([data-open]) .shell-time-machine-slider {
+  grid-area: slider;
+}
+
+.sd-dock:not([data-open]) .sd-dock-toggle {
+  grid-area: toggle;
+}
+
+.sd-dock:not([data-open]) .sd-dock-hint {
+  grid-area: hint;
+}
+
+.sd-dock:not([data-open]) .sd-dock-panel {
+  display: none;
+}
+
+/* Collapsed, 1000px and wider: one slim row of title, date, slider, hint and toggle. */
+@media (min-width: 1000px) {
+  .sd-dock:not([data-open]) .shell-time-machine {
+    grid-template-columns: auto auto minmax(120px, 1fr) auto auto;
+    grid-template-areas: "title showing slider hint toggle";
+    gap: 8px 16px;
+  }
+
+  .sd-dock:not([data-open]) .shell-time-machine-showing {
+    justify-self: start;
+  }
 }
 
 @media (max-width: 520px) {
   .sd-dock {
     padding-top: 12px;
-  }
-
-  .sd-dock-toggle {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    background: var(--color-stone-hi);
-    border: 1px solid #4a3858;
-    border-radius: 50%;
-    color: var(--color-pumpkin);
-    font-size: 18px;
-    cursor: pointer;
-  }
-
-  .sd-dock-in {
-    position: relative;
-  }
-
-  .sd-dock:not([data-open]) .shell-time-machine-slider,
-  .sd-dock:not([data-open]) .sd-timeline,
-  .sd-dock:not([data-open]) .shell-time-machine-controls {
-    display: none;
-  }
-
-  .sd-dock:not([data-open]) .sd-candle {
-    height: 44px;
-  }
-
-  .sd-dock .shell-time-machine {
-    padding-right: 44px;
   }
 
   .sd-dock-in {
@@ -275,18 +343,49 @@
     font-size: 20px;
   }
 
-  .sd-timeline {
-    display: none;
+  /* Collapsed: the title and the date each get the full width, so neither breaks into many lines. */
+  .sd-dock:not([data-open]) .shell-time-machine {
+    grid-template-areas:
+      "title title"
+      "showing showing"
+      "slider slider"
+      "toggle hint";
   }
 
-  .sd-dock .shell-time-machine-controls {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 2px;
+  .sd-dock:not([data-open]) .shell-time-machine-showing {
+    justify-self: start;
   }
 
-  .sd-dock .shell-time-machine-controls .shell-button {
-    flex: none;
-    white-space: nowrap;
+  /*
+   * Expanded: at most 60% of the screen (380px at most; the 21.5 check found 346px
+   * of content clipped by 14px at 320x640 under the first cap of min(50vh, 320px));
+   * anything taller scrolls inside the dock. The controls wrap onto rows (the base rule), never a
+   * sideways scroll, so every jump and Play stays visible. The collapsed bar
+   * has no cap.
+   */
+  .sd-dock[data-open] .sd-dock-in {
+    max-height: min(60vh, 380px);
+    overflow-y: auto;
+  }
+
+  .sd-dock[data-open] .shell-time-machine-controls {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+/*
+ * Collapsed, 360px to 520px (found in the 21.5 check, Nov 22: the bar was 179px at 390x844):
+ * the toggle takes the right of the title and date, so the bar loses a row.
+ * Below 360px the stacked layout above stays. (Written by Claude Code, outside Kiro, at the developer's request.)
+ */
+@media (min-width: 360px) and (max-width: 520px) {
+  .sd-dock:not([data-open]) .shell-time-machine {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title toggle"
+      "showing toggle"
+      "slider slider"
+      "hint hint";
   }
 }

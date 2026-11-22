@@ -98,6 +98,15 @@ export function makeDayFormatter(timeZone?: string): (ms: number) => string {
   return (ms) => format.format(ms)
 }
 
+/**
+ * A marker's short label (task L2, Req 34.6): "Mira Castell goes dark in 12
+ * days". N is the marker's `day`, the whole days from today, so the label
+ * stays put while the slider moves, like the marker itself.
+ */
+export function markerSoonLabel(marker: DockMarker): string {
+  return marker.type === "fades" ? dockText.fadesIn(marker.name, marker.day) : dockText.darkIn(marker.name, marker.day)
+}
+
 /** A marker's accessible name: "Mira Castell goes dark on 3 March" (Req 12.4). */
 export function markerLabel(marker: DockMarker, formatDay: (ms: number) => string): string {
   const date = formatDay(marker.at)

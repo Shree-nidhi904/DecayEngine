@@ -1,0 +1,5 @@
+# Netlify config for the landing page (task P3). Written by Claude Code, outside Kiro,
+# at the developer's request. A static folder: no build, nothing to install.
+[build]
+  base = "site"
+  publish = "."

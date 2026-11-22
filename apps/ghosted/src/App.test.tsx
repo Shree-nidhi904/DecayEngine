@@ -6,14 +6,15 @@
 
 import "./test/dialog-polyfill"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { ANNOUNCER_ID, App } from "./App"
 import { makeBackup } from "./backup"
+import { loadSampleData } from "./sample-data"
 import { ENGINE_STORAGE_KEY, OWN_PEOPLE_FLAG, STARTED_FLAG } from "./first-run"
 import type { Scheduler } from "./ticking"
 import type { PersonPayload } from "./policy"
 import { FakeStorage } from "./test/fake-storage"
-import { DAY_MS, T0, day, makeEngine } from "./test/fixtures"
+import { DAY_MS, MINUTE_MS, T0, day, makeEngine } from "./test/fixtures"
 import { RecordingAdapter } from "./test/recording-adapter"
 
 afterEach(cleanup)
@@ -219,6 +220,12 @@ describe("App: autopsy, then reconnect (task 4.11; Req 19.1, 19.5, 24.3)", () =>
 describe("App: the moon-clock dock (task 5.1; Req 12.1, 12.2, 12.5, 12.6)", () => {
   const appRoot = () => document.querySelector<HTMLElement>(".gh-app")!
   const toolbarAdd = () => screen.getByRole("button", { name: "Add a person" })
+  const dockToggle = () => screen.getByRole("button", { name: "Coming up" })
+  /** The dock starts collapsed (task L2, Req 34.1); the jumps and markers show once it is expanded. */
+  const expandDock = () => {
+    fireEvent.click(dockToggle())
+    expect(dockToggle().getAttribute("aria-expanded")).toBe("true")
+  }
 
   it("is after <main>, so it comes last in the Tab order", () => {
     renderApp()
@@ -233,6 +240,7 @@ describe("App: the moon-clock dock (task 5.1; Req 12.1, 12.2, 12.5, 12.6)", () =
     const tick = vi.spyOn(engine, "tick")
     expect(appRoot().style.getPropertyValue("--age")).toBe("0.0000")
 
+    expandDock()
     fireEvent.click(screen.getByRole("button", { name: "+90 days" }))
 
     expect(appRoot().style.getPropertyValue("--age")).toBe("0.2466")
@@ -261,6 +269,7 @@ describe("App: the moon-clock dock (task 5.1; Req 12.1, 12.2, 12.5, 12.6)", () =
 
   it("the markers are worked out at the real time and stay put while previewing", () => {
     renderApp()
+    expandDock()
     const track = () => screen.getByRole("group", { name: "Who fades and goes dark in the next year" })
     const before = within(track()).getAllByRole("button").map((b) => b.getAttribute("aria-label"))
     // Priya (lit, last contact 12 days ago, rhythm 30) starts fading 24 days after T0: 8 December.
@@ -271,10 +280,145 @@ describe("App: the moon-clock dock (task 5.1; Req 12.1, 12.2, 12.5, 12.6)", () =
 
   it("activating a marker previews its day", () => {
     renderApp()
+    expandDock()
     const marker = screen.getByRole("button", { name: "Priya Raman starts fading on 8 December" })
     fireEvent.click(marker)
     expect((screen.getByRole("slider") as HTMLInputElement).value).toBe(String(Number(marker.dataset.day) * DAY_MS))
     expect(appRoot().hasAttribute("data-previewing")).toBe(true)
+  })
+
+  it("starts collapsed: no markers on the page until the toggle expands the dock (task L2, Req 34.1, 34.2)", () => {
+    renderApp()
+    const dock = document.querySelector<HTMLElement>(".gh-dock")!
+    expect(dock.hasAttribute("data-expanded")).toBe(false)
+    expect(dockToggle().getAttribute("aria-expanded")).toBe("false")
+    expect(screen.queryByRole("group", { name: "Who fades and goes dark in the next year" })).toBeNull()
+    expandDock()
+    expect(screen.getByRole("group", { name: "Who fades and goes dark in the next year" })).toBeTruthy()
+  })
+
+  it("collapsing during a preview keeps --age, the banner and the blocked writes; the slider still previews (task L2, Req 34.4)", () => {
+    const engine = renderApp()
+    const tick = vi.spyOn(engine, "tick")
+    expandDock()
+    fireEvent.click(screen.getByRole("button", { name: "+90 days" }))
+    fireEvent.click(dockToggle())
+    expect(dockToggle().getAttribute("aria-expanded")).toBe("false")
+
+    expect(appRoot().style.getPropertyValue("--age")).toBe("0.2466")
+    expect(appRoot().hasAttribute("data-previewing")).toBe(true)
+    const dock = document.querySelector<HTMLElement>(".gh-dock")!
+    expect(within(dock).getByRole("status").textContent).toContain("Future preview · nothing is saved")
+    expect(within(dock).getByRole("button", { name: "Back to today" })).toBeTruthy()
+    expect(toolbarAdd().getAttribute("aria-disabled")).toBe("true")
+    expect(tick).not.toHaveBeenCalled()
+
+    // The slider moves the preview while collapsed: 180 days is --age 180 / 365.
+    fireEvent.change(screen.getByRole("slider"), { target: { value: String(180 * DAY_MS) } })
+    expect(appRoot().style.getPropertyValue("--age")).toBe("0.4932")
+    expect(toolbarAdd().getAttribute("aria-disabled")).toBe("true")
+    expect(tick).not.toHaveBeenCalled()
+  })
+})
+
+describe("App: the hero's loss forecast line (task P4; Req 35.1, 35.9, design section 12.6)", () => {
+  const ONE_FLICKERS = "If you do nothing, in the next 7 days 1 window starts to flicker."
+  const NOTHING = "No window will start to flicker or go dark in the next 7 days."
+  const line = () => document.querySelector<HTMLElement>(".gh-hero-loss")
+  const heroTitle = () => document.querySelector<HTMLElement>(".gh-hero-title")!
+
+  it("after Load sample street at T0 the line shows under the heading; a call to Sunita changes it (the version dependency)", () => {
+    const engine = makeEngine()
+    render(
+      <App
+        engine={engine}
+        storage={new FakeStorage()}
+        session={null}
+        clock={() => T0}
+        tickScheduler={idleScheduler}
+        prefersReducedMotion={() => true}
+        timeZone="UTC"
+      />
+    )
+    // The first run has no line (Req 35.8).
+    expect(line()).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Load sample street" }))
+
+    // Sunita (rhythm 7, last contact 6 days ago) starts to flicker at +2.4 days; nobody goes dark (section 12.5).
+    expect(line()!.textContent).toBe(ONE_FLICKERS)
+    expect(heroTitle().textContent).toBe("4 windows are flickering")
+    expect(heroTitle().nextElementSibling).toBe(line())
+
+    // A call at T0 sets her last contact to T0: she starts to flicker at +8.4 days, outside the 7 days.
+    fireEvent.click(screen.getByRole("button", { name: "Open Sunita Rao" }))
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Sunita Rao" })).getByRole("button", { name: "Reach out" }))
+    // The person dialog hands over to the Reach out dialog, so it is the only one open.
+    const reachOut = screen.getByRole("dialog")
+    fireEvent.click(reachOut.querySelector<HTMLElement>('.gh-choice[data-kind="call"]')!)
+    fireEvent.click(within(reachOut).getByRole("button", { name: "Done" }))
+
+    const sunita = engine.view(T0).find((p) => p.payload.name === "Sunita Rao")!
+    expect(sunita.policyData.lastContactAt).toBe(T0)
+    expect(sunita.health).toBe(100)
+    expect(line()!.textContent).toBe(NOTHING)
+  })
+
+  it("a settle tick moves the line (the realNow dependency)", () => {
+    const engine = makeEngine()
+    // Rhythm 10 (T = 30 days), last contact T0: starts to flicker at exactly T0 + 12 days.
+    engine.addItem({ payload: { name: "Mira Castell", relationship: "", rhythmDays: 10, lastContactAt: T0 }, importance: 2, costMinutes: 10 }, T0)
+    let at = day(5) - MINUTE_MS
+    const clock = () => at
+    let runTick: (() => void) | undefined
+    const scheduler: Scheduler = {
+      setInterval: (callback) => {
+        runTick = callback
+        return 1
+      },
+      clearInterval: () => {},
+    }
+    render(
+      <App
+        engine={engine}
+        storage={new FakeStorage({ [STARTED_FLAG]: "1" })}
+        session={null}
+        clock={clock}
+        tickScheduler={scheduler}
+        prefersReducedMotion={() => true}
+        timeZone="UTC"
+      />
+    )
+    // T0 + 12 days is 7 days and 1 minute away.
+    expect(line()!.textContent).toBe(NOTHING)
+
+    at = day(5) + MINUTE_MS
+    act(() => runTick!())
+    // Now it is 7 days less 1 minute away.
+    expect(line()!.textContent).toBe(ONE_FLICKERS)
+  })
+
+  it("is hidden when every window is dark (Req 35.8)", () => {
+    const engine = makeEngine()
+    engine.addItem({ payload: { name: "Mira Castell", relationship: "", rhythmDays: 1, lastContactAt: day(-10) }, importance: 2, costMinutes: 10 }, T0)
+    render(
+      <App
+        engine={engine}
+        storage={new FakeStorage({ [STARTED_FLAG]: "1" })}
+        session={null}
+        clock={() => T0}
+        tickScheduler={idleScheduler}
+        prefersReducedMotion={() => true}
+        timeZone="UTC"
+      />
+    )
+    expect(heroTitle().textContent).toBe("Nobody is fading.")
+    expect(line()).toBeNull()
+  })
+
+  it("on the mixed street of renderApp: Sunita (last contact 30 days ago, rhythm 30) starts to flicker on day 6", () => {
+    renderApp()
+    // Priya fades at +24 days, Dan is already flickering and goes dark at +11 days, Leo is dark.
+    expect(line()!.textContent).toBe(ONE_FLICKERS)
   })
 })
 
@@ -356,5 +500,76 @@ describe("App: the privacy line after the user's own people (task 5.3; Req 15.2)
     expect(storage.getItem(OWN_PEOPLE_FLAG)).not.toBeNull()
     expect(screen.getByText(OWN)).toBeTruthy()
     expect(screen.queryByText(SAMPLE)).toBeNull()
+  })
+})
+
+describe("App: what this session saves, under the Triage picks (task P5; Req 36.1, 36.6, 36.7, design section 13.8)", () => {
+  const ONE = "A call or meet-up with these people keeps 1 window from going dark in the next 7 days."
+  const triage = () => document.querySelector<HTMLElement>(".gh-triage")!
+  const line = () => triage().querySelector<HTMLElement>(".shell-triage-note")
+  function choose(minutes: number) {
+    fireEvent.click(within(triage()).getByRole("radio", { name: `${minutes} min` }))
+    fireEvent.click(within(triage()).getByRole("button", { name: "Plan" }))
+  }
+
+  /**
+   * Ada Fenn: rhythm 10 (T 30 days), last contact 22 days ago: freshness 26.67, dark at T0 + 5 days;
+   * a call keeps her lit. 20 minutes. Cy Moss: rhythm 30, last contact 50 days ago: freshness 44.44,
+   * dark at T0 + 31 days. 10 minutes.
+   */
+  function renderAdaAndCy() {
+    const engine = makeEngine()
+    const add = (name: string, rhythmDays: number, lastContactAt: number, costMinutes: number) => {
+      const payload: PersonPayload = { name, relationship: "", rhythmDays, lastContactAt }
+      engine.addItem({ payload, importance: 2, costMinutes }, T0)
+    }
+    add("Ada Fenn", 10, day(-22), 20)
+    add("Cy Moss", 30, day(-50), 10)
+    render(
+      <App
+        engine={engine}
+        storage={new FakeStorage({ [STARTED_FLAG]: "1" })}
+        session={null}
+        clock={() => T0}
+        tickScheduler={idleScheduler}
+        prefersReducedMotion={() => true}
+        timeZone="UTC"
+      />
+    )
+    return engine
+  }
+
+  it("follows the budget field: the line at 30 minutes, none at 15, back at 30", () => {
+    renderAdaAndCy()
+    // 30 minutes is run straight away: Ada (20) and Cy (10) both fit, and only Ada is at risk.
+    expect(line()!.textContent).toBe(ONE)
+    choose(15)
+    // Only Cy (10 minutes) fits, and he goes dark in 31 days.
+    expect(line()).toBeNull()
+    choose(30)
+    expect(line()!.textContent).toBe(ONE)
+  })
+
+  it("follows the picks after a write: a call to Ada lights her, so the picks are Cy only and the line goes (the version dependency)", () => {
+    const engine = renderAdaAndCy()
+    expect(line()!.textContent).toBe(ONE)
+
+    const fading = screen.getByRole("region", { name: "Fading" })
+    fireEvent.click(within(within(fading).getByRole("article", { name: "Ada Fenn" })).getByRole("button", { name: "Reach out" }))
+    const reachOut = screen.getByRole("dialog", { name: "Reach out to Ada Fenn" })
+    fireEvent.click(reachOut.querySelector<HTMLElement>('.gh-choice[data-kind="call"]')!)
+    fireEvent.click(within(reachOut).getByRole("button", { name: "Done" }))
+
+    const ada = engine.view(T0).find((p) => p.payload.name === "Ada Fenn")!
+    expect(ada.health).toBe(100)
+    expect(ada.state).toBe("alive")
+    expect(engine.triage(30, T0).picks.map((p) => p.item.payload.name)).toEqual(["Cy Moss"])
+    expect(line()).toBeNull()
+  })
+
+  it("on the mixed street of renderApp there is no line: Dan, the only pick, goes dark in 11 days", () => {
+    renderApp()
+    expect(triage().querySelectorAll(".shell-triage-picks > li")).toHaveLength(1)
+    expect(line()).toBeNull()
   })
 })

@@ -1585,7 +1585,7 @@ Tab order follows the DOM, which matches the visual order:
 6. Fading cards, Empty windows cards, Still lit rows;
 7. the forecast choices;
 8. the toolbar (Add a person, Import, Back up, Restore, Reset all data);
-9. the dock last: the slider, the "Jumps and markers" toggle, and only when expanded the marker buttons, the jumps and Play; then Back to today in the preview banner (Req 34.9, section 11).
+9. the dock last: the slider, the "Coming up" toggle, and only when expanded the marker buttons, the jumps and Play; then Back to today in the preview banner (Req 34.9, section 11).
 
 The dock is fixed at the bottom on screen but last in the DOM, so it comes last in the Tab order without any `tabindex` above 0. Disabled write controls use `aria-disabled` and stay focusable with their reason as the description (Req 12.5).
 
@@ -1629,6 +1629,8 @@ Hero → Street → SectionNav → GhostedTriage → ThreeLists → ForecastCont
 
 At 1280×800 the dock is always open and covers about a quarter of the screen. Its marker rows are glyphs with no visible words.
 
+> **Check 8.6 finding (Nov 22).** At 520px and narrower the 128px `--dock-max` cap clipped the collapsed bar (about 174px needed at 390px, about 237px at 320px, because the narrow title column wrapped to four lines). The fix is in `dock.css` only: below 520px the collapsed bar has no moon, is not capped, and its height is its content, with the page's room following it through `--dock-h`. The expanded dock keeps its cap. It was written by Claude Code outside Kiro; see the "Work outside Kiro on Nov 22: collapsed dock" entry in the log. Requirement 34.1 is re-measured after it.
+
 ### 11.1 Structure (`MoonDock.tsx`, no shell change)
 
 The shell `TimeMachine` stays mounted the whole time, so the slider, the date line and Play's state are never lost. `MoonDock` passes a different `belowSlider` depending on whether the dock is expanded:
@@ -1639,8 +1641,9 @@ The shell `TimeMachine` stays mounted the whole time, so the slider, the date li
   <TimeMachine belowSlider={
       <>
         <button class="gh-button gh-dock-toggle" aria-expanded aria-controls={panelId}>
-          <chevron aria-hidden/> {dockText.toggle}        ← "Jumps and markers"
+          <chevron aria-hidden/> {dockText.toggle}        ← "Coming up"
         </button>
+        {!expanded && <p class="gh-dock-hint">{dockText.hint}</p>}   ← "Drag to look ahead"
         <div id={panelId} class="gh-dock-panel">
           {expanded && <>track with markers · ticks · <ol class="gh-sr-only"> marker list</>}
         </div>
@@ -1673,7 +1676,10 @@ The shell `TimeMachine` stays mounted the whole time, so the slider, the date li
 
 ### 11.4 The page's bottom room (Req 34.7)
 
-- `useDockHeight(ref)` (new, in `MoonDock.tsx`) watches the dock's root with a `ResizeObserver`. It sets `--dock-h: <border-box block size>px` on `document.documentElement`, removes it on unmount, and does nothing when `ResizeObserver` is missing (jsdom).
+- `useDockHeight(ref)` (new, in `MoonDock.tsx`) feature-detects `ResizeObserver` with `typeof globalThis.ResizeObserver === "function"`.
+  - When it is there, it watches the dock's root and sets `--dock-h: <border-box block size>px` on `document.documentElement`. It disconnects and removes the property on unmount.
+  - When it is missing (jsdom, old browsers), it sets nothing, and the CSS fallback below applies.
+- Tests stub `ResizeObserver` explicitly. They install a fake on `globalThis` that records the observed element, fire its callback with a given size, check that `--dock-h` equals that size, and remove the fake afterwards. A second case runs with no `ResizeObserver` and checks that `--dock-h` is not set. No assertion is weakened to make either case pass.
 - `layout.css` uses `var(--dock-h, var(--dock-max))`:
   - `html { scroll-padding-bottom: calc(var(--dock-h, var(--dock-max)) + 12px) }`
   - `.gh-main { padding-block-end: calc(var(--dock-h, var(--dock-max)) + 24px) }`
@@ -1682,7 +1688,7 @@ The shell `TimeMachine` stays mounted the whole time, so the slider, the date li
 
 ### 11.5 Wording (`wording.ts`)
 
-`dockText.toggle` "Jumps and markers", `dockText.markerList` "Who fades and goes dark next", and `dockText.fadesIn` and `dockText.darkIn` as above. No word judges anyone. `wording.test.ts` gets sample arguments for the two new functions, so the banned-phrase scan covers their output.
+`dockText.toggle` "Coming up" (the same words as Study Dungeon's toggle), `dockText.hint` "Drag to look ahead" (shown only while collapsed, as `.gh-dock-hint` in `--dim`, mono 12 px), `dockText.markerList` "Who fades and goes dark next", and `dockText.fadesIn` and `dockText.darkIn` as above. No word judges anyone. `wording.test.ts` gets sample arguments for the two new functions, so the banned-phrase scan covers their output.
 
 ### 11.6 Tests
 
@@ -1694,12 +1700,13 @@ Existing tests are **changed to match the new behaviour, never loosened** (`no-f
 | `dock-stagger.test.tsx` | Renders the markers expanded; row assertions unchanged. |
 | `dock-narrow.test.ts` | Adds the collapsed rule for `.shell-time-machine-controls`; the narrow rules it checks stay. |
 | `layout-css.test.ts` | The dock's room uses `var(--dock-h, var(--dock-max))`; new `.gh-sr-only` and the toggle's 44 px. |
-| `App.test.tsx` (dock section) | Jumps and markers after expanding. A new case: collapse during a preview keeps `--age`, the banner and the blocked writes. |
+| `App.test.tsx` (dock section) | The jumps and markers are used after expanding. A new case: collapse during a preview keeps `--age`, the banner and the blocked writes. |
 | `App.preview.test.tsx`, `App.preview.property.test.tsx` | Expand before using a jump, wherever one is used. The preview-never-writes property keeps `numRuns` at 100 or more. |
 | `App.accessibility.test.tsx` | Expand before "+90 days". The toggle is among the controls checked, and has a name in words. |
 | `primary-buttons.test.tsx` | The toggle is quiet: the region's only filled button is still the shell's Play. |
 | `motion.test.ts` | The chevron's transition sits inside `no-preference`. |
-| `wording.test.ts` | Arguments for `dockText.fadesIn` and `dockText.darkIn`. |
+| `wording.test.ts` | Arguments for `dockText.fadesIn` and `dockText.darkIn`. A new case checks the exact words of `dockText.toggle` ("Coming up") and `dockText.hint` ("Drag to look ahead"). The banned-phrase scan covers all four. |
+| `components/MoonDock.test.tsx` (hint) | The hint shows while collapsed and is gone once expanded. |
 | `timeline.test.ts` | New cases for `markerSoonLabel` ("1 day" and "N days", both types). |
 | new `dock-state.test.ts` | Read and write, a missing key, a throwing storage, `null` storage. |
 
@@ -1707,8 +1714,379 @@ jsdom cannot apply CSS or measure height. Req 34.2's "not shown" for the shell c
 
 ### 11.7 Open points
 
-1. **Play while collapsing.** The shell owns Play, so collapsing cannot stop it without a shell change. A running Play goes on to the end (5 s at most), and moving the slider stops it as today. Under reduced motion Play is a single jump, so nothing keeps running. **Confirm, or ask for an optional shell prop instead.**
-2. **Toggle words.** "Jumps and markers" is a proposal. **Confirm or change.**
+1. **Play while collapsing.** *Decided:* the shell owns Play, so collapsing does not stop it. A running Play goes on to the end (5 s at most), and moving the slider stops it as today. Under reduced motion Play is a single jump, so nothing keeps running. No shell change.
+2. **Toggle words.** *Decided:* "Coming up" in both apps, the same in both states, with `aria-expanded`.
+3. **Collapsed hint.** *Decided:* "Drag to look ahead" is shown in the collapsed bar only, from `wording.ts`, and covered by a wording test (amendment A).
+4. **Build order.** *Decided:* Ghosted (tasks 8.1 to 8.6) is built and checked with screenshots at 1280×800, 390×844 and 320×640 first. Study Dungeon (tasks 21.x) comes after. If Study Dungeon is not done in time, Ghosted ships on its own (amendment B).
+
+---
+
+## 12. The loss forecast line (Requirement 35, task P4)
+
+One line under the hero heading says what changes on the street in the next 7 days if nothing is done, from the engine's own forecast. Study Dungeon gets the same line (its Requirement 20); the two are specified separately because each app has its own words and its own timeline module.
+
+### 12.1 What is reused, and what is not
+
+Reused unchanged:
+
+| Function | File | Used for |
+|---|---|---|
+| `dockMarkers(peopleToday, forecastToday, today)` | `src/timeline.ts` | The "fades" markers (lit people only, from `ghostedPolicy.nextDueAt`) and the "dark" markers (from the forecast), each with its `day` = `ceil((at − today) / DAY_MS)`. |
+| `engine.view(realNow)` | engine | Today's people and their states. |
+| `engine.forecast(realNow, 7 × DAY_MS)` | engine | Who goes dark in the week. |
+| `ghostedPolicy.nextDueAt` | `src/policy.ts` | Called inside `dockMarkers` only; the new code never calls it or repeats its formula. |
+| `DAY_MS` | `src/time.ts` | The 7-day horizon. |
+
+Not reused, and why:
+
+- **The App's existing `markers`** (`dockMarkers` with a 365-day forecast). The engine dates a death by bisection at 1-minute precision over the whole search interval (`bisection.ts`), so a person who goes dark exactly 7 days from now can get a `diesAt` up to a minute later, which is day 8. A 7-day forecast decides membership by health at exactly `realNow + 7 days` (`findDeathAfter` checks the end of the window first), so the boundary in Req 35.2 is exact. The cost is one more `forecast` call per tick or write, over at most a few hundred people.
+- **`ForecastControl`**: it reads `now`, which follows the preview, and lists names, not counts.
+
+### 12.2 New module: `src/loss-forecast.ts` (pure)
+
+```typescript
+/** The line's horizon in days (Req 35). */
+export const LOSS_FORECAST_DAYS = 7
+
+export type LossForecast = { fade: number; dark: number }
+
+/**
+ * @param peopleToday   engine.view(realNow)
+ * @param forecastToday engine.forecast(realNow, LOSS_FORECAST_DAYS × DAY_MS)
+ * @param today         realNow
+ * @returns null when nobody is lit or flickering at `today` (the line is hidden, Req 35.8)
+ */
+export function lossForecast(
+  peopleToday: readonly Person[],
+  forecastToday: readonly ForecastEntry<PersonPayload, PersonPolicyData>[],
+  today: number
+): LossForecast | null
+```
+
+How it counts:
+
+1. If no person in `peopleToday` is `alive` or `weak`, return `null`.
+2. `markers = dockMarkers(peopleToday, forecastToday, today).filter((m) => m.day <= LOSS_FORECAST_DAYS)`. `dockMarkers` keeps `0 < day`, so the window is `(today, today + 7 days]`: `ceil(x / DAY_MS) ≤ 7` exactly when `x ≤ 7 × DAY_MS`.
+3. `darkIds` = the set of ids of the `"dark"` markers. With a 7-day forecast every entry has `today < diesAt ≤ today + 7 days`, so this is every forecast entry.
+4. `fadeIds` = the set of ids of the `"fades"` markers that are not in `darkIds`. `dockMarkers` makes "fades" markers only for people `alive` at `today`, so a person already flickering or dark is never counted here (Req 35.4).
+5. Return `{ fade: fadeIds.size, dark: darkIds.size }`. Using sets means each person is counted once.
+
+The boundary for "starts to flicker": `nextDueAt` is the moment freshness is exactly 60, when the person is still lit, and they flicker from the next millisecond. A person whose `nextDueAt` is exactly `today + 7 days` is counted, as the dock marks them on day 7. This keeps the line and the dock in agreement (Open point 12.7.2).
+
+### 12.3 Wording (`wording.ts`, in `heroText`)
+
+```typescript
+/** The loss forecast line (task P4, Req 35). Windows start to flicker and go dark; never "die" or "dead". */
+lossForecast: (fade: number, dark: number) => string
+```
+
+| `fade`, `dark` | Text |
+|---|---|
+| 0, 0 | "No window will start to flicker or go dark in the next 7 days." |
+| 1, 0 | "If you do nothing, in the next 7 days 1 window starts to flicker." |
+| 3, 0 | "If you do nothing, in the next 7 days 3 windows start to flicker." |
+| 0, 1 | "If you do nothing, in the next 7 days 1 window goes dark." |
+| 0, 2 | "If you do nothing, in the next 7 days 2 windows go dark." |
+| 1, 1 | "If you do nothing, in the next 7 days 1 window starts to flicker and 1 goes dark." |
+| 2, 1 | "If you do nothing, in the next 7 days 2 windows start to flicker and 1 goes dark." |
+| 3, 2 | "If you do nothing, in the next 7 days 3 windows start to flicker and 2 go dark." |
+
+The noun ("window", "windows") follows the first count shown. The verb after "and" agrees with the second count. "The next 7 days" is the rolling window Req 35 defines, not a calendar week, so the line never says "this week".
+
+### 12.4 App and Hero changes
+
+- **`App.tsx`**: one new memo next to `markers`:
+
+  ```typescript
+  const loss = useMemo(
+    () => lossForecast(engine.view(realNow), engine.forecast(realNow, LOSS_FORECAST_DAYS * DAY_MS), realNow),
+    [engine, realNow, version]
+  )
+  ```
+
+  It is passed to the hero as `loss={previewing || firstRun ? undefined : loss}`. `realNow` changes on each settle tick and `version` after each write (Req 35.9). The memo reads nothing else and stores nothing.
+- **`components/Hero.tsx`**: a new optional prop `loss?: LossForecast | null`. When it is set (not `undefined` or `null`), the hero renders `<p className="gh-hero-loss">{heroText.lossForecast(loss.fade, loss.dark)}</p>` straight after the `h2` and before `.gh-hero-actions`. Nothing else in the hero changes. Hero still makes no engine call. The prop is optional, so every existing `Hero` render in the tests keeps today's output.
+- **`styles/layout.css`**: `.gh-hero-loss { margin: 8px 0 0; color: var(--dim); font-size: 17px; line-height: 1.5; }`, in the body font (Spectral) the hero's text already inherits (the body type of `design-tokens.md`, a gap from the allowed set). No width, no animation, no new colour.
+- **Accessibility**: the `<p>` has no `aria-live`, no `role` and no `tabindex`. The App's only live region (`#gh-announcer`) is a sibling before the hero, not an ancestor, so the line is never announced on a tick. A screen reader reads it in order, after the heading.
+- **Requirement 33.2**: the line adds one line of text to the hero at 1280 px and probably two at 390 px (about 26 px and 51 px). After L1 the first row of windows ended 7 px above the dock at 390×844, measured with the old dock. Task 8.6's compact dock is shorter, so the room should be there, but it is measured again once the line is in (task 9.4). If the row does not fit at 390×844, only the hero's padding and margins in `layout.css` may be tightened. If it still does not fit, the work stops and reports the measured heights of the sign, the hero and the Street heading. The line is never hidden on small screens (Req 35.13).
+
+### 12.5 Worked example: the sample street (section 6)
+
+Worked by hand from section 6.2 and the policy (`T = 3r` days; a lit person starts to flicker at `L + 2T/5 = L + 1.2r` days, and goes dark after `L + 2.7r` days). Days are counted from `now`. The next 7 days are `(0, 7]`.
+
+| Person | State at `now` | L | Starts to flicker | Goes dark | Counted |
+|---|---|---|---|---|---|
+| Priya Raman (r 30) | lit | −12 | −12 + 36 = **+24** | −12 + 81 = +69 | no |
+| Sam Rivera (r 14) | lit | −5 | −5 + 16.8 = **+11.8** | +32.8 | no |
+| Sunita Rao (r 7) | lit | −6 | −6 + 8.4 = **+2.4** | −6 + 18.9 = +12.9 | **starts to flicker** |
+| Nia Bello (r 45) | lit | −20 | −20 + 54 = **+34** | +101.5 | no |
+| Dan Okafor (r 45) | flickering | −96 | (already flickering) | −96 + 121.5 = **+25.5** | no |
+| Grace Liu (r 30) | flickering | −51 | (already flickering) | −51 + 81 = **+30** | no |
+| Meera Joshi (r 21) | flickering | −35 | (already flickering) | −35 + 56.7 = **+21.7** | no |
+| Joel Kim (r 90) | flickering | −140 | (already flickering) | −140 + 243 = **+103** | no |
+| Leo, Tomas, Ayesha, Harun | dark | | | (already dark) | no |
+
+Result: `{ fade: 1, dark: 0 }`, so the hero reads "4 windows are flickering", then "If you do nothing, in the next 7 days 1 window starts to flicker." This agrees with section 7.5: the only fade marker within 7 days is Sunita's (+2.4), and `engine.forecast(NOW, 7 d)` is `[]`.
+
+### 12.6 Tests
+
+All use `T0` plus offsets (`test/fixtures`), a real engine on `InMemoryAdapter`, and never the real clock.
+
+New `src/loss-forecast.test.ts` (unit, real engine):
+
+| Case | Set-up | Expected, and how it was worked out |
+|---|---|---|
+| Sample | `loadSampleData(engine, T0)`, `realNow = T0` | `{ fade: 1, dark: 0 }` (section 12.5) |
+| Zero, with people | r 30, last contact T0, `realNow = T0` | `{ fade: 0, dark: 0 }`: fades at T0 + 36 d |
+| Counted once | r 1 (T = 3 d), last contact T0, `realNow = T0` | `{ fade: 0, dark: 1 }`: fades at +1.2 d and goes dark after +2.7 d, both in the next 7 days; counted as dark only |
+| Fade boundary, in | r 10 (T = 30 d), last contact T0, `realNow = T0 + 5 d` | `{ fade: 1, dark: 0 }`: `nextDueAt` = T0 + 12 d (2T/5 = 1 036 800 000 ms, a whole number) = `realNow + 7 d` exactly |
+| Fade boundary, out | same person, `realNow = T0 + 5 d − 1 ms` | `{ fade: 0, dark: 0 }`: `nextDueAt` is 7 d + 1 ms away |
+| Dark boundary, in | r 10, last contact T0, `realNow = T0 + 20 d + 1 ms` | `{ fade: 0, dark: 1 }`: the window ends at T0 + 27 d + 1 ms, where freshness is 100 × (1 − (27 d + 1 ms) / 30 d), just below 10. The person is already flickering (20 d > 12 d), so is not counted as starting to flicker |
+| Dark boundary, out | same person, `realNow = T0 + 20 d` | `{ fade: 0, dark: 0 }`: at T0 + 27 d freshness is exactly 100 × 3 / 30 = 10, which is still flickering |
+| Only dark | r 1, last contact T0 − 10 d, `realNow = T0` | `null` |
+| No people | empty engine | `null` |
+| Wording | the table in 12.3 | each exact sentence |
+
+New `src/loss-forecast.property.test.ts` (Property 14, `{ numRuns: 100 }`, the existing `personAt(scenario())` generator, whose coverage check already proves it reaches all three states):
+
+- dark is 1 exactly when `view(r)` is not dead and `view(r + 7 d)` is dead;
+- fade 1 implies `view(r)` alive, `view(r + 7 d)` not dead, and `view(r + 7 d + 1 min)` not alive;
+- `view(r)` alive with fade 0 and dark 0 implies `view(r + 7 d)` alive;
+- fade + dark ≤ 1 for a single person.
+
+Changed existing tests (changed to match, never loosened, `no-fake-tests.md`):
+
+| Test | Change |
+|---|---|
+| `wording.test.ts` | Add `"heroText.lossForecast": [[0, 0], [1, 0], [3, 0], [0, 1], [0, 2], [1, 1], [2, 1], [3, 2]]` to `SAMPLE_CALLS`. Without it the existing coverage test fails, as it should. The banned-phrase scan then covers every output. A new case checks that no output matches `/\b(die|dies|died|dying|dead)\b/i`. `BANNED` itself is unchanged. |
+| `components/Hero.test.tsx` | New cases: with `loss` the line is straight after the `h2` and before the buttons, with the exact text; without `loss` (and with `null`) there is no `.gh-hero-loss`; the line has no `aria-live`, `role` or `tabindex`. Existing cases are unchanged: they pass no `loss`. |
+| `App.test.tsx` | New case: after "Load sample street" at T0 the hero shows "If you do nothing, in the next 7 days 1 window starts to flicker." After a logged call to Sunita at T0, the line reads "No window will start to flicker or go dark in the next 7 days." Worked out: the call sets her L to T0, so she fades at T0 + 8.4 d, outside the 7 days, and no one else changes within them (12.5). This proves the `version` dependency. |
+| `App.preview.test.tsx` | New case: with the dock moved ahead the line is gone and the preview eyebrow shows; after "Back to today" the line is back with the same words. |
+| `App.first-run.test.tsx` | New case: no `.gh-hero-loss` on the first run or on the empty street after "Start empty". |
+| `App.test.tsx` (ticks) | New case with the fake tick scheduler and a fixed clock: one r 10 person with last contact T0. At T0 + 5 d − 1 min the line is the zero sentence (`nextDueAt` = T0 + 12 d is 7 d + 1 min away). After a tick at T0 + 5 d + 1 min it reads "If you do nothing, in the next 7 days 1 window starts to flicker." (7 d − 1 min away). This proves the `realNow` dependency. |
+| `App.accessibility.test.tsx` | New case: the line is not inside any `[aria-live]` element and is not in the Tab order. |
+| `contrast.test.ts` | No change expected: `--dim` on `--panel`, `--panel-hi`, `--bg` and `--wall` is already checked. If the hero's background is a different token, a row for `--dim` on it is added. |
+| `tokens.test.ts`, `motion.test.ts`, `layout-css.test.ts` | No change: they scan every CSS file, so the new rule is checked automatically. |
+| `primary-buttons.test.tsx`, `sample-data.test.ts`, `timeline.test.ts` | No change. |
+
+Before editing, the build task searches the tests for `gh-hero-main`, `.gh-hero` and the hero's `textContent`, in case one compares the hero's whole text. Any such test is changed to expect the new line, not loosened.
+
+### 12.7 Open points
+
+1. **Wording.** *Decided:* "in the next 7 days", never "this week", because the window is a rolling 7 days and not a calendar week.
+2. **Starting to flicker exactly at 7 days.** At `nextDueAt` freshness is exactly 60, still lit, and the person flickers 1 ms later. *Decided:* counted, as the dock marks them on day 7, so the two never disagree.
+3. **A lit person at exactly 60 at `realNow`.** `dockMarkers` drops a marker at `day 0`, so this person (who flickers 1 ms later) is not counted. It needs freshness to be exactly 60 at the tick's millisecond. *Proposed:* accept, as the dock does.
+4. **Hidden when everyone is dark.** *Decided:* with nobody lit or flickering, nothing can change, and the hero already says "Nobody is fading", so the line is hidden.
+5. **Requirement 33.2.** *Decided:* measured again once the line is in. If the first row of windows does not fit at 390×844, tighten only the hero's padding and margins in `layout.css`. If it still does not fit, stop and report the measured heights of the sign, the hero and the Street heading. The line is never hidden on small screens.
+
+## 13. What this session saves (Requirement 36, task P5)
+
+After Triage picks people for the budget, one line under the picks says how many of them would go dark in the next 7 days and stay lit after a call, for example "A call or meet-up with these people keeps 1 window from going dark in the next 7 days." Study Dungeon gets the same line in its own words (its Requirement 21, design "What This Session Saves"). The shell addition in 13.2 is shared and is built once, here (task 10.1).
+
+### 13.1 Where the line goes, and why the shell needs a prop
+
+`GhostedTriage` wraps the shell `TriagePanel` and passes it a `triage(budget)` function. The panel keeps the chosen budget and the result in its own state (`budget`, and `result = useMemo(() => triage(budget))`), and renders the picks inside its `<section>`. The app never sees which budget was run or which picks are shown, and none of today's props renders anything under the picks (`renderText` is per pick; the wording props are fixed strings or per-number functions).
+
+App-only options were considered and dropped:
+
+- **Render the line after the panel.** The app would need the panel's budget. It could only learn it by recording what `triage` was last called with, which is a side effect inside the panel's `useMemo`, and the line would sit under "Also fading", not under the picks.
+- **Run triage again in the app.** It would be a second result the panel does not show, so the line could disagree with the picks after a budget change.
+
+So the shell gets one optional prop (13.2). It is backward-compatible: omitted, the panel's output is exactly today's.
+
+### 13.2 Shell addition: `TriagePanel` `picksNote` (Requirement 36.11)
+
+In `packages/shell/src/components/TriagePanel.tsx`, added to `TriagePanelProps`:
+
+```typescript
+/**
+ * A line under the picks, between the picks list and the start button.
+ * Called with the picks in the order shown, each time the shown result is
+ * worked out. Returns the text, or null for no line. Omitted: no line, and
+ * the panel renders exactly as without this prop.
+ */
+picksNote?: (picks: TriageCandidate<Payload, PolicyData>[]) => string | null;
+```
+
+- Rendering: only in the branch that shows the picks list (`result.picks.length > 0`). `const note = picksNote?.(result.picks) ?? null`. When `note` is a non-empty string, `<p className="shell-triage-note">{note}</p>` is rendered straight after the picks `<ol>` and before the `<div>` that holds the start button. Before the first run, in the "nothing fits" branch and in the empty branch it is never called and nothing is rendered.
+- The `<p>` has no `aria-live`, no `role`, no `id` and no `tabindex`. The panel has no live region, so it is read in order after the picks.
+- `shell.css`, next to `.shell-triage-empty`: `.shell-triage-note { margin: 0; color: var(--shell-text-dim); }`. The `<ol>`, the `<p>` and the button's `<div>` are all direct children of `.shell-triage`, a flex column with `gap: 0.75rem` (12 px). With `margin: 0` the line gets exactly that 12 px above and below. This is the Ghosted P4 lesson: there the hero line had a top margin only and touched the buttons; here the gap comes from the parent on both sides, so it cannot be lost by a margin rule. No width, no media query.
+- Nothing else changes: `types.ts` and `index.ts` do not change (`TriageCandidate` is already imported), no word is added to the shell, no constant is renamed.
+- **Allow-list.** In `scripts/check-engine-unchanged.sh`, the `allowed` pattern's test-file group becomes `(TimeMachine\.range|TriagePanel\.budgets|TriagePanel\.note|AutopsyDialog\.markers|AutopsyDialog\.focus)\.test\.tsx`. `TriagePanel.tsx` and `shell.css` are already on the list. The comment above it becomes "29.4, 26.5, 27.4, 28.4, 36.11", and the failure message says "outside Requirements 26 to 28 and 36". Nothing else in the script changes.
+- **New shell test** `packages/shell/src/components/TriagePanel.note.test.tsx` (13.8).
+
+### 13.3 New module: `src/triage-saves.ts` (pure)
+
+```typescript
+import { LOSS_FORECAST_DAYS } from "./loss-forecast"
+
+/** The contact the line assumes (Req 36.5). A meet-up gives the same policyData. */
+export const SAVE_EVENT: ContactEvent = { kind: "call" }
+
+/**
+ * The ids of the picks that are at risk and kept (Req 36), in the order of `picks`.
+ * @param picks engine.triage(budget, now).picks, as the panel shows them
+ * @param now   the time triage ran at
+ */
+export function savedPicks(picks: readonly GhostedCandidate[], now: number): string[]
+
+/** savedPicks(picks, now).length. */
+export function triageSaves(picks: readonly GhostedCandidate[], now: number): number
+```
+
+How it counts:
+
+1. `end = now + LOSS_FORECAST_DAYS * DAY_MS` (`DAY_MS` from `src/time.ts`).
+2. For each pick, skip it unless `pick.diesAt !== null && pick.diesAt <= end` (at risk). Triage only makes candidates of people flickering at `now`, and `findDeathAfter` searches after `now`, so `diesAt > now` always holds.
+3. **Kept**: `r = ghostedPolicy.applyEvent(pick.item, SAVE_EVENT, now)`, then `after = { ...pick.item, health: r.health, policyData: r.policyData, lastEventAt: now }`, and the pick is kept when `ghostedPolicy.healthAt(after, end) >= ghostedPolicy.thresholds.dead`. This is what `engine.tend` stores (it settles, calls `applyEvent`, and stores its health and policyData with `lastEventAt = now`); `pick.item` is already the settled copy triage made, so nothing is mutated. Because `healthAt` never rises between events, not dark at `end` means not dark at any time in the window.
+4. Keep each id once (a `Set`), in pick order, and return them.
+
+No decay formula is written in this module. It reads `diesAt` from the engine's result and asks the policy's own `applyEvent` and `healthAt`, the functions the engine itself calls.
+
+**`diesAt` precision.** The engine dates a death by bisection over triage's 10-year search, to 1 minute, and returns the upper end, a time at which the person is already dark (`bisection.ts`). So `diesAt <= end` is never a false "at risk". A person whose real crossing is less than a minute before `end` can get a `diesAt` just after it and is then not counted. That errs towards saying less, never more. It can make this line and the hero's P4 line disagree about such a person by one; accepted (13.9.3).
+
+### 13.4 The honest claim: why "a call or meet-up", and the check in step 3
+
+"Keeps … from going dark" is only true if reaching out really keeps that window lit past the next 7 days. Worked from the policy (`T = 3r` days, dark once freshness is below 10, so after `0.9 T = 2.7r` days without contact):
+
+- **A call or a meet-up** sets freshness to 100 and `lastContactAt = now`. Freshness at `now + 7 days` is `100 × (1 − 7 / 3r)`, which is at least 10 exactly when `r ≥ 70 / 27 ≈ 2.59`. So a call keeps any pick with a rhythm of 3 days or more, and none with a rhythm of 1 or 2 days (dark after 2.7 or 5.4 days). Step 3 drops those, so the line never counts them.
+- **A text** adds only 40 (Requirement 2.1). For example a rhythm-3 person at freshness 33.3 becomes 73.3 and goes dark 2.4 days before the window ends, while a call keeps them lit. A text cannot be what the line promises.
+
+*Decided:* the count assumes a call, step 3 checks it for each pick, and the words name the contact: "A call or meet-up with these people keeps …". A meet-up gives exactly the same policyData as a call, so the property test runs both. When the user then logs a text instead, the line has not claimed anything for it.
+
+### 13.5 Wording (`wording.ts`, in `triageText`)
+
+```typescript
+/** The line under the picks (task P5, Req 36). Called only with n ≥ 1. Never "die" or "dead". */
+saves: (n: number) => string
+```
+
+| `n` | Text |
+|---|---|
+| 0 | No line (36.6). The function is not called. |
+| 1 | "A call or meet-up with these people keeps 1 window from going dark in the next 7 days." |
+| 2 | "A call or meet-up with these people keeps 2 windows from going dark in the next 7 days." |
+| 3 | "A call or meet-up with these people keeps 3 windows from going dark in the next 7 days." |
+
+"These people" points at the heading above the picks, "Reach out to these". The window and the dark come from the street's own words ("goes dark in N days" already sits on each pick). "In the next 7 days" is the same rolling window as P4, never "this week". Nothing says how much anyone matters; the line is about the light only.
+
+### 13.6 GhostedTriage and CSS
+
+- **`components/GhostedTriage.tsx`**: one new callback, passed as `picksNote`:
+
+  ```typescript
+  const picksNote = useCallback(
+    (picks: GhostedCandidate[]) => {
+      const n = triageSaves(picks, now)
+      return n === 0 ? null : triageText.saves(n)
+    },
+    [now]
+  )
+  ```
+
+  It uses the same `now` as `triage`, so the line and the picks always describe the same moment. `version` changes `triage`, so the panel works out the result again and calls `picksNote` with the new picks (Req 36.7). Nothing is stored.
+- **`styles/layout.css`**: `.gh-triage .shell-triage-note { color: var(--dim); font-size: 17px; line-height: 1.5; }`, next to `.gh-triage .shell-triage-title`. No margin (the shell's 12 px gap stays), no width, no media query. `.gh-triage .shell-triage` sets no `gap`, so the shell's 12 px applies.
+- **`contrast.test.ts`**: one row, `{ file: "layout.css", selector: ".gh-triage .shell-triage-note", text: "dim", on: PANELS }`, the same pair as `.gh-triage-steps`.
+- **Requirement 33.2** is not affected: Triage sits below the Street.
+
+### 13.7 Worked example: the sample street, previewed 15 days ahead
+
+At today (section 6) every flickering person goes dark more than 7 days away (Meera +21.7, Dan +25.5, Grace +30, Joel +103; 12.5), so **the line is hidden at every budget on the sample street today**. It shows once the time machine looks ahead. With the moon clock at +15 days (`T = 3r`, freshness `100 × (1 − a / T)` for `a` days since the last contact; `L` from 12.5):
+
+| Person | `a` at +15 | Freshness | State | Goes dark, days from +15 | Minutes, importance | Worth `(100 − h)² / 100 × importance` |
+|---|---|---|---|---|---|---|
+| Priya (r 30) | 27 | 70.0 | lit | | | |
+| Nia (r 45) | 35 | 74.1 | lit | | | |
+| Sunita (r 7) | 21 | 0 | dark (from +12.9) | | | |
+| Sam (r 14) | 20 | 52.38 | flickering | +17.8 | 10, 2 | 45.35 |
+| Dan (r 45) | 111 | 17.78 | flickering | +10.5 | 5, 2 | 135.21 |
+| Grace (r 30) | 66 | 26.67 | flickering | +15 | 15, 1 | 53.78 |
+| Meera (r 21) | 50 | 20.63 | flickering | **+6.7** | 25, 3 | 189.00 |
+| Joel (r 90) | 155 | 42.59 | flickering | +88 | 30, 3 | 98.88 |
+
+- **30 minutes** (the default): the best set within 30 minutes is Dan + Meera (30 min, worth 324.21; Dan + Sam + Grace is 234.34, Joel alone 98.88). Meera is at risk (+6.7 ≤ 7). A call at +15 makes her `a = 0`, so she goes dark 56.7 days later: kept. **Count 1**: "A call or meet-up with these people keeps 1 window from going dark in the next 7 days."
+- **15 minutes**: Dan + Sam (15 min, 180.56; Grace alone 53.78). Neither is at risk. **No line.**
+
+This is the browser check in task 10.6, and the preview case in 13.8.
+
+### 13.8 Tests
+
+All use `T0` plus offsets (`test/fixtures`), a real engine on `InMemoryAdapter`, and never the real clock. Budget 1440 unless a row says otherwise.
+
+Fixture people, all added at T0 with `now = T0` (freshness `100 × (1 − a / 3r)`):
+
+| Name | r | Last contact | Freshness at T0 | Goes dark | Call at T0, freshness at T0 + 7 d | Role |
+|---|---|---|---|---|---|---|
+| Ada Fenn | 10 | T0 − 22 d | 26.67, flickering | T0 + 5 d | 76.67 | at risk, kept |
+| Eli Park | 10 | T0 − 22 d | 26.67, flickering | T0 + 5 d | 76.67 | at risk, kept |
+| Bo Lark | 2 | T0 − 3 d | 50, flickering | T0 + 2.4 d | 0 (dark after 5.4 d) | at risk, not kept |
+| Di Vance | 3 | T0 − 6 d | 33.33, flickering | T0 + 2.1 d | 22.22 (a text gives 0) | at risk, kept by a call only |
+| Cy Moss | 30 | T0 − 50 d | 44.44, flickering | T0 + 31 d | | not at risk |
+| Fay Ruiz | 30 | T0 | 100, lit | | | never a candidate |
+| Gil Ortega | 1 | T0 − 10 d | 0, dark | | | never a candidate |
+
+New `src/triage-saves.test.ts`:
+
+| Case | Set-up | Expected |
+|---|---|---|
+| No picks | empty engine | `triageSaves([], T0)` is 0 |
+| Zero, not at risk | Cy only | 0 |
+| Zero, at risk but not kept | Bo only | 0, and `savedPicks` is `[]` |
+| One | Ada only | 1, `savedPicks` is `[Ada's id]` |
+| Many | all seven | picks are Ada, Eli, Bo, Di and Cy (Fay and Gil are not candidates); count 3 (Ada, Eli, Di) |
+| A text is not enough | Di only | count 1. Also the policy fact behind 13.4: after a text at T0, `ghostedPolicy.healthAt` at T0 + 7 d is 0; after a call it is 22.22 (within 1e-9) |
+| Boundary in | Ada's real pick with `diesAt` replaced by `T0 + 7 × DAY_MS` | 1 |
+| Boundary out | the same with `T0 + 7 × DAY_MS + 1` | 0 |
+| Missing `diesAt` | the same with `diesAt: null` | 0 |
+| Counted once | `[adaPick, adaPick]` | 1 |
+| Budget | Ada (20 min) and Cy (10 min) | budget 15: picks are Cy only, count 0. Budget 30: picks Ada and Cy, count 1 |
+| The horizon | | `SAVE_EVENT` is `{ kind: "call" }`, and the window uses `LOSS_FORECAST_DAYS` (7) |
+| Sample, +15 days | `loadSampleData(engine, T0)`, `now = T0 + 15 d` | budget 30: 1 (Meera). Budget 15: 0 (13.7) |
+
+New `src/triage-saves.property.test.ts` (Property 15, `{ numRuns: 100 }`):
+
+- **Data**: an array of 1 to 4 scenarios from `scenario()` in `test/generators.ts` (unchanged), half of them with the rhythm replaced by 1, 2 or 3 days (`fc.tuple(scenario(), fc.constantFrom(1, 2, 3), fc.boolean())`), so that "at risk, not kept" occurs often. Each scenario is built with `personAt` on its own engine; the property holds for each engine. Budget: `fc.integer({ min: 1, max: 1440 })`.
+- **Checks**, for each engine with `result = engine.triage(budget, now)`, `ids = savedPicks(result.picks, now)` and `end = now + 7 d`:
+  - `ids.length ≤ result.picks.length`, and every id is a pick's id;
+  - before any write, `engine.view(end)` shows each counted person dark (they really are at risk);
+  - after `engine.tend(id, { kind: "call" }, now)` for every counted id, `engine.view(end)` shows each of them not dark, and `engine.forecast(now, 7 d)` lists none of them;
+  - every at-risk pick not counted is dark in `engine.view(end)` after a call at `now` (so nothing a call would keep is left out);
+  - the same two checks with `{ kind: "meetup" }`, on the scenario built again.
+- **Coverage** (fixed seed, in the same file, like the generator coverage check): of the generated picks, at least 5% are counted, at least 5% are at risk and not kept, and at least 5% are not at risk. If one is not reached, the generator mix is changed; the threshold and `numRuns` are never lowered.
+
+New `packages/shell/src/components/TriagePanel.note.test.tsx` (shell words are placeholders, as in the other shell tests):
+
+- without `picksNote`, there is no `.shell-triage-note`, and the section's children are the same as with a `picksNote` that returns `null`;
+- with a `picksNote` returning "TR-Note", a `<p class="shell-triage-note">` with that text is the element straight after the picks `<ol>` and straight before the start button's wrapper, and `picksNote` was called with the picks in the shown order;
+- returning `null` or `""` renders no `<p>`;
+- it is not called and nothing renders before the first run, in the "nothing fits" branch, or in the empty branch;
+- after another budget is chosen and Run pressed, it is called with the new picks and the text follows;
+- the `<p>` has no `aria-live`, `role` or `tabindex`, and the panel's Tab stops are the same with and without it;
+- `shell.css` source: `.shell-triage-note` has `margin: 0`, and `.shell-triage` is `display: flex` with `gap: 0.75rem`.
+
+Changed existing tests (changed to match, never loosened, `no-fake-tests.md`). **Searched first** with a text search over the Ghosted and shell tests for `shell-triage`, `gh-triage`, "Reach out to these", "Start reaching out", "Who to reach out to", "Plan", "Also fading" and "Nobody fits"; only the matching lines were read, not whole files:
+
+| Test | What the search showed | Change |
+|---|---|---|
+| `wording.test.ts` | `SAMPLE_CALLS` must name every function | Add `"triageText.saves": [[1], [2], [3]]`. Add `triageText.saves(` lines to the "never says die, dies, died, dying or dead" case, and a case for the exact words in 13.5. `BANNED` is unchanged. |
+| `components/GhostedTriage.test.tsx` | compares the filled buttons' text ("Plan", "Start reaching out") | Unchanged; the line is not a button. New cases: with the Ada/Cy fixture at 30 min the line has the exact text and sits between the picks list and "Start reaching out"; at 15 min there is none; no line when nobody is fading. |
+| `App.test.tsx` | finds `.gh-triage` for the order of parts | Unchanged. New cases: the Ada/Cy fixture shows the line at 30 min, none after choosing 15 and Plan, the line again at 30; after a logged call to Ada at T0 it is gone (the `version` dependency: Ada is lit, so the picks are Cy only). |
+| `App.preview.test.tsx` | finds "Start reaching out" inside `.gh-triage` | Unchanged. New case: the sample at +15 days (dock expanded first, as task 8.5 does) shows the 30-minute line from 13.7 while "Start reaching out" stays aria-disabled; after "Back to today" there is none. |
+| `App.accessibility.test.tsx` | | New case: the line is not inside any `[aria-live]` element and is not in the Tab order. |
+| `layout-css.test.ts` | | New case: no rule in the app's CSS sets `display: none`, `visibility: hidden` or a negative margin on `.shell-triage-note`, and no rule sets `gap` on `.gh-triage .shell-triage`. |
+| `contrast.test.ts` | lists the restyled shell selectors | One new row (13.6). |
+| `primary-buttons.test.tsx`, `App.storage-errors.test.tsx`, `App.preview.property.test.tsx` | find buttons by role and name | No change expected. |
+| Shell `TriagePanel.test.tsx`, `TriagePanel.interaction.test.tsx`, `TriagePanel.budgets.test.tsx` | read spans inside list items and radio labels | Must pass unchanged (Req 36.11). They are outside the allow-list, so editing one fails the Requirement 29 check. |
+
+Not read in full: every file above except the matching lines, and `TriagePanel.test.tsx` (no match). The build task runs `grep -rn "shell-triage\|gh-triage\|Reach out to these" apps/ghosted/src packages/shell/src --include=*.test.*` before editing, in case a test compares the whole panel's text.
+
+### 13.9 Open points
+
+1. **The line names the contact.** *Decided:* "A call or meet-up with these people keeps …", because a text cannot keep the promise (13.4). Shorter words that do not name the contact would over-claim for texts.
+2. **Under-count, never over-count.** *Decided:* an at-risk pick a call cannot keep (rhythm 1 or 2 days) is left out, so the count can be less than "picks whose `diesAt` falls inside the horizon" (the roadmap's P5 wording). The two are equal whenever every at-risk pick has a rhythm of 3 days or more, as on the sample street.
+3. **A crossing in the last minute.** *Accepted:* `diesAt` is up to a minute late (13.3), so such a pick is not counted, and this line may differ from the hero's P4 line by one for it.
+4. **Shown while previewing.** *Proposed:* the line follows the picks, which follow the previewed `now`, so it shows in a preview too. On the sample street it is the only way to see it, since nothing goes dark within 7 days today. The banner's "nothing is saved" is about storage, and "keeps … from going dark" does not use the word "save". If the line should hide during a preview like P4's, `GhostedTriage` passes no `picksNote` while `blocked` is the preview reason; one line. **Needs your decision.**
+5. **One engine per generated person.** `test/generators.ts` builds one person per engine, so the property test's triage has at most one candidate per engine. Several people in one result (and "counted once") are covered by the unit tests. FYI.
 
 ## Correctness Properties
 
@@ -1765,6 +2143,14 @@ For any time-machine offset above 0, no write action reaches the engine or stora
 ### Property 13: Started dark
 For any rhythm and any last contact more than `9 × T / 10` before the add time, the person is dead at creation, with "created" and "died" at the same timestamp. The autopsy sentences name the whole-day gap from `payload.lastContactAt` to `diedAt` (at least 1 day) and never contain "0 days".
 **Validates: Requirements 19.6, 20.8**
+
+### Property 14: Loss line matches the engine's states
+For any person and `realNow`, the person counts as going dark exactly when the engine shows them not dark at `realNow` and dark at `realNow + 7 days`. A person counted as starting to flicker is lit at `realNow`, not dark at `realNow + 7 days`, and no longer lit one minute after `realNow + 7 days`. A lit person who is not counted is still lit at `realNow + 7 days`. Test: `src/loss-forecast.property.test.ts` (section 12.6).
+**Validates: Requirements 35.2, 35.3, 35.4**
+
+### Property 15: The saves line never over-claims
+For any generated people, `now` and budget, every pick the Triage line counts is dark at `now + 7 days` if left alone, and after a call at `now` through the real engine (and, separately, a meet-up) it is not dark at `now + 7 days`, so not at any time in the next 7 days. Every at-risk pick that is not counted is dark at `now + 7 days` even after a call. The count is never more than the number of picks. Test: `src/triage-saves.property.test.ts` (section 13.8).
+**Validates: Requirements 36.2, 36.3, 36.4, 36.13**
 
 ---
 

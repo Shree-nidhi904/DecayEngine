@@ -5,7 +5,7 @@
 // along the track (--at), its glyph and its accessible name.
 
 import { afterEach, describe, expect, it } from "vitest"
-import { cleanup, render, within } from "@testing-library/react"
+import { cleanup, fireEvent, render, within } from "@testing-library/react"
 import { MoonDock } from "./components/MoonDock"
 import { loadSampleData } from "./sample-data"
 import {
@@ -91,6 +91,8 @@ describe("MoonDock with staggered markers", () => {
         prefersReducedMotion={() => true}
       />
     )
+    // The markers show once the dock is expanded (task L2, Req 34.2).
+    fireEvent.click(within(container).getByRole("button", { name: "Coming up" }))
     const track = within(container).getByRole("group", { name: "Who fades and goes dark in the next year" })
     expect(track.getAttribute("data-rows")).toBe(String(Math.max(...rows) + 1))
     const formatDay = makeDayFormatter("UTC")
@@ -110,6 +112,7 @@ describe("MoonDock with staggered markers", () => {
     const { container } = render(
       <MoonDock today={T0} offsetMs={0} onChange={() => {}} markers={[]} formatDate={String} prefersReducedMotion={() => true} />
     )
+    fireEvent.click(within(container).getByRole("button", { name: "Coming up" }))
     expect(container.querySelector(".gh-dock-track")!.getAttribute("data-rows")).toBe("1")
   })
 })

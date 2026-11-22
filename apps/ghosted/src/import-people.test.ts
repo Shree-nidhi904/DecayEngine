@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest"
 import { DecayEngine, InMemoryAdapter } from "@decay-engine/engine"
-import { IMPORT_COST_MINUTES, IMPORT_IMPORTANCE, parseImport } from "./import-people"
+import { IMPORT_COST_MINUTES, IMPORT_IMPORTANCE, duplicateReasons, parseImport } from "./import-people"
 import { ghostedPolicy, type ContactEvent, type PersonPayload, type PersonPolicyData } from "./policy"
 import { importText, personFormRules } from "./wording"
 
@@ -145,6 +145,38 @@ describe("imported people get importance 2 and 10 minutes", () => {
     expect(view.map((p) => [p.payload.name, p.importance, p.costMinutes, p.policyData.lastContactAt])).toEqual([
       ["Mira Castell", 2, 10, NOV_1],
       ["Tomas Reyes", 2, 10, T0],
+    ])
+  })
+})
+
+// Task P6 (Claude Code, outside Kiro, at the developer's request).
+describe("duplicateReasons", () => {
+  const p = (name: string, relationship = "") => ({ name, relationship })
+
+  it("is undefined for everyone when nobody repeats", () => {
+    expect(duplicateReasons([p("A"), p("B"), undefined, p("A", "Work")], [])).toEqual([undefined, undefined, undefined, undefined])
+  })
+  it("names the first line a repeat matches, and keeps the first", () => {
+    expect(duplicateReasons([p("A", "x"), p("B"), p("a ", " X")], [])).toEqual([
+      undefined,
+      undefined,
+      "same name and relationship as line 1",
+    ])
+  })
+  it("flags someone already on the street, ignoring case and spaces", () => {
+    expect(duplicateReasons([p(" mira castell", "COUSIN")], [p("Mira Castell", "Cousin")])).toEqual([
+      "already on your street (same name and relationship)",
+    ])
+  })
+  it("does not flag the same name with a different relationship", () => {
+    expect(duplicateReasons([p("Sam", "Cousin")], [p("Sam", "Work")])).toEqual([undefined])
+  })
+  it("counts blank and skipped entries in the line numbers", () => {
+    expect(duplicateReasons([undefined, p("A"), undefined, p("A")], [])).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      "same name and relationship as line 2",
     ])
   })
 })

@@ -193,3 +193,91 @@ describe("GhostedTriage during a preview (Req 12.5)", () => {
     expect(pickRows(container)).toHaveLength(2)
   })
 })
+
+describe("GhostedTriage: what this session saves (task P5; Req 36.1, 36.6, 36.8, design section 13.8)", () => {
+  const ONE = "A call or meet-up with these people keeps 1 window from going dark in the next 7 days."
+  const line = () => document.querySelector<HTMLElement>(".shell-triage-note")
+
+  /**
+   * Ada Fenn: rhythm 10 (T 30 days), last contact 22 days ago: freshness 26.67, dark at T0 + 5 days,
+   * and a call keeps her lit for 27 days. 20 minutes. Cy Moss: rhythm 30, last contact 50 days ago:
+   * freshness 44.44, dark at T0 + 31 days. 10 minutes.
+   */
+  function adaAndCy(): GhostedEngine {
+    const engine = makeEngine()
+    const add = (name: string, rhythmDays: number, lastContactAt: number, costMinutes: number) => {
+      const payload: PersonPayload = { name, relationship: "", rhythmDays, lastContactAt }
+      engine.addItem({ payload, importance: 2, costMinutes }, T0)
+    }
+    add("Ada Fenn", 10, day(-22), 20)
+    add("Cy Moss", 30, day(-50), 10)
+    return engine
+  }
+
+  function choose(minutes: number) {
+    fireEvent.click(screen.getByRole("radio", { name: `${minutes} min` }))
+    fireEvent.click(screen.getByRole("button", { name: "Plan" }))
+  }
+
+  it("at 30 minutes (Ada and Cy) the line has the exact words, between the picks and Start reaching out", () => {
+    const { container } = setup(adaAndCy())
+    expect(pickRows(container).map((r) => r.querySelector(".gh-pick-name")!.textContent).sort()).toEqual([
+      "Ada Fenn",
+      "Cy Moss",
+    ])
+    const note = line()!
+    expect(note.tagName).toBe("P")
+    expect(note.textContent).toBe(ONE)
+    expect(note.previousElementSibling).toBe(container.querySelector(".shell-triage-picks"))
+    expect(note.nextElementSibling).toBe(screen.getByRole("button", { name: "Start reaching out" }).parentElement)
+  })
+
+  it("at 15 minutes only Cy fits and he is not at risk, so there is no line; back at 30 it returns", () => {
+    const { container } = setup(adaAndCy())
+    choose(15)
+    expect(pickRows(container).map((r) => r.querySelector(".gh-pick-name")!.textContent)).toEqual(["Cy Moss"])
+    expect(line()).toBeNull()
+    choose(30)
+    expect(line()!.textContent).toBe(ONE)
+  })
+
+  it("the sample street today: nobody flickering goes dark within 7 days, so there is no line", () => {
+    const { container } = setup()
+    expect(pickRows(container)).toHaveLength(2)
+    expect(line()).toBeNull()
+  })
+
+  it("no line when nobody is fading, and none when nobody fits", () => {
+    const empty = makeEngine()
+    const payload: PersonPayload = { name: "Ines Varga", relationship: "", rhythmDays: 30, lastContactAt: day(-1) }
+    empty.addItem({ payload, importance: 3, costMinutes: 1 }, T0)
+    setup(empty)
+    expect(screen.getByText("Nobody is fading.")).toBeTruthy()
+    expect(line()).toBeNull()
+    cleanup()
+
+    const tooLong = makeEngine()
+    const ada: PersonPayload = { name: "Ada Fenn", relationship: "", rhythmDays: 10, lastContactAt: day(-22) }
+    tooLong.addItem({ payload: ada, importance: 2, costMinutes: 200 }, T0)
+    setup(tooLong)
+    expect(screen.getByText("Nobody fits in that time.")).toBeTruthy()
+    expect(line()).toBeNull()
+  })
+
+  it("follows `now`: the sample street 15 days ahead shows the line for Meera, also while writes are blocked (Req 36.8)", () => {
+    const engine = sampleEngine()
+    render(
+      <GhostedTriage
+        engine={engine}
+        now={day(15)}
+        version={0}
+        blocked={previewBlockedText}
+        onStartSession={vi.fn()}
+        onReachOut={vi.fn()}
+      />
+    )
+    // Design section 13.7: at 30 minutes the picks are Dan and Meera; Meera goes dark 6.7 days later, and a call keeps her lit.
+    expect(line()!.textContent).toBe(ONE)
+    expect(screen.getByRole("button", { name: "Start reaching out" }).getAttribute("aria-disabled")).toBe("true")
+  })
+})

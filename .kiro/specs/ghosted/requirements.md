@@ -402,7 +402,7 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 1. THE Ghosted work SHALL make zero changes under `packages/engine/`.
 2. A check (`scripts/check-engine-unchanged.sh`, called by `scripts/check.sh`) SHALL work out the state before the Ghosted work from git history (the parent of the first commit that added anything under `.kiro/specs/ghosted`, or HEAD when nothing about Ghosted is committed yet), with no recorded file, and SHALL run `git diff --exit-code <that commit> -- packages/engine` and `git status --porcelain --untracked-files=all -- packages/engine`, failing if either reports a change. On a shallow clone, where that history is missing, it SHALL say it was skipped and not fail.
 3. WHERE Ghosted seems to need an engine change, THE work SHALL stop and the need SHALL be reported (`engine-boundary.md`).
-4. CHANGES under `packages/shell/` SHALL be limited to Requirements 26 to 28, and the same check SHALL fail when a shell file outside the files those requirements name (including every existing shell test) differs from that state. Requirement 32 needs no shell change; WHERE it turns out to need one, THE work SHALL stop and report it rather than widen this list.
+4. CHANGES under `packages/shell/` SHALL be limited to Requirements 26 to 28 and 36.11, and the same check SHALL fail when a shell file outside the files those requirements name (including every existing shell test) differs from that state. Requirement 32 needs no shell change; WHERE it turns out to need one, THE work SHALL stop and report it rather than widen this list. (Amended for task P5: Requirement 36.11 adds one optional TriagePanel prop and one new shell test file.)
 
 ### Requirement 30: Look and Fonts
 
@@ -459,7 +459,7 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 
 1. WHEN the page loads with no remembered choice, THE dock SHALL be collapsed: one slim bar with the moon at its small size, the time machine title, the shown date line (today's date, or the previewed date) and the slider.
 2. WHILE the dock is collapsed, THE quick jumps, Play, the marker track, its tick labels and the marker list (34.6) SHALL not be shown and SHALL not be reachable with Tab.
-3. WHEN the user activates the toggle, THE dock SHALL expand and show everything in 34.2; activating it again SHALL collapse it. The toggle SHALL be a native `<button>` with `aria-expanded`, a visible name from `wording.ts` that stays the same in both states, a target of at least 44×44 px, and a quiet (not filled) style.
+3. WHEN the user activates the toggle, THE dock SHALL expand and show everything in 34.2; activating it again SHALL collapse it. The toggle SHALL be a native `<button>` with `aria-expanded`, the visible name "Coming up" from `wording.ts` (the same in both states and in both apps), a target of at least 44×44 px, and a quiet (not filled) style.
 4. WHEN the dock collapses or expands, THE preview offset SHALL stay the same. WHILE previewing, THE preview banner with "Back to today" SHALL stay visible in the collapsed bar, and every write SHALL stay blocked (Req 12.5). Moving the slider while collapsed SHALL change the preview as it does when expanded.
 5. WHEN the user expands or collapses the dock, THE choice SHALL be kept in `sessionStorage` (through the App's existing `session` prop) and restored on a reload in the same tab. WHERE `sessionStorage` cannot be used, THE choice SHALL last until the page is closed. No `localStorage` key SHALL be added.
 6. WHEN the dock is expanded, EACH marker SHALL show a short visible label on hover and on keyboard focus: "<name> starts fading in N days" or "<name> goes dark in N days", where N is the marker's day from today. THE expanded dock SHALL also hold an ordered list of every marker in that wording, in marker order, hidden visually and read by screen readers. Each marker button SHALL keep its accessible name with the date (Req 12.4).
@@ -467,6 +467,52 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 8. THE toggle and any change of size SHALL respect reduced motion: any transition sits inside `@media (prefers-reduced-motion: no-preference)` (Req 25.1).
 9. Tab order SHALL follow the DOM: the dock stays after `<main>` and so last in the Tab order (Req 12, design section 9.5). Inside it: the slider, the toggle, then (when expanded) the markers, the jumps and Play, then "Back to today" when previewing.
 10. ALL new text SHALL come from `wording.ts`, and the banned-phrase wording tests SHALL still pass. No colour outside the Ghosted tokens, no change to `packages/engine/` or `packages/shell/`.
+11. WHILE the dock is collapsed, THE bar SHALL show a short hint from `wording.ts`, "Drag to look ahead". WHEN the dock is expanded, THE hint SHALL not be shown. A wording test SHALL cover the hint's words.
+12. WHERE `ResizeObserver` is not available, THE dock SHALL set no measured height, and the page SHALL keep the CSS fallback room (today's `--dock-max` room).
+
+### Requirement 35: The Loss Forecast Line (task P4)
+
+**User Story:** As someone keeping in touch, I want the hero to tell me which windows change in the next 7 days if I do nothing, so that I see what I am about to lose on the first screen.
+
+Terms: `realNow` is the App's real time (the last settle tick), never the previewed time. **The next 7 days** is the rolling window `(realNow, realNow + 7 × DAY_MS]`: it starts just after `realNow` and includes the moment exactly 7 days later. It is not a calendar week.
+
+#### Acceptance Criteria
+
+1. WHILE not previewing and at least one person is lit or flickering at `realNow`, THE hero SHALL show one line of plain text directly under its heading (the `h2`) and before its buttons, giving the number of windows that will start to flicker and the number that will go dark in the next 7 days.
+2. A person SHALL be counted as **going dark** WHEN `engine.forecast(realNow, 7 × DAY_MS)` lists them: they are not dark at `realNow` and the engine shows them dark at `realNow + 7 × DAY_MS`.
+3. A person SHALL be counted as **starting to flicker** WHEN they are lit at `realNow` (engine state `alive`), `ghostedPolicy.nextDueAt(person, realNow)` falls in the next 7 days, and they are not counted as going dark. A `nextDueAt` exactly at `realNow + 7 × DAY_MS` SHALL be counted, as the dock marks it on day 7.
+4. EACH person SHALL be counted at most once. A person who starts to flicker and goes dark within the same 7 days SHALL be counted only as going dark. A person who is already flickering or already dark at `realNow` SHALL never be counted as starting to flicker.
+5. THE counts SHALL come from the existing `dockMarkers` (`timeline.ts`) applied to `engine.view(realNow)` and `engine.forecast(realNow, 7 × DAY_MS)`, so the line agrees with the moon dock's markers for days 1 to 7. No policy formula SHALL be repeated in the new code.
+6. WHEN both counts are 0, THE line SHALL read "No window will start to flicker or go dark in the next 7 days." Otherwise it SHALL use the sentences in design section 12.3.
+7. WHILE previewing, THE line SHALL not be shown, and the rest of the hero SHALL stay as it is today (the preview eyebrow and the previewed counts; Ghosted's hero has no preview forecast line of its own). WHEN the user goes back to today, THE line SHALL show again.
+8. ON the first run, on an empty street, and WHEN every person is dark at `realNow`, THE line SHALL not be shown.
+9. THE line SHALL be worked out again after every write (`version`) and on every settle tick (`realNow`). It SHALL store nothing (no new `localStorage` or `sessionStorage` key) and SHALL make no network request.
+10. THE line SHALL be a plain `<p>` in the hero, with no `aria-live`, no `role="status"` or `role="alert"`, and not inside a live region, so a screen reader is not told about it on every tick. It SHALL not be focusable. It SHALL use `--dim` text, an existing token whose pairs are in `contrast.test.ts`, with no new colour and no animation.
+11. ALL its words SHALL come from `wording.ts` (`heroText.lossForecast`). They SHALL never contain "die", "dies", "died", "dying" or "dead": windows start to flicker and go dark. They SHALL pass the banned-phrase tests of Requirement 31.2. `wording.test.ts` SHALL get sample arguments for the new function (so the coverage test stays complete) and a case that checks its exact words. No existing check is removed or loosened.
+12. THE change SHALL not touch `packages/engine/` or `packages/shell/`. The Requirement 29 check SHALL pass unchanged.
+13. AFTER the line is added, Requirement 33.2 (the first row of windows fully visible at 1280×800 and 390×844) SHALL be measured again in a browser. WHERE it fails, the hero's padding and margins in `layout.css` MAY be tightened, and nothing else. WHERE it still fails, the work SHALL stop and report the measured heights of the sign, the hero and the Street heading. THE line SHALL never be hidden on small screens.
+
+### Requirement 36: What This Session Saves (task P5)
+
+**User Story:** As someone short on time, I want Triage to tell me how many of the people it picked would go dark in the next 7 days and stay lit if I call them, so that I see what my minutes keep.
+
+Terms: `now` is the time the Triage panel runs at (the `now` GhostedTriage already receives). **The next 7 days** is the window `(now, now + LOSS_FORECAST_DAYS × DAY_MS]`, with `LOSS_FORECAST_DAYS` (7) imported from `loss-forecast.ts` (Requirement 35), not a new number. The **picks** are `engine.triage(budget, now).picks` for the budget the panel shows. A pick is **at risk** WHEN its `diesAt` is not `null` and is at or before `now + 7 days`. An at-risk pick is **kept** WHEN a call at `now` leaves its freshness at `now + 7 days` at or above the dead threshold (10), worked out with `ghostedPolicy.applyEvent` and `ghostedPolicy.healthAt` on a copy of the pick (design section 13.3).
+
+#### Acceptance Criteria
+
+1. WHEN Triage has run and shows at least one pick, and at least one pick is kept, THE panel SHALL show one line of plain text under the picks list and before the "Start reaching out" button, giving the number of kept picks.
+2. THE number SHALL be the count of distinct pick ids that are kept. It SHALL be read from the picks of the triage result the panel shows, never from a second list or a second formula. A pick whose `diesAt` is `null`, or later than `now + 7 days`, SHALL not be counted. A pick whose `diesAt` is exactly `now + 7 days` SHALL be counted when it is kept.
+3. Triage candidates are flickering people only (engine Requirement 17b). So a lit person and a dark person are never counted, and nor is a flickering person who is not a pick (the "Also fading" list).
+4. AN at-risk pick that a call cannot keep lit for the next 7 days SHALL not be counted. (A call keeps a window from going dark for 2.7 × rhythm days, so a pick with a rhythm of 1 or 2 days goes dark within 7 days even after a call.) The line SHALL therefore never claim more than a call or meet-up gives.
+5. THE line SHALL name the contact it assumes, "A call or meet-up", because a text adds 40 and may not keep a window lit for the next 7 days (design section 13.4). Its words SHALL come from `wording.ts` (`triageText.saves`), with a singular and a plural form (design section 13.5). They SHALL never contain "die", "dies", "died", "dying" or "dead", SHALL never say the light measures how much someone matters, and SHALL pass the banned-phrase tests of Requirement 31.2. `wording.test.ts` SHALL get sample arguments for the new function and a case that checks its exact words. No existing check is removed or loosened.
+6. THE line SHALL not be shown before Triage has run, WHEN there are no picks (nobody is fading, or nobody fits the budget), or WHEN no pick is kept. It SHALL never say "0".
+7. THE line SHALL follow the panel: it SHALL be worked out again whenever the panel works out its picks again (a new budget is run, `now` changes, or a write bumps `version`), and SHALL always describe the picks shown at that moment.
+8. WHILE previewing, THE line SHALL follow the same rule at the previewed `now`, as the picks do. "Start reaching out" stays disabled with its reason, as today (Requirement 12.5).
+9. THE line SHALL be a plain `<p>`, with no `aria-live`, no `role="status"` or `role="alert"`, not inside a live region and not focusable. It SHALL use `--dim` text on the Triage panel, a pair already in `contrast.test.ts`, with no new colour and no animation.
+10. THERE SHALL be a gap of at least 8 px between the line and the last pick above it, and between the line and the "Start reaching out" button below it, at every width. No CSS rule SHALL hide the line at any width.
+11. THE shell `TriagePanel` SHALL get one optional prop that returns the line's text for the picks shown (or `null` for no line), rendered as described in 36.1, 36.9 and 36.10. WHERE the prop is not given, THE panel SHALL render exactly as today. A new shell test file SHALL prove both, and the existing shell tests and Study Dungeon tests SHALL pass without modification. The new test file SHALL be added to the shell allow-list in `scripts/check-engine-unchanged.sh` (Requirement 29.4).
+12. THE change SHALL not touch `packages/engine/`, SHALL store nothing (no new `localStorage` or `sessionStorage` key) and SHALL make no network request. `policy.ts` and `autopsy-sentences.ts` SHALL not be edited.
+13. A property test (Property 15) SHALL prove that every counted pick, after a call at `now` (and, separately, a meet-up), is not dark at any time in the next 7 days, and that every at-risk pick not counted is dark at `now + 7 days` even after a call.
 
 ## Correctness Properties
 
@@ -485,6 +531,8 @@ Each property is a fast-check test with `{ numRuns: 100 }` or more, fixed timest
 11. **State in three ways**: for any person, the rendered window and card show the glyph and the word that match its state.
 12. **Preview never writes**: for any time-machine offset above 0, no write action reaches the engine and stored data stays byte-for-byte the same.
 13. **Started dark**: for any rhythm and any last contact more than `9 × T / 10` before the add time, the person is dead at creation with "created" and "died" at the same timestamp, and the autopsy sentences name the whole-day gap from `payload.lastContactAt` to `diedAt` (at least 1 day) and never contain "0 days".
+14. **Loss line matches the engine's states** (Requirement 35): for any person and `realNow`, the person counts as going dark exactly when the engine shows them not dark at `realNow` and dark at `realNow + 7 days`. A person counted as starting to flicker is lit at `realNow`, not dark at `realNow + 7 days`, and no longer lit (flickering, or dark) one minute after `realNow + 7 days`. A lit person who is not counted at all is still lit at `realNow + 7 days`.
+15. **The saves line never over-claims** (Requirement 36): for any generated people, `now` and budget, every pick counted by the line is dark at `now + 7 days` if left alone, and after a call at `now` through the real engine (and, in a separate run, a meet-up) it is not dark at `now + 7 days`, so not at any time in the next 7 days. Every at-risk pick that is not counted is dark at `now + 7 days` even after a call. The count is never more than the number of picks.
 
 ## Authorship
 

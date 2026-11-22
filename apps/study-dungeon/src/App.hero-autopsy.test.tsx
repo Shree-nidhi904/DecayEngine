@@ -16,9 +16,10 @@ import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, screen, within } from "@testing-library/react"
 import { makeAppKit } from "./test/app-kit"
 import { day } from "./test/fixtures"
+import { expandDock } from "./test/dock"
 import { DAY_MS } from "./policy"
 import { generateCauseSentences } from "./autopsy-sentences"
-import { previewBlockedText } from "./wording"
+import { heroExtraText, previewBlockedText } from "./wording"
 
 afterEach(cleanup)
 
@@ -108,6 +109,7 @@ describe("hero section", () => {
 
   it("the counts follow the time machine; souls and the streak stay on the real time", () => {
     setupHero()
+    expandDock()
     fireEvent.click(button("+30 days"))
     expect(heroCounts()).toEqual(["0", "1", "3"])
     expect(within(hero()).getByText("1 fact is weakening")).toBeTruthy()
@@ -117,6 +119,7 @@ describe("hero section", () => {
 
   it("Fight the weakest is disabled while previewing, says why and opens nothing", () => {
     setupHero()
+    expandDock()
     fireEvent.click(button("+7 days"))
     const fight = within(hero()).getByRole("button", { name: "Fight the weakest" })
     expect(fight.getAttribute("aria-disabled")).toBe("true")
@@ -141,6 +144,67 @@ describe("hero section", () => {
     expect(heroCounts()).toEqual(["0", "0", "0"])
     expect(stat("souls")).toMatchObject({ number: "0", label: "souls banished" })
     expect(stat("streak")).toMatchObject({ number: "0", label: "days in a row" })
+  })
+})
+
+describe("hero: the loss forecast line (task P4, Requirement 20)", () => {
+  const NOTHING = "Nothing will weaken or die in the next 7 days."
+  const lossLine = () => hero().querySelector<HTMLElement>(".sd-hero-loss")
+
+  it("setupHero() at TODAY shows the zero sentence", () => {
+    // s1 (45 at day 20 12:00, half-life 4) dies 8.68 days later, 8.14 days from TODAY;
+    // s2 (100 at day 19 18:00, half-life 20) weakens 14.74 days later, 13.95 days from TODAY;
+    // w2 (solid, added day 12 13:00) dies at day 45.76; d1 is dead.
+    setupHero()
+    expect(lossLine()!.textContent).toBe(NOTHING)
+  })
+
+  it("sits straight after the h2 and before the Start with … line and the button", () => {
+    setupHero()
+    const heading = hero().querySelector("h2")!
+    const line = lossLine()!
+    expect(line.tagName).toBe("P")
+    expect(heading.nextElementSibling).toBe(line)
+    const startWith = line.nextElementSibling as HTMLElement
+    expect(startWith.classList.contains("sd-hero-sub")).toBe(true)
+    expect(startWith.textContent!.startsWith("Start with ")).toBe(true)
+    expect(startWith.nextElementSibling).toBe(within(hero()).getByRole("button", { name: "Fight the weakest" }))
+  })
+
+  it("is gone at +7 days, where the preview forecast shows instead; Back to today brings it back with the same words", () => {
+    setupHero()
+    expandDock()
+    fireEvent.click(button("+7 days"))
+    expect(lossLine()).toBeNull()
+    // Nothing changes state between TODAY and +7 days (the case above), so the preview line is the "no changes" one.
+    expect(hero().querySelector(".sd-hero-forecast")!.textContent).toBe(heroExtraText.forecast(0, 0))
+
+    fireEvent.click(button("Back to today"))
+    expect(hero().querySelector(".sd-hero-forecast")).toBeNull()
+    expect(lossLine()!.textContent).toBe(NOTHING)
+  })
+
+  it("is hidden with no facts and when every fact is dead (Req 20.8)", () => {
+    const empty = makeAppKit()
+    empty.renderApp(day(1))
+    expect(lossLine()).toBeNull()
+    cleanup()
+
+    const dead = makeAppKit()
+    dead.add("d1", "new", day(0)) // dead at 6.64 days
+    dead.renderApp(day(10))
+    expect(within(hero()).getByText("Nothing is weakening. Your graves are waiting in the Graveyard.")).toBeTruthy()
+    expect(lossLine()).toBeNull()
+  })
+
+  it("with no weak facts but some alive, sits alone under the quiet heading", () => {
+    const kit = makeAppKit()
+    kit.add("a1", "solid", day(10)) // weakens 7.37 days later, day 17.37: 6.37 days from day 11
+    kit.renderApp(day(11))
+    const heading = hero().querySelector("h2")!
+    expect(heading.textContent).toBe("All quiet in the Crypt. Every fact is sleeping soundly.")
+    expect(heading.nextElementSibling).toBe(lossLine())
+    expect(lossLine()!.textContent).toBe("If you do nothing, in the next 7 days 1 fact weakens.")
   })
 })
 

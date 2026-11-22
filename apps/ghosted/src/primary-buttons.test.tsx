@@ -75,10 +75,14 @@ function expectRegions() {
   }
   for (const row of document.querySelectorAll(".gh-row")) expect(count(row, `${APP_FILLED}, ${SHELL_FILLED}`)).toBe(0)
 
-  // The dock: the shell's Play is its primary action; the app adds none.
+  // The dock: the shell's Play is its primary action; the app adds none, and
+  // its "Coming up" toggle is quiet (task L2, Req 34.3).
   const dock = document.querySelector<HTMLElement>(".gh-dock")!
   expect(count(dock, APP_FILLED), "dock").toBe(0)
   expect([...dock.querySelectorAll(SHELL_FILLED)].map((b) => b.textContent)).toEqual(["Play the year"])
+  const toggle = within(dock).getByRole("button", { name: "Coming up" })
+  expect(toggle.classList.contains("gh-button"), "dock toggle").toBe(true)
+  expect(toggle.matches(`${APP_FILLED}, ${SHELL_FILLED}`), "dock toggle").toBe(false)
 
   // Nothing filled outside those regions.
   const cards = outsideDialogs("article.gh-card").length
@@ -127,6 +131,8 @@ describe("one primary per region, in every hero case (Req 30.4, 8.6)", () => {
     const engine = makeEngine()
     loadSampleData(engine, T0)
     renderApp(engine)
+    // The jumps show once the dock is expanded (task L2, Req 34.2).
+    fireEvent.click(screen.getByRole("button", { name: "Coming up" }))
     fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
     expectRegions()
   })

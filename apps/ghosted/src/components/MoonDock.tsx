@@ -24,15 +24,68 @@
 // The dock adds no filled button of its own: the shell's Play is the
 // region's primary action (amended Req 30.4). Engine calls: none; the App
 // passes the markers, computed at the real time.
+//
+// Task L2 (Req 34, design section 11): the dock is collapsed by default to
+// one bar (the small moon, the title, the date line, the slider, the hint
+// "Drag to look ahead" and the "Coming up" toggle). The TimeMachine stays
+// mounted in both states, so the offset and Play are never lost. While
+// collapsed, the app's own parts (the marker track, its ticks and the
+// screen-reader marker list) are not rendered, and dock.css hides the
+// shell's jumps and Play. The preview banner shows in both states. The
+// choice is kept in sessionStorage (dock-state.ts). Each marker shows a
+// short "goes dark in N days" label on hover and on keyboard focus. The dock
+// measures its own height into --dock-h on the root element, so the page
+// keeps that much room at the bottom (layout.css); without ResizeObserver
+// the CSS fallback (--dock-max) applies.
 
-import { useId, useMemo, type CSSProperties } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react"
 import { PreviewBanner, TimeMachine, type FrameScheduler } from "@decay-engine/shell"
+import { readDockExpanded, writeDockExpanded } from "../dock-state"
+import type { SessionFlagStorage } from "../splash"
 import { ghostedShellTheme } from "../theme"
 import { DAY_MS } from "../time"
-import { DOCK_DAYS, makeDayFormatter, markerLabel, markerRows, type DockMarker } from "../timeline"
+import { DOCK_DAYS, makeDayFormatter, markerLabel, markerRows, markerSoonLabel, type DockMarker } from "../timeline"
 import { dockText, ghostedWording } from "../wording"
 import { StateGlyph } from "./icons"
 import "../styles/dock.css"
+
+/** The custom property the dock's measured height goes into, on the root element (Req 34.7). */
+export const DOCK_HEIGHT_PROPERTY = "--dock-h"
+
+/**
+ * Keeps --dock-h on the root element equal to the dock's border-box height,
+ * in whole pixels, while the dock is on the page (Req 34.7). Feature-detects
+ * ResizeObserver: without it (jsdom, old browsers) nothing is set and the CSS
+ * fallback applies (Req 34.12).
+ */
+function useDockHeight(ref: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const element = ref.current
+    if (element === null || typeof globalThis.ResizeObserver !== "function") return
+    const root = document.documentElement
+    const observer = new globalThis.ResizeObserver((entries) => {
+      const entry = entries[entries.length - 1]
+      if (entry === undefined) return
+      const box = entry.borderBoxSize?.[0]
+      const height = box !== undefined ? box.blockSize : element.getBoundingClientRect().height
+      root.style.setProperty(DOCK_HEIGHT_PROPERTY, `${Math.ceil(height)}px`)
+    })
+    observer.observe(element, { box: "border-box" })
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty(DOCK_HEIGHT_PROPERTY)
+    }
+  }, [ref])
+}
+
+/** The toggle's chevron: points up while collapsed (there is more above), turned while expanded (dock.css). */
+function Chevron() {
+  return (
+    <svg className="gh-dock-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path d="M3 10l5-5 5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 /** The dock's jumps, in this order; 365 reads "+1 year" (Req 12.1). */
 export const DOCK_JUMP_DAYS: readonly number[] = [30, 90, 180, 365]
@@ -53,6 +106,8 @@ export interface MoonDockProps {
   frames?: FrameScheduler
   clock?: () => number
   prefersReducedMotion?: () => boolean
+  /** Where the expanded choice is kept for the tab (the App's `session`). Null or omitted: React state only. */
+  session?: SessionFlagStorage | null
 }
 
 /** The moon over the rooftops, from the wireframe. Colours are in dock.css. */
@@ -88,6 +143,7 @@ export function MoonDock({
   frames,
   clock,
   prefersReducedMotion,
+  session = null,
 }: MoonDockProps) {
   const formatDay = useMemo(() => makeDayFormatter(timeZone), [timeZone])
   const previewing = offsetMs > 0
@@ -96,6 +152,18 @@ export function MoonDock({
   // Markers that fall close together are staggered over up to three rows (dock.css), so every glyph stays visible.
   const rows = useMemo(() => markerRows(markers), [markers])
   const rowCount = rows.length === 0 ? 1 : Math.max(...rows) + 1
+
+  // Collapsed unless this tab expanded it before (Req 34.1, 34.5). Read once, on mount.
+  const [expanded, setExpanded] = useState(() => readDockExpanded(session))
+  const toggle = useCallback(() => {
+    const next = !expanded
+    setExpanded(next)
+    writeDockExpanded(session, next)
+  }, [expanded, session])
+  const panelId = `${useId()}-panel`
+
+  const dockRef = useRef<HTMLDivElement>(null)
+  useDockHeight(dockRef)
 
   const track = (
     <div className="gh-dock-timeline">
@@ -117,6 +185,10 @@ export function MoonDock({
               onClick={() => onChange(marker.day * DAY_MS)}
             >
               <StateGlyph state={marker.type === "fades" ? "weak" : "dead"} />
+              {/* Shown on hover and on keyboard focus (dock.css). The button's name is the label above. */}
+              <span className="gh-dock-mark-tip" aria-hidden="true">
+                {markerSoonLabel(marker)}
+              </span>
             </button>
           )
         })}
@@ -126,13 +198,42 @@ export function MoonDock({
           <span key={tick}>{tick}</span>
         ))}
       </div>
+      {markers.length > 0 && (
+        <ol className="gh-sr-only" aria-label={dockText.markerList}>
+          {markers.map((marker) => (
+            <li key={`${marker.id}-${marker.type}`}>{markerSoonLabel(marker)}</li>
+          ))}
+        </ol>
+      )}
     </div>
+  )
+
+  // Right under the slider, so the toggle comes straight after it in the Tab order (Req 34.9).
+  const belowSlider = (
+    <>
+      {!expanded && <p className="gh-dock-hint">{dockText.hint}</p>}
+      <button
+        type="button"
+        className="gh-button gh-dock-toggle"
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        onClick={toggle}
+      >
+        <Chevron />
+        <span>{dockText.toggle}</span>
+      </button>
+      <div id={panelId} className="gh-dock-panel">
+        {expanded && track}
+      </div>
+    </>
   )
 
   return (
     <div
+      ref={dockRef}
       className="gh-dock"
       data-previewing={previewing ? "" : undefined}
+      data-expanded={expanded ? "" : undefined}
       style={{ "--age": age.toFixed(4) } as CSSProperties}
     >
       <div className="gh-dock-in">
@@ -148,7 +249,7 @@ export function MoonDock({
             frames={frames}
             clock={clock}
             prefersReducedMotion={prefersReducedMotion}
-            belowSlider={track}
+            belowSlider={belowSlider}
             maxDays={DOCK_DAYS}
             jumpDays={DOCK_JUMP_DAYS}
           />

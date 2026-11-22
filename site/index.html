@@ -1,0 +1,88 @@
+<!doctype html>
+<!--
+  The Decay Engine landing page (task P3): one URL that states the pitch and links the two apps.
+  Written by Claude Code, outside Kiro, at the developer's request. Static HTML and CSS only:
+  no framework, no script, no web fonts, no network request of its own.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Decay Engine: one engine for things that fade</title>
+  <meta name="description" content="One engine for things that fade. It shows what you will lose, helps you decide what to save, and explains what died. Two apps built on it: Study Dungeon and Ghosted.">
+  <meta name="theme-color" content="#07060d">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the apps</a>
+
+  <header class="top">
+    <p class="mark">Decay Engine</p>
+    <p class="event">Kiroween 2026 · Skeleton Crew</p>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="pitch">
+      <div class="lights" aria-hidden="true">
+        <span class="l l1"></span><span class="l l2"></span><span class="l l3"></span>
+        <span class="l l4"></span><span class="l l5"></span><span class="l l6"></span>
+      </div>
+      <h1 id="pitch">One engine for things that fade.</h1>
+      <p class="lede">It shows what you will lose, helps you decide what to save, and tells you what died and why.</p>
+    </section>
+
+    <section class="three" aria-label="What it does">
+      <div>
+        <h2>See it coming</h2>
+        <p>Slide a time machine forward and see next week's state today, to the minute. Nothing is saved while you look.</p>
+      </div>
+      <div>
+        <h2>Save what matters</h2>
+        <p>Tell it how many minutes you have. It picks the best set to tend, with an exact answer, not a guess.</p>
+      </div>
+      <div>
+        <h2>Know what died</h2>
+        <p>When something dies, a plain sentence says what happened and when. Facts only, never blame.</p>
+      </div>
+    </section>
+
+    <section class="apps" aria-labelledby="apps-h">
+      <h2 id="apps-h">Two apps, one engine</h2>
+      <div class="cards">
+        <a class="card sd" href="https://decay-engine-study-dungeon.netlify.app">
+          <span class="tag">Study Dungeon</span>
+          <span class="head">Facts you study fade into monsters.</span>
+          <span class="body">Review them before they die. A right answer makes a fact stronger and gives it a longer memory. A wrong one shortens it.</span>
+          <span class="go">Open Study Dungeon <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="card gh" href="https://decay-engine-ghosted.netlify.app">
+          <span class="tag">Ghosted</span>
+          <span class="head">A street of windows, one per person.</span>
+          <span class="body">Each light shows how recently you were in touch. A call or a text brings it back. It never claims a light measures how much someone matters.</span>
+          <span class="go">Open Ghosted <span aria-hidden="true">→</span></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="how" aria-labelledby="how-h">
+      <h2 id="how-h">How it is built</h2>
+      <ul>
+        <li><strong>One policy and one skin.</strong> The engine knows nothing about what an item is. Each app adds a decay rule and a look.</li>
+        <li><strong>Ghosted needed no change to the engine.</strong> A script in the check suite proves it on every run.</li>
+        <li><strong>Everything stays in your browser.</strong> No account, no server, no network calls.</li>
+        <li><strong>Tested.</strong> Over two thousand tests across the engine, the shared shell and both apps.</li>
+        <li><strong>Built with Kiro.</strong> Specs, steering files, hooks and a read-only reviewing agent, with a log of every session.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <nav aria-label="Project links">
+      <a href="https://github.com/Shree-nidhi904/DecayEngine">Source on GitHub</a>
+      <a href="https://github.com/Shree-nidhi904/DecayEngine/blob/main/docs/KIRO_WRITEUP.md">How Kiro was used</a>
+      <a href="https://github.com/Shree-nidhi904/DecayEngine/blob/main/docs/KIRO_LOG.md">Kiro log</a>
+      <a href="https://kiroween.devpost.com/">Kiroween 2026</a>
+    </nav>
+  </footer>
+</body>
+</html>

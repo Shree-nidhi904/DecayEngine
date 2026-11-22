@@ -71,7 +71,7 @@ Mood rule: weak and health at or above 35 is worried, below 35 is feral, alive i
 
 Window lit amount: `--lit = health / 100`. Weak windows flicker. Dead windows are boarded up.
 
-## Expiry Reaper (cold kitchen)
+## Expiry Reaper (cold kitchen; dropped, not built)
 
 ```css
 :root {

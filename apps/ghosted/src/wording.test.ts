@@ -52,6 +52,7 @@ const COUNTS = [
 const SAMPLE_CALLS: Readonly<Record<string, readonly unknown[][]>> = {
   markerSummary: [[COUNTS], [[]]],
   "importText.defaults": [[2, 10]],
+  "importText.repeatsLine": [[1], [12]],
   "ghostedWording.timeMachine.showing": [["14 Nov 2023", 0], ["3 Mar 2024", 1], ["3 Mar 2024", 90]],
   "ghostedWording.timeMachine.jump": [[30], [90], [180], [365], [1]],
   "ghostedWording.triage.minutes": [[15]],
@@ -71,6 +72,7 @@ const SAMPLE_CALLS: Readonly<Record<string, readonly unknown[][]>> = {
   "heroText.flickering": [[1], [4]],
   "heroText.reachOutTo": [["Dan"]],
   "heroText.previewEyebrow": [["3 Mar 2027"]],
+  "heroText.lossForecast": [[0, 0], [1, 0], [3, 0], [0, 1], [0, 2], [1, 1], [2, 1], [3, 2]],
   "removeText.confirm": [[NAME]],
   "reachOutText.title": [[NAME]],
   "reachOutText.question": [[FIRST]],
@@ -86,11 +88,14 @@ const SAMPLE_CALLS: Readonly<Record<string, readonly unknown[][]>> = {
   "personFormText.added": [[NAME]],
   "personFormText.edited": [[NAME]],
   "triageText.fiveMinute": [["Dan"]],
+  "triageText.saves": [[1], [2], [3]],
   "sessionText.skippedDark": [[NAME]],
   "sessionText.skippedRemoved": [[NAME]],
   "sessionText.skipped": [[`${NAME} (removed)`]],
   "dockText.fades": [[NAME, DATE]],
   "dockText.dark": [[NAME, DATE]],
+  "dockText.fadesIn": [[NAME, 1], [NAME, 12]],
+  "dockText.darkIn": [[NAME, 1], [NAME, 12]],
   "forecastText.horizon": [[7], [30], [90]],
   "forecastText.entry": [[NAME, DATE]],
   "forecastText.nobody": [[7], [1]],
@@ -173,6 +178,89 @@ describe("wording.ts", () => {
     }
     expect(wording.listNames).toEqual({ alive: "Still lit", weak: "Fading", dead: "Empty windows" })
     expect(wording.stateWords).toEqual({ alive: "lit", litAgain: "lit again", weak: "flickering", dead: "boarded up" })
+  })
+
+  it('the dock\'s toggle reads "Coming up" and its collapsed hint "Drag to look ahead" (task L2, Req 34.3, 34.11)', () => {
+    expect(wording.dockText.toggle).toBe("Coming up")
+    expect(wording.dockText.hint).toBe("Drag to look ahead")
+    expect(wording.dockText.markerList).toBe("Who fades and goes dark next")
+    // The short marker labels, with "1 day" and "N days".
+    expect(wording.dockText.fadesIn(NAME, 1)).toBe("Mira Castell starts fading in 1 day")
+    expect(wording.dockText.darkIn(NAME, 12)).toBe("Mira Castell goes dark in 12 days")
+    // The banned-phrase scan above reached all four.
+    for (const path of ["dockText.toggle", "dockText.hint", "dockText.markerList"]) {
+      expect(found.strings.map((s) => s.path)).toContain(path)
+    }
+    for (const call of ['dockText.fadesIn("Mira Castell", 12)', 'dockText.darkIn("Mira Castell", 12)']) {
+      expect(found.strings.map((s) => s.path)).toContain(call)
+    }
+  })
+})
+
+describe("the loss forecast line (task P4, Req 35.6, 35.11)", () => {
+  const lines = () => found.strings.filter((s) => s.path.startsWith("heroText.lossForecast("))
+
+  it("the banned-phrase scan above reached every sample call", () => {
+    expect(lines().map((s) => s.path)).toEqual([
+      "heroText.lossForecast(0, 0)",
+      "heroText.lossForecast(1, 0)",
+      "heroText.lossForecast(3, 0)",
+      "heroText.lossForecast(0, 1)",
+      "heroText.lossForecast(0, 2)",
+      "heroText.lossForecast(1, 1)",
+      "heroText.lossForecast(2, 1)",
+      "heroText.lossForecast(3, 2)",
+    ])
+  })
+
+  it('never says "die", "dies", "died", "dying" or "dead": windows start to flicker and go dark', () => {
+    const hits = lines().filter((s) => /\b(die|dies|died|dying|dead)\b/i.test(s.text))
+    expect(hits).toEqual([])
+  })
+
+  it('says "in the next 7 days", never "this week"', () => {
+    for (const s of lines()) {
+      expect(s.text, s.path).toContain("in the next 7 days")
+      expect(s.text, s.path).not.toMatch(/\bthis week\b/i)
+    }
+  })
+
+  it("has the exact words for zero, one and many windows", () => {
+    expect(wording.heroText.lossForecast(0, 0)).toBe("No window will start to flicker or go dark in the next 7 days.")
+    expect(wording.heroText.lossForecast(1, 0)).toBe("If you do nothing, in the next 7 days 1 window starts to flicker.")
+    expect(wording.heroText.lossForecast(3, 2)).toBe(
+      "If you do nothing, in the next 7 days 3 windows start to flicker and 2 go dark."
+    )
+  })
+})
+
+describe("the Triage saves line (task P5, Req 36.5)", () => {
+  const lines = () => found.strings.filter((s) => s.path.startsWith("triageText.saves("))
+
+  it("the banned-phrase scan above reached every sample call", () => {
+    expect(lines().map((s) => s.path)).toEqual(["triageText.saves(1)", "triageText.saves(2)", "triageText.saves(3)"])
+  })
+
+  it('never says "die", "dies", "died", "dying" or "dead": windows go dark', () => {
+    const hits = lines().filter((s) => /\b(die|dies|died|dying|dead)\b/i.test(s.text))
+    expect(hits).toEqual([])
+  })
+
+  it('says "in the next 7 days", never "this week", and names the contact it assumes', () => {
+    for (const s of lines()) {
+      expect(s.text, s.path).toContain("in the next 7 days")
+      expect(s.text, s.path).not.toMatch(/\bthis week\b/i)
+      expect(s.text, s.path).toMatch(/^A call or meet-up /)
+    }
+  })
+
+  it("has the exact words for one and many windows", () => {
+    expect(wording.triageText.saves(1)).toBe(
+      "A call or meet-up with these people keeps 1 window from going dark in the next 7 days."
+    )
+    expect(wording.triageText.saves(3)).toBe(
+      "A call or meet-up with these people keeps 3 windows from going dark in the next 7 days."
+    )
   })
 })
 

@@ -13,7 +13,7 @@ import { MAX_FORECAST_HORIZON_MS } from "@decay-engine/engine"
 import type { GhostedEngine } from "./engine-instance"
 import type { PersonPayload } from "./policy"
 import { loadSampleData } from "./sample-data"
-import { DOCK_DAYS, dockMarkers, makeDayFormatter, markerLabel, type DockMarker } from "./timeline"
+import { DOCK_DAYS, dockMarkers, makeDayFormatter, markerLabel, markerSoonLabel, type DockMarker } from "./timeline"
 import { DAY_MS, MINUTE_MS, T0, day, makeEngine } from "./test/fixtures"
 
 function sample() {
@@ -175,5 +175,26 @@ describe("markerLabel (Req 12.4)", () => {
     const marker: DockMarker = { id: "p1", name: "Ana Ruiz", type: "dark", at: Date.UTC(2024, 2, 3, 12), day: 110 }
     expect(markerLabel(marker, makeDayFormatter("UTC"))).toBe("Ana Ruiz goes dark on 3 March")
     expect(markerLabel({ ...marker, type: "fades" }, makeDayFormatter("UTC"))).toBe("Ana Ruiz starts fading on 3 March")
+  })
+})
+
+describe("markerSoonLabel (task L2, Req 34.6)", () => {
+  const marker: DockMarker = { id: "p1", name: "Ana Ruiz", type: "dark", at: Date.UTC(2024, 2, 3, 12), day: 110 }
+
+  it("names the person, what happens and the days from today", () => {
+    expect(markerSoonLabel(marker)).toBe("Ana Ruiz goes dark in 110 days")
+    expect(markerSoonLabel({ ...marker, type: "fades" })).toBe("Ana Ruiz starts fading in 110 days")
+  })
+
+  it('says "1 day" for a marker on day 1', () => {
+    expect(markerSoonLabel({ ...marker, day: 1 })).toBe("Ana Ruiz goes dark in 1 day")
+    expect(markerSoonLabel({ ...marker, type: "fades", day: 1 })).toBe("Ana Ruiz starts fading in 1 day")
+  })
+
+  it("on the sample street, each label uses the marker's own day", () => {
+    const { markers } = sample()
+    // Sunita Rao starts fading 2.4 days after T0: day 3.
+    expect(markerSoonLabel(markers[0]!)).toBe("Sunita Rao starts fading in 3 days")
+    for (const m of markers) expect(markerSoonLabel(m).endsWith(m.day === 1 ? " 1 day" : ` ${m.day} days`)).toBe(true)
   })
 })

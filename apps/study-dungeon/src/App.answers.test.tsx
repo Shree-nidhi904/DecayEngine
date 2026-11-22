@@ -62,4 +62,30 @@ describe("answer checking in the App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Fight the weakest" }))
     expect(screen.getByRole("button", { name: "Show answer" })).toBeTruthy()
   })
+
+  it("with too few other facts, a pick-from-four fight asks you to type and says why (task P6)", () => {
+    const kit = makeAppKit(new MemoryStorage({ "study-dungeon:started": "1", "study-dungeon:tour-done": "1" }), { answerCheck: "choices" })
+    kit.add("w1", "solid", day(0))
+    kit.add("a1", "solid", day(8)) // only one other answer: fewer than the two wrong options needed
+    kit.renderApp(day(8))
+    fireEvent.click(screen.getByRole("button", { name: "Fight the weakest" }))
+    const fight = screen.getByRole("dialog", { name: "Fight" })
+    expect(within(fight).queryByRole("group", { name: "Choose the answer" })).toBeNull()
+    expect(within(fight).getByLabelText("Your answer")).toBeTruthy()
+    expect(within(fight).getByText("There are too few other facts to pick from, so type this one.")).toBeTruthy()
+  })
+
+  it("no explanation is shown when the options can be built", () => {
+    setup()
+    fireEvent.click(screen.getByRole("button", { name: "Fight the weakest" }))
+    expect(screen.queryByText(/too few other facts/)).toBeNull()
+  })
+
+  it("no explanation is shown when the setting is typing", () => {
+    const kit = makeAppKit(new MemoryStorage({ "study-dungeon:started": "1", "study-dungeon:tour-done": "1" }), { answerCheck: "typed" })
+    kit.add("w1", "solid", day(0))
+    kit.renderApp(day(8))
+    fireEvent.click(screen.getByRole("button", { name: "Fight the weakest" }))
+    expect(screen.queryByText(/too few other facts/)).toBeNull()
+  })
 })

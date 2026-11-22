@@ -266,7 +266,7 @@ type ReviewEvent = {
 
 1. WHEN the page loads with no remembered choice, THE time dock SHALL be collapsed at every width: one slim bar with the candle at its small size, the time machine title, the shown date line (today's date, or the previewed date) and the slider.
 2. WHILE the dock is collapsed, THE quick jumps, Play, the marker track, its tick labels and the "Next: …" line SHALL not be shown and SHALL not be reachable with Tab.
-3. WHEN the user activates the toggle, THE dock SHALL expand and show everything in 19.2; activating it again SHALL collapse it. The toggle SHALL be a native `<button>`, shown at every width (today it shows only below 520 px), with `aria-expanded`, a visible name from `wording.ts` that stays the same in both states, and a target of at least 44×44 px.
+3. WHEN the user activates the toggle, THE dock SHALL expand and show everything in 19.2; activating it again SHALL collapse it. The toggle SHALL be a native `<button>`, shown at every width (today it shows only below 520 px), with `aria-expanded`, the visible name "Coming up" from `wording.ts` (the same in both states and in both apps), and a target of at least 44×44 px.
 4. WHEN the dock collapses or expands, THE preview offset SHALL stay the same. THE preview banner (rendered by the App, outside the dock) SHALL keep showing while previewing, and every write SHALL stay blocked. Moving the slider while collapsed SHALL change the preview as it does when expanded.
 5. WHEN the user expands or collapses the dock, THE choice SHALL be kept in `sessionStorage` and restored on a reload in the same tab. WHERE `sessionStorage` cannot be used, THE choice SHALL last until the page is closed. No `localStorage` key SHALL be added.
 6. THE markers SHALL keep their current labels ("Day 12: Ana dies", as accessible name and title). No marker is missing a label, so nothing about the markers changes.
@@ -275,4 +275,50 @@ type ReviewEvent = {
 9. Tab order SHALL follow the DOM. The dock stays last on the page. Inside it come the slider, then the toggle, then (when expanded) the markers, the jumps and Play.
 10. ALL new text SHALL come from `wording.ts`. No colour outside the Study Dungeon tokens. No change to `packages/engine/` or `packages/shell/`.
 11. THE first-run tour step that points at the time machine (`.shell-time-machine`) SHALL still find it, collapsed or expanded.
+12. WHILE the dock is collapsed, THE bar SHALL show a short hint from `wording.ts`, "Drag to look ahead". WHEN the dock is expanded, THE hint SHALL not be shown. A wording test SHALL cover the hint's words.
+13. WHERE `ResizeObserver` is not available, THE dock SHALL set no measured height, and the page SHALL keep the CSS fallback room (today's values).
+14. THIS requirement SHALL be built only after Ghosted Requirement 34 is built and checked. If it is not done in time, Ghosted ships without it.
+
+### Requirement 20: The Loss Forecast Line (task P4)
+
+**User Story:** As a learner, I want the hero to tell me how many facts weaken and die in the next 7 days if I do nothing, so that I see what I am about to lose on the first screen.
+
+Terms: `realNow` is the App's real time (the last settle tick), never the previewed time. **The next 7 days** is the rolling window `(realNow, realNow + 7 × DAY_MS]`: it starts just after `realNow` and includes the moment exactly 7 days later. It is not a calendar week.
+
+#### Acceptance Criteria
+
+1. WHILE not previewing and at least one fact is alive or weak at `realNow`, THE hero SHALL show one line of plain text directly under its heading (the `h2` with the hero message), before the "Start with …" line and the "Fight the weakest" button, giving the number of facts that will weaken and the number that will die in the next 7 days.
+2. A fact SHALL be counted as **will die** WHEN `engine.forecast(realNow, 7 × DAY_MS)` lists it: it is not dead at `realNow` and the engine shows it dead at `realNow + 7 × DAY_MS`.
+3. A fact SHALL be counted as **will weaken** WHEN it is alive at `realNow` (engine state `alive`), `studyDungeonPolicy.nextDueAt(fact, realNow)` falls in the next 7 days, and it is not counted as will die. A `nextDueAt` exactly at `realNow + 7 × DAY_MS` SHALL be counted, as the dock marks it on day 7.
+4. EACH fact SHALL be counted at most once. A fact that weakens and dies within the same 7 days SHALL be counted only as will die. A fact already weak or dead at `realNow` SHALL never be counted as will weaken.
+5. THE counts SHALL come from the existing `timelineEvents` (`timeline.ts`) applied to `engine.view(realNow)` and `engine.forecast(realNow, 7 × DAY_MS)` with `maxDays` 7, so the line agrees with the time dock's markers for days 1 to 7. No policy formula SHALL be repeated in the new code.
+6. WHEN both counts are 0, THE line SHALL read "Nothing will weaken or die in the next 7 days." Otherwise it SHALL use the sentences in design "Loss Forecast Line", Wording, with the words weaken, die and facts.
+7. WHILE previewing, THE line SHALL not be shown. THE existing preview forecast ("Compared with today, … This is a preview, nothing is saved.", `heroExtraText.forecast`) SHALL stay exactly as it is, so the two never show together. WHEN the user goes back to today, THE line SHALL show again.
+8. WHEN there are no facts, or every fact is dead at `realNow`, THE line SHALL not be shown. (On the first run the hero is not shown at all.)
+9. THE line SHALL be worked out again after every write (`version`) and on every settle tick (`realNow`). It SHALL store nothing (no new storage key) and SHALL make no network request.
+10. THE line SHALL be a plain `<p>` in the hero, with no `aria-live`, no `role="status"` or `role="alert"`, and not inside a live region, so a screen reader is not told about it on every tick. It SHALL not be focusable. It SHALL use the colour and background of the existing `.sd-hero-sub` line (`--color-bone-dim` on the hero), with no new colour and no animation.
+11. ALL its words SHALL come from `wording.ts` (`heroText.lossForecast`), and a test SHALL check them exactly.
+12. THE change SHALL not touch `packages/engine/` or `packages/shell/`, and SHALL not edit any file that `authorship.md` lists as written by Claude Code (`timeline.ts`, `policy.ts` and `sample-data.ts` are imported unchanged).
+
+### Requirement 21: What This Session Saves (task P5)
+
+**User Story:** As a learner, I want Triage to tell me how many of the facts it picked would die in the next 7 days and survive them if I answer right, so that I see what my minutes save.
+
+Terms: `now` is the time the Triage panel runs at (the App's `now`, the one `runTriage` already uses). **The next 7 days** is the window `(now, now + LOSS_FORECAST_DAYS × DAY_MS]`, with `LOSS_FORECAST_DAYS` (7) imported from `loss-forecast.ts` (Requirement 20), not a new number. The **picks** are `engine.triage(budget, now).picks` for the budget the panel shows. A pick is **at risk** WHEN its `diesAt` is not `null` and is at or before `now + 7 days`. An at-risk pick is **saved** WHEN a right answer at `now` leaves its health at `now + 7 days` at or above the dead threshold (10), worked out with `studyDungeonPolicy.applyEvent` and `studyDungeonPolicy.healthAt` on a copy of the pick (design "What This Session Saves").
+
+#### Acceptance Criteria
+
+1. WHEN Triage has run and shows at least one pick, and at least one pick is saved, THE panel SHALL show one line of plain text under the "Fight these first" list and before the "Start the session" button, giving the number of saved picks.
+2. THE number SHALL be the count of distinct pick ids that are saved. It SHALL be read from the picks of the triage result the panel shows, never from a second list or a second formula. A pick whose `diesAt` is `null`, or later than `now + 7 days`, SHALL not be counted. A pick whose `diesAt` is exactly `now + 7 days` SHALL be counted when it is saved.
+3. Triage candidates are weak facts only (engine Requirement 17b). So a fact in the Crypt or the Graveyard is never counted, and nor is a weak fact that is not a pick (the "Still lurking" list).
+4. AN at-risk pick that a right answer cannot keep alive for the next 7 days SHALL not be counted. (A right answer gives health 100 and doubles the half-life, and a fact at 100 dies after 3.32 half-lives. So a pick whose half-life is 1 day, 2 days after the answer, dies 6.64 days later, inside the window.) The line SHALL therefore never claim more than a right answer gives.
+5. THE line SHALL say it assumes right answers ("Answering these right saves …"), because a wrong answer sets health to 45 and halves the half-life. Its words SHALL come from `wording.ts` (`triageNoteText.saves`), with a singular and a plural form, saying facts "die" "in the next 7 days", never "this week". `theme.test.ts` (the app's wording test) SHALL check the exact words.
+6. THE line SHALL not be shown before Triage has run, WHEN there are no picks (no weak facts, or none fits the budget), or WHEN no pick is saved. It SHALL never say "0".
+7. THE line SHALL follow the panel: it SHALL be worked out again whenever the panel works out its picks again (a new budget is run, `now` changes, or a write bumps `version`), and SHALL always describe the picks shown at that moment.
+8. WHILE previewing, THE line SHALL follow the same rule at the previewed `now`, as the picks do. "Start the session" stays disabled with its reason, as today.
+9. THE line SHALL be a plain `<p>`, with no `aria-live`, no `role="status"` or `role="alert"`, not inside a live region and not focusable. It SHALL use `--color-bone-dim` on the Triage panel, the colour the panel's numbers already use, with no new colour and no animation.
+10. THERE SHALL be a gap of at least 8 px between the line and the last pick above it, and between the line and the "Start the session" button below it, at every width. No CSS rule SHALL hide the line at any width.
+11. THE line SHALL use the shell `TriagePanel`'s optional `picksNote` prop, added once in Ghosted task 10.1 (Ghosted Requirement 36.11). Study Dungeon SHALL make no other shell change, and its existing tests of the panel SHALL pass unchanged.
+12. THE change SHALL not touch `packages/engine/`, SHALL store nothing and SHALL make no network request. It SHALL not edit any file that `authorship.md` lists as written by Claude Code (`policy.ts`, `timeline.ts`, `sample-data.ts` and `contrast.test.ts` are used unchanged).
+13. A property test SHALL prove that every counted pick, after a right answer at `now` through the real engine, is not dead at any time in the next 7 days, and that every at-risk pick not counted is dead at `now + 7 days` even after a right answer.
 

@@ -106,6 +106,9 @@ export const importText = {
   rhythmMissing:
     "expected name | relationship | rhythm days | last contact (YYYY-MM-DD), the rhythm is required",
   tooManyFields: "expected name | relationship | rhythm days | last contact (YYYY-MM-DD), there are more than 4 fields",
+  // Task P6: a line that repeats a person (same name and relationship), in the paste or already on the street.
+  repeatsLine: (line: number) => `same name and relationship as line ${line}`,
+  alreadyOnStreet: "already on your street (same name and relationship)",
 } as const
 
 /** Why a backup file was refused (Req 21.4, design section 9.3). */
@@ -248,6 +251,23 @@ export const heroText = {
   addPerson: "Add a person",
   /** The eyebrow while the time machine looks ahead (Req 8.5). */
   previewEyebrow: (date: string) => `Future preview · ${date}`,
+  /**
+   * The loss forecast line under the hero heading (task P4, Req 35, design
+   * section 12.3). Windows start to flicker and go dark; never "die" or
+   * "dead". "The next 7 days" is a rolling window, never "this week". The
+   * noun follows the first count shown; the verb after "and" agrees with the
+   * second count.
+   */
+  lossForecast: (fade: number, dark: number) => {
+    if (fade === 0 && dark === 0) return "No window will start to flicker or go dark in the next 7 days."
+    const windows = (n: number) => (n === 1 ? "1 window" : `${n} windows`)
+    const flicker = (n: number) => (n === 1 ? "starts to flicker" : "start to flicker")
+    const goDark = (n: number) => (n === 1 ? "goes dark" : "go dark")
+    const start = "If you do nothing, in the next 7 days"
+    if (dark === 0) return `${start} ${windows(fade)} ${flicker(fade)}.`
+    if (fade === 0) return `${start} ${windows(dark)} ${goDark(dark)}.`
+    return `${start} ${windows(fade)} ${flicker(fade)} and ${dark} ${goDark(dark)}.`
+  },
 } as const
 
 /** The privacy line below the lists (Req 15). */
@@ -330,6 +350,14 @@ export const triageText = {
   howItWorks: "How does this work?",
   /** The quiet button (Req 9.4): "Today's 5-minute action: Reach out to Dan". */
   fiveMinute: (firstName: string) => `Today's 5-minute action: Reach out to ${firstName}`,
+  /**
+   * The line under the picks (task P5, Req 36, design section 13.5): how many
+   * picks would go dark in the next 7 days and a call or meet-up keeps lit.
+   * Called only with n ≥ 1 (no line for 0). It names the contact because a
+   * text may not keep the window lit. Never "die" or "dead".
+   */
+  saves: (n: number) =>
+    `A call or meet-up with these people keeps ${n === 1 ? "1 window" : `${n} windows`} from going dark in the next 7 days.`,
 } as const
 
 /** The Triage session (Req 9.5, design section 4.3). */
@@ -362,6 +390,16 @@ export const dockText = {
   dark: (name: string, date: string) => `${name} goes dark on ${date}`,
   /** Under the track, from the wireframe (hidden from screen readers; the slider says the date). */
   ticks: ["Today", "3 months", "6 months", "9 months", "1 year"],
+  /** The toggle that expands and collapses the dock (task L2, Req 34.3). The same in both states and in both apps. */
+  toggle: "Coming up",
+  /** In the collapsed bar only (Req 34.11). */
+  hint: "Drag to look ahead",
+  /** The screen-reader list of every marker (Req 34.6). */
+  markerList: "Who fades and goes dark next",
+  /** A marker's short label (Req 34.6): "Mira Castell starts fading in 12 days". */
+  fadesIn: (name: string, n: number) => `${name} starts fading in ${days(n)}`,
+  /** A marker's short label (Req 34.6): "Mira Castell goes dark in 12 days". */
+  darkIn: (name: string, n: number) => `${name} goes dark in ${days(n)}`,
 } as const
 
 /** The forecast control (task 5.2, Req 22). */

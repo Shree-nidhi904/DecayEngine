@@ -26,7 +26,7 @@ import type { Scheduler } from "./ticking"
 import { previewBlockedText } from "./wording"
 import { stripComments } from "./test/css"
 import { FakeStorage } from "./test/fake-storage"
-import { T0, makeEngine } from "./test/fixtures"
+import { DAY_MS, T0, makeEngine } from "./test/fixtures"
 import { listFiles, readText, SRC_DIR } from "./test/source-files"
 
 afterEach(() => {
@@ -57,6 +57,11 @@ function renderSample() {
 // native <summary> is focusable and opens on Enter and Space, like a button.
 const CONTROLS = "button, summary, input, select, textarea, a[href], [role='button'], [role='link'], [contenteditable]"
 const openDialog = () => document.querySelector<HTMLDialogElement>("dialog[open]")
+/** The dock starts collapsed (task L2, Req 34.1): expand it, as a user would, before using a jump. */
+function jumpAhead90Days() {
+  fireEvent.click(screen.getByRole("button", { name: "Coming up" }))
+  fireEvent.click(screen.getByRole("button", { name: "+90 days" }))
+}
 const heroHeading = () => within(screen.getByRole("main")).getAllByRole("heading", { level: 2 })[0]!
 const region = (name: string) => screen.getByRole("region", { name })
 const card = (list: string, name: string) => within(region(list)).getByRole("article", { name })
@@ -130,14 +135,27 @@ describe("App: every control works from the keyboard (Req 24.1)", () => {
 
   it("during a preview too: the blocked write controls stay in the Tab order", () => {
     renderSample()
-    fireEvent.click(screen.getByRole("button", { name: "+90 days" }))
+    jumpAhead90Days()
     expectReachable("preview")
+  })
+
+  it("the dock's toggle is a native button with aria-expanded and a name in words, collapsed and expanded (task L2, Req 34.3)", () => {
+    renderSample()
+    const toggle = screen.getByRole("button", { name: "Coming up" })
+    expect(controls()).toContain(toggle)
+    expect(toggle.getAttribute("aria-expanded")).toBe("false")
+    expectReachable("collapsed dock")
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute("aria-expanded")).toBe("true")
+    expect(accessibleName(toggle).trim()).toBe("Coming up")
+    expectReachable("expanded dock")
+    expectNamed("expanded dock")
   })
 
   it("every button has a name in words and every field a label, today and in a preview", () => {
     renderSample()
     expectNamed("today")
-    fireEvent.click(screen.getByRole("button", { name: "+90 days" }))
+    jumpAhead90Days()
     expectNamed("preview")
   })
 
@@ -154,6 +172,38 @@ describe("App: every control works from the keyboard (Req 24.1)", () => {
       }
     }
     expect(missing).toEqual([])
+  })
+})
+
+describe("App: the hero's loss forecast line (task P4, Req 35.10)", () => {
+  it("is not inside any live region and is not in the Tab order", () => {
+    renderSample()
+    const line = document.querySelector<HTMLElement>(".gh-hero-loss")!
+    expect(line.textContent).toBe("If you do nothing, in the next 7 days 1 window starts to flicker.")
+    expect(line.closest("[aria-live]")).toBeNull()
+    expect(line.closest("[role='status'], [role='alert']")).toBeNull()
+    expect(line.hasAttribute("tabindex")).toBe(false)
+    expect(controls()).not.toContain(line)
+    expect(controls().some((el) => line.contains(el))).toBe(false)
+  })
+})
+
+describe("App: the Triage saves line (task P5, Req 36.9)", () => {
+  it("is a plain paragraph, not inside any live region and not in the Tab order", () => {
+    renderSample()
+    // 15 days ahead, where the line shows at 30 minutes (design section 13.7).
+    fireEvent.change(screen.getByRole("slider"), { target: { value: String(15 * DAY_MS) } })
+    const line = document.querySelector<HTMLElement>(".gh-triage .shell-triage-note")!
+    expect(line.tagName).toBe("P")
+    expect(line.textContent).toBe("A call or meet-up with these people keeps 1 window from going dark in the next 7 days.")
+    expect(line.closest("[aria-live]")).toBeNull()
+    expect(line.closest("[role='status'], [role='alert']")).toBeNull()
+    expect(line.hasAttribute("role")).toBe(false)
+    expect(line.hasAttribute("tabindex")).toBe(false)
+    expect(controls()).not.toContain(line)
+    expect(controls().some((el) => line.contains(el))).toBe(false)
+    // Every control still passes the keyboard checks with the line on the page.
+    expectReachable("preview 15 days ahead, with the saves line")
   })
 })
 
@@ -216,7 +266,7 @@ describe("App: dialogs (Req 24.2, 24.3)", () => {
 describe("App: blocked write controls during a preview (Req 12.5)", () => {
   it("stay focusable, say why in their description, and do nothing when activated", () => {
     renderSample()
-    fireEvent.click(screen.getByRole("button", { name: "+90 days" }))
+    jumpAhead90Days()
     const blocked = [...document.querySelectorAll<HTMLElement>('[aria-disabled="true"]')]
     expect(blocked.length).toBeGreaterThan(10)
     for (const el of blocked) {

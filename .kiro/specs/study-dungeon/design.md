@@ -735,7 +735,7 @@ Health is then sampled with `studyDungeonPolicy.healthAt` over the current life 
 
 ### Property-Based Tests
 
-Not applicable for Study Dungeon app-level code. The engine itself has property-based tests; the app uses the engine and policy as building blocks.
+Not applicable for Study Dungeon app-level code. The engine itself has property-based tests; the app uses the engine and policy as building blocks. (Amended for task P5: one app property test, for Requirement 21.13; see "What This Session Saves", Tests.)
 
 ## Accessibility
 
@@ -803,7 +803,7 @@ Not applicable for Study Dungeon app-level code. The engine itself has property-
 ### Development
 - TypeScript
 - Vitest
-- fast-check (engine tests only, not app tests)
+- fast-check (engine tests, and from task P5 the app's `triage-saves.property.test.ts`; amended for Requirement 21.13)
 
 ### External (Fonts)
 - Google Fonts API: Pirata One, Spectral, IBM Plex Mono
@@ -828,9 +828,10 @@ The shell `TimeMachine` stays mounted, so the slider, the date line and Play's s
 
 - The existing `open` state becomes `expanded`. It is read from the session flag and now applies at every width.
 - The toggle moves from before `TimeMachine` into the start of `belowSlider`, so it comes right after the slider in the Tab order.
-- Its name is the visible text `timelineText.toggle` ("Jumps and predictions"), the same in both states, with `aria-expanded` and `aria-controls` pointing at the panel. The ▴/▾ glyph stays, `aria-hidden`.
+- Its name is the visible text `timelineText.toggle` ("Coming up", the same words as Ghosted's toggle), the same in both states, with `aria-expanded` and `aria-controls` pointing at the panel. The ▴/▾ glyph stays, `aria-hidden`.
 - `timelineText.unfold` and `fold` are removed, because the name no longer changes with the state.
 - The `.sd-timeline` block (track, ticks and the "Next:" line) renders only while expanded.
+- While collapsed, `belowSlider` also shows the hint `<p class="sd-dock-hint">{timelineText.hint}</p>`, "Drag to look ahead", in `--color-bone-dim`, mono 12 px. It is gone once expanded.
 - The shell's jumps and Play are hidden with `.sd-dock:not([data-open]) .shell-time-machine-controls { display: none }` at every width.
 - The old phone-only rules that hid the slider while folded are removed: the slider is always shown (Req 19.1).
 - The toggle: 44×44 px minimum at every width. The colours are its existing ones (`--color-stone-hi`, `--color-pumpkin`, the `#4a3858` edge already in `dock.css`). The phone-only `position: absolute` placement goes, and it sits in the flow under the slider.
@@ -845,7 +846,10 @@ The shell `TimeMachine` stays mounted, so the slider, the date line and Play's s
 
 ### The page's bottom room
 
-- `useDockHeight(ref)` in `TimeDock.tsx` watches the dock with a `ResizeObserver`. It sets `--dock-h` on `document.documentElement`, removes it on unmount, and does nothing without `ResizeObserver` (jsdom).
+- `useDockHeight(ref)` in `TimeDock.tsx` feature-detects `ResizeObserver` with `typeof globalThis.ResizeObserver === "function"`.
+  - When it is there, it watches the dock and sets `--dock-h` on `document.documentElement`. It disconnects and removes the property on unmount.
+  - When it is missing (jsdom, old browsers), it sets nothing, and the CSS fallbacks below apply.
+- Tests stub `ResizeObserver` explicitly. They install a fake on `globalThis`, fire its callback with a given size, check that `--dock-h` equals it, and remove the fake afterwards. A second case runs without it and checks that `--dock-h` is not set. No assertion is weakened.
 - `world.css` keeps today's values as the fallback, so the room is never smaller than now before the first measurement:
   - `.sd-world { padding-bottom: var(--dock-h, 15rem) }`, and `var(--dock-h, 10rem)` below 520 px
   - `html { scroll-padding-bottom: calc(var(--dock-h, 238px) + 12px) }`, which keeps today's 250 px, and the matching 130 px below 520 px
@@ -863,10 +867,321 @@ Existing tests are **changed to match the new behaviour, never loosened** (`no-f
 | `App.accessibility.test.tsx` | Expand before using a jump. The toggle is among the controls checked, focusable and named in words. |
 | `App.tour.test.tsx` | The time machine step still finds `.shell-time-machine` while collapsed. |
 | `theme.test.ts` | Only if it checks the removed `fold` and `unfold` strings: it then checks `toggle`. |
+| wording test (the existing Study Dungeon wording test, or a new case in `TimeDock.test.tsx` if there is none) | The exact words of `timelineText.toggle` ("Coming up") and `timelineText.hint` ("Drag to look ahead"). In `TimeDock.test.tsx`: the hint shows while collapsed and is gone once expanded. |
 
 jsdom cannot apply CSS or measure height. "Not shown" for the shell controls and the bottom room are checked by CSS source tests plus a browser check at 320, 390 and 1280 px, on a draft deploy or a server the developer starts.
 
 ### Open points
 
-1. **Play while collapsing.** As in Ghosted design section 11.7: a running Play goes on to the end (5 s at most) unless the slider moves. **Confirm.**
-2. **Toggle words.** "Jumps and predictions" is a proposal. **Confirm or change.**
+1. **Play while collapsing.** *Decided:* as in Ghosted design section 11.7, a running Play goes on to the end (5 s at most) unless the slider moves. No shell change.
+2. **Toggle words.** *Decided:* "Coming up" in both apps, the same in both states, with `aria-expanded`.
+3. **Collapsed hint.** *Decided:* "Drag to look ahead", shown in the collapsed bar only, from `wording.ts`, and covered by a wording test.
+4. **Build order.** *Decided:* Ghosted first (its tasks 8.1 to 8.6, checked with screenshots), then these tasks. If they are not done in time, Ghosted ships on its own.
+
+## Loss Forecast Line (Requirement 20, task P4)
+
+One line under the hero heading says how many facts weaken and die in the next 7 days if nothing is done, from the engine's own forecast. Ghosted gets the same line in its own words (Ghosted Requirement 35, design section 12).
+
+**Authorship.** The files changed are Kiro's: `components/HeroSection.tsx`, `wording.ts` and `styles/hero.css`. (`authorship.md` lists `HeroSection.tsx` among the Kiro files that Claude Code changed in the visual pass; it is still Kiro's file, and the preview forecast code that pass added is not touched.) `timeline.ts`, `policy.ts` and `sample-data.ts` were written by Claude Code. They are imported unchanged, and no Claude Code file is edited.
+
+### What is reused, and what is not
+
+Reused unchanged:
+
+| Function | File | Used for |
+|---|---|---|
+| `timelineEvents(today, deaths, realNow, maxDays)` | `src/timeline.ts` | The "weak" events (alive facts only, from `studyDungeonPolicy.nextDueAt`) and the "dead" events (from the forecast), each with its `day` = `ceil((at − realNow) / DAY_MS)`, kept when `1 ≤ day ≤ maxDays`. |
+| `engine.view(realNow)` | engine | Today's facts and their states. |
+| `engine.forecast(realNow, 7 × DAY_MS)` | engine | Which facts die in the week. |
+| `studyDungeonPolicy.nextDueAt` | `src/policy.ts` | Called inside `timelineEvents` only; the new code never calls it or repeats its formula. |
+| `DAY_MS` | `src/policy.ts` | The 7-day horizon. |
+
+Not reused, and why:
+
+- **The hero's preview forecast** (the `forecast` memo in `HeroSection.tsx`). It compares the states in `engine.view(realNow)` with those in `engine.view(now)`. Called with `now = realNow + 7 days` it gives the same counts except at the "weaken" boundary: at `nextDueAt` a fact's health is exactly 60, still alive, so a fact that weakens exactly at 7 days would be missed, while the time dock marks it on day 7. Reusing `timelineEvents` keeps the line and the dock in agreement. The preview code stays exactly as it is and is still what shows while previewing (Req 20.7).
+- **The time dock's own events** (`TimeDock.tsx`, a 60-day forecast). The engine dates a death by bisection at 1-minute precision over the search interval, so a death exactly 7 days away can get a `diesAt` up to a minute later, which is day 8. A 7-day forecast decides membership by health at exactly `realNow + 7 days` (`findDeathAfter` checks the end of the window first). The cost is one more `forecast` call per tick or write.
+
+### New module: `src/loss-forecast.ts` (pure)
+
+```typescript
+/** The line's horizon in days (Requirement 20). */
+export const LOSS_FORECAST_DAYS = 7
+
+export type LossForecast = { weaken: number; die: number }
+
+/**
+ * @param factsToday engine.view(realNow)
+ * @param deaths     engine.forecast(realNow, LOSS_FORECAST_DAYS × DAY_MS)
+ * @param realNow    the real time
+ * @returns null when no fact is alive or weak at realNow (the line is hidden, Req 20.8)
+ */
+export function lossForecast(
+  factsToday: readonly Fact[],
+  deaths: readonly { item: { id: string }; diesAt: number }[],
+  realNow: number
+): LossForecast | null
+```
+
+How it counts:
+
+1. If no fact in `factsToday` is `alive` or `weak`, return `null`.
+2. `events = timelineEvents(factsToday, deaths, realNow, LOSS_FORECAST_DAYS)`. Its `1 ≤ day ≤ 7` is the window `(realNow, realNow + 7 days]`: `ceil(x / DAY_MS) ≤ 7` exactly when `x ≤ 7 × DAY_MS`.
+3. `dieIds` = the set of ids of the `"dead"` events. With a 7-day forecast this is every forecast entry.
+4. `weakenIds` = the set of ids of the `"weak"` events that are not in `dieIds`. `timelineEvents` makes "weak" events only for facts `alive` at `realNow`, so a fact already weak or dead is never counted here (Req 20.4).
+5. Return `{ weaken: weakenIds.size, die: dieIds.size }`. Using sets means each fact is counted once.
+
+### Wording (`wording.ts`, in `heroText`)
+
+```typescript
+/** The loss forecast line (task P4, Requirement 20). */
+lossForecast: (weaken: number, die: number) => string
+```
+
+| `weaken`, `die` | Text |
+|---|---|
+| 0, 0 | "Nothing will weaken or die in the next 7 days." |
+| 1, 0 | "If you do nothing, in the next 7 days 1 fact weakens." |
+| 3, 0 | "If you do nothing, in the next 7 days 3 facts weaken." |
+| 0, 1 | "If you do nothing, in the next 7 days 1 fact dies." |
+| 0, 2 | "If you do nothing, in the next 7 days 2 facts die." |
+| 1, 1 | "If you do nothing, in the next 7 days 1 fact weakens and 1 dies." |
+| 2, 0 | "If you do nothing, in the next 7 days 2 facts weaken." |
+| 3, 2 | "If you do nothing, in the next 7 days 3 facts weaken and 2 die." |
+
+The noun ("fact", "facts") follows the first count shown. The verb after "and" agrees with the second count. "The next 7 days" is the rolling window Requirement 20 defines, not a calendar week, so the line never says "this week".
+
+### HeroSection changes
+
+- `engine` becomes `Pick<StudyDungeonEngine, "view" | "history" | "forecast">`. The App already passes the whole engine, so `App.tsx` does not change.
+- A new memo:
+
+  ```typescript
+  const loss = useMemo(
+    () => (previewing ? null : lossForecast(engine.view(realNow), engine.forecast(realNow, LOSS_FORECAST_DAYS * DAY_MS), realNow)),
+    [engine, realNow, version, previewing]
+  )
+  ```
+
+  `realNow` changes on each settle tick and `version` after each write (Req 20.9). The memo reads nothing else and stores nothing.
+- `const lossLine = loss === null ? null : <p className="sd-hero-sub sd-hero-loss">{heroText.lossForecast(loss.weaken, loss.die)}</p>`, rendered straight after the `h2` in each message branch: before the "Start with …" line and the button in the weak branch, alone under the heading in the quiet branch. In the "no facts" and "only dead" branches `loss` is always `null`.
+- The preview forecast memo and its `<p className="sd-hero-sub sd-hero-forecast">` are unchanged. While previewing, `loss` is `null`, so the two lines never show together.
+- **Look**: the line reuses `.sd-hero-sub` (`--color-bone-dim`, 18 px, on the hero's background), the pair the "Start with …" line already uses, so there is no new colour pair. `hero.css` gets `.sd-hero-loss { margin-bottom: 8px; }` only if the 16 px gap of `.sd-hero-sub` to the "Start with …" line looks too loose in the browser check. No width, no animation.
+- **Accessibility**: the `<p>` has no `aria-live`, no `role` and no `tabindex`. The App's only live region (`#sd-announcer`) is a sibling before the hero, not an ancestor, so the line is never announced on a tick.
+
+### Worked example: the sample facts
+
+Worked by hand from the policy (`health = H × 0.5^(t / half-life)`; alive at 60 and above, dead below 10) and the steps in `SAMPLE_FACTS`. After a right answer (health 100) a fact weakens `half-life × log2(100/60) = 0.737 × half-life` after it, and dies `half-life × log2(10) = 3.322 × half-life` after it. After a wrong answer (health 45) it dies `half-life × log2(4.5) = 2.170 × half-life` after it. Days are counted from `now`. The next 7 days are `(0, 7]`.
+
+| Fact | State at `now` | Last event, half-life after it | Weakens | Dies | Counted |
+|---|---|---|---|---|---|
+| Capital of Australia? | alive | right −6, 20 | −6 + 14.74 = +8.74 | −6 + 66.44 = +60.44 | no |
+| Time cost of binary search? | alive | right −8, 20 | −8 + 14.74 = **+6.74** | −8 + 66.44 = +58.44 | **will weaken** |
+| Unit of electrical resistance? | alive | right −2, 16 | −2 + 11.79 = +9.79 | +51.15 | no |
+| TCP handshake, in order? | alive | right −2, 20 | −2 + 14.74 = +12.74 | +64.44 | no |
+| Derivative of ln x? | weak | right −12, 10 | (already weak) | −12 + 33.22 = +21.22 | no |
+| What does the mitochondrion do? | weak | wrong −9 (health 45), 10 | (already weak) | −9 + 21.70 = +12.70 | no |
+| Treaty that ended the Thirty Years' War? | weak | right −15, 10 | (already weak) | −15 + 33.22 = +18.22 | no |
+| Enzyme that unwinds DNA? | weak | right −8, 4 | (already weak) | −8 + 13.29 = **+5.29** | **will die** |
+| Frankenstein, Sistine Chapel, gold, speed of light | dead | | | (already dead) | no |
+
+Result: `{ weaken: 1, die: 1 }`, so the hero reads "4 facts are weakening", then "If you do nothing, in the next 7 days 1 fact weakens and 1 dies.", then "Start with …". Cross-check with the engine's states at `now + 7 days`, worked the same way: binary search 100 × 0.5^(15/20) = 59.5 (weak), helicase 100 × 0.5^(15/4) = 7.4 (dead), and every other alive fact still above 60 (Australia 63.7, resistance 67.7, TCP 73.2).
+
+### Tests
+
+All use fixed times from `test/fixtures`, a real engine on `InMemoryAdapter`, and never the real clock. Study Dungeon has no wording test file, so the exact words are checked in the new test.
+
+New `src/loss-forecast.test.ts`:
+
+| Case | Set-up | Expected, and how it was worked out |
+|---|---|---|
+| Sample | `loadSampleData(engine, T0)`, `realNow = T0` | `{ weaken: 1, die: 1 }` (the worked example), and the cross-check with `engine.view(T0 + 7 d)` above |
+| Zero, with facts | one solid fact (half-life 10) added at T0, `realNow = T0` | `{ weaken: 0, die: 0 }`: it weakens at 10 × 0.737 = 7.37 days |
+| Counted once | one new fact (half-life 2) added at T0, `realNow = T0` | `{ weaken: 0, die: 1 }`: it weakens at +1.47 d and dies at +6.64 d, both in the next 7 days; counted as will die only |
+| Die boundary, in | one solid fact added at T0. It dies at T0 + 10 × DAY_MS × log2(10) = T0 + 2 870 145 873.98 ms, so the first whole millisecond at which it is dead is D = T0 + 2 870 145 874 (worked by hand; the test also asserts `Math.ceil(10 * DAY_MS * Math.log2(10))` equals 2 870 145 874). `realNow = D − 7 d` = T0 + 2 265 345 874 (26.22 d, weak) | `{ weaken: 0, die: 1 }`: the window ends exactly at D |
+| Die boundary, out | same fact, `realNow = D − 7 d − 1 ms` | `{ weaken: 0, die: 0 }`: at the window's end, 0.98 ms before the crossing, health is just above 10 |
+| Weaken boundary, in | one solid fact added at T0. It weakens at W = T0 + 864 000 000 × log2(100/60) = T0 + 636 738 273.36 ms, not a whole millisecond, so the test brackets it with the nearest whole milliseconds. `realNow = T0 + 31 938 274` | `{ weaken: 1, die: 0 }`: W is 7 days − 0.64 ms away (day 7) |
+| Weaken boundary, out | same fact, `realNow = T0 + 31 938 273` | `{ weaken: 0, die: 0 }`: W is 7 days + 0.36 ms away (day 8) |
+| Only dead | one new fact added at T0 − 10 d, `realNow = T0` (it died at 6.64 d) | `null` |
+| No facts | empty engine | `null` |
+| Wording | the table above | each exact sentence |
+
+Changed existing tests (changed to match, never loosened, `no-fake-tests.md`):
+
+| Test | Change |
+|---|---|
+| `App.hero-autopsy.test.tsx` | New cases. (1) The existing `setupHero()` at `TODAY` shows "Nothing will weaken or die in the next 7 days." Worked out: s1 (45 at day 20 12:00, half-life 4) dies 4 × 2.170 = 8.68 days later, 8.14 days from `TODAY`; s2 (100 at day 19 18:00, half-life 20) weakens 14.74 days later, 13.95 days from `TODAY`; w2 (solid, added day 12 13:00) dies at day 45.76; d1 is dead. (2) After "+7 days" there is no `.sd-hero-loss`, and the existing "Compared with today, …" line is shown with today's words; after "Back to today" the loss line is back with the same words. (3) The line is straight after the `h2` and before "Start with …". |
+| `App.first-run.test.tsx` | New case: after "Load sample data" the hero shows "If you do nothing, in the next 7 days 1 fact weakens and 1 dies." After "Start empty" there is no `.sd-hero-loss`. |
+| `App.test.tsx` | New case (the `version` dependency): with the sample at T0, a right answer to "Enzyme that unwinds DNA?" from its Dungeon card gives it health 100 and half-life 8, so it weakens at 8 × 0.737 = 5.90 days and dies at 26.58 days. The line then reads "If you do nothing, in the next 7 days 2 facts weaken." New case (the `realNow` dependency), with the fake tick scheduler: one solid fact added at T0; rendered at T0 + 31 878 000 the line is the zero sentence (W is 7 d + 60.3 s away); after a tick at T0 + 31 998 000 it reads "If you do nothing, in the next 7 days 1 fact weakens." (7 d − 59.7 s away). |
+| `App.accessibility.test.tsx` | New case: the line is not inside any `[aria-live]` element and is not in the Tab order. |
+| `App.extras.test.tsx` and any other hero test | No change expected: they find hero text with `getByText`. The build task first searches the tests for `sd-hero-sub`, `sd-hero-main` and the hero's `textContent`, in case one compares the hero's whole text. Any such test is changed to expect the new line, not loosened. |
+| `styles/layout-css.test.ts`, `contrast.test.ts`, `styles/animations.test.ts` | No change: no new width, colour pair or animation. `contrast.test.ts` was written by Claude Code and is not edited. |
+
+If task 21 (the compact dock) is built first, the new preview case expands the dock before "+7 days", as task 21.4 does for the other tests.
+
+### Open points
+
+1. **Wording.** *Decided:* "in the next 7 days", never "this week", because the window is a rolling 7 days and not a calendar week.
+2. **Weakening exactly at 7 days.** At `nextDueAt` health is exactly 60, still alive. *Decided:* counted, as the dock marks it on day 7.
+3. **Hidden when every fact is dead.** *Decided:* nothing can change, and the hero already says the graves are waiting, so the line is hidden.
+4. **Build order.** P4 does not depend on task 21. *Proposed:* build Ghosted's P4 first (after its task 8.6), then this.
+
+## What This Session Saves (Requirement 21, task P5)
+
+After Triage picks facts for the budget, one line under the picks says how many of them would die in the next 7 days and survive them after a right answer, for example "Answering these right saves 1 fact that would die in the next 7 days." Ghosted gets the same line in its own words (Ghosted Requirement 36, design section 13), and the shell prop it needs is built once, in Ghosted task 10.1.
+
+**Authorship.** The files changed are Kiro's: `App.tsx`, `wording.ts`, `styles/dock.css` and the tests. (`authorship.md` lists `App.tsx` and the styles among the Kiro files Claude Code changed in the visual pass; they are still Kiro's files.) `policy.ts`, `timeline.ts`, `sample-data.ts` and `contrast.test.ts` were written by Claude Code and are used unchanged.
+
+### Where the line goes
+
+The App renders the shell `TriagePanel` and passes `runTriage` (`engine.triage(budget, now)`). The panel keeps the budget and the result in its own state, so the App never knows which picks are shown, and no existing prop renders anything under them. Rendering the line after the panel would put it under "Still lurking" and would need the panel's budget; running triage again in the App could disagree with the picks shown. So the line uses the shell's new optional `picksNote` prop (Ghosted design 13.2): called with the picks shown, it returns the text or `null`, and the panel renders `<p className="shell-triage-note">` straight after the "Fight these first" list and before the "Start the session" button. Omitted, the panel renders exactly as today, so every existing Study Dungeon test of the panel is unaffected.
+
+### New module: `src/triage-saves.ts` (pure)
+
+```typescript
+import { LOSS_FORECAST_DAYS } from "./loss-forecast"
+
+/** The answer the line assumes (Requirement 21.5). */
+export const SAVE_EVENT: ReviewEvent = { kind: "review", correct: true }
+
+/** The ids of the picks that are at risk and saved (Requirement 21), in the order of `picks`. */
+export function savedPicks(picks: readonly TriageCandidate<FactPayload, FactPolicyData>[], now: number): string[]
+
+/** savedPicks(picks, now).length. */
+export function triageSaves(picks: readonly TriageCandidate<FactPayload, FactPolicyData>[], now: number): number
+```
+
+How it counts:
+
+1. `end = now + LOSS_FORECAST_DAYS * DAY_MS` (`DAY_MS` from `policy.ts`).
+2. For each pick, skip it unless `pick.diesAt !== null && pick.diesAt <= end` (at risk). Candidates are weak at `now` and `findDeathAfter` searches after `now`, so `diesAt > now` always holds.
+3. **Saved**: `r = studyDungeonPolicy.applyEvent(pick.item, SAVE_EVENT, now)`, `after = { ...pick.item, health: r.health, policyData: r.policyData, lastEventAt: now }`, and the pick is saved when `studyDungeonPolicy.healthAt(after, end) >= studyDungeonPolicy.thresholds.dead`. This is what `engine.tend` stores (settle, `applyEvent`, health and policyData with `lastEventAt = now`); `pick.item` is already triage's settled copy, so nothing is mutated. Because `healthAt` never rises between events, not dead at `end` means not dead at any time in the window.
+4. Keep each id once (a `Set`), in pick order, and return them.
+
+No decay formula is written in this module: it reads `diesAt` from the engine's result and asks the policy's own `applyEvent` and `healthAt`, which the engine itself calls.
+
+**`diesAt` precision.** The engine dates a death by bisection over triage's 10-year search, to 1 minute, returning a time at which the fact is already dead. So `diesAt <= end` is never a false "at risk". A fact whose real crossing is less than a minute before `end` can get a `diesAt` just after it and is not counted: the line may say less, never more, and may differ by one from the hero's P4 line for such a fact.
+
+### The honest claim
+
+"Saves" is only true if a right answer really keeps the fact alive past the next 7 days. A right answer gives health 100 and half-life `h' = min(180, 2h)`; health at `now + 7 days` is `100 × 0.5^(7 / h')`, at least 10 exactly when `h' ≥ 7 / log2(10) = 2.107` days, so when the half-life before the answer is above 1.054 days. Half-lives are clamped at 1 day, and a new fact (2 days) answered wrong once has exactly 1 day. Such a fact, weak, dies within 2.17 days; after a right answer its half-life is 2 days and it dies 6.64 days later, still inside the window. Step 3 leaves it out.
+
+*Decided:* the count assumes a right answer, step 3 checks it for each pick, and the words say so: "Answering these right saves …". A wrong answer (health 45, half-life halved) is never what the line promises.
+
+### Wording (`wording.ts`, new `triageNoteText`)
+
+```typescript
+/** The line under the Triage picks (task P5, Requirement 21). Called only with n ≥ 1. */
+export const triageNoteText = {
+  saves: (n: number) => string,
+} as const
+```
+
+| `n` | Text |
+|---|---|
+| 0 | No line (21.6). The function is not called. |
+| 1 | "Answering these right saves 1 fact that would die in the next 7 days." |
+| 2 | "Answering these right saves 2 facts that would die in the next 7 days." |
+| 3 | "Answering these right saves 3 facts that would die in the next 7 days." |
+
+"These" points at the heading above the picks, "Fight these first". "In the next 7 days" is the same rolling window as P4, never "this week". It is a separate object, not a key in `studyDungeonWording.triage`, because that object is the shell's `TriageWording` shape.
+
+### App and CSS changes
+
+- **`App.tsx`**: one new callback next to `runTriage`, passed to `TriagePanel` as `picksNote`:
+
+  ```typescript
+  const triageNote = useCallback(
+    (picks: TriageCandidate<FactPayload, FactPolicyData>[]) => {
+      const n = triageSaves(picks, now)
+      return n === 0 ? null : triageNoteText.saves(n)
+    },
+    [now]
+  )
+  ```
+
+  It uses the same `now` as `runTriage`, so the line and the picks always describe the same moment. A write bumps `version`, which changes `runTriage`, so the panel works the result out again and calls `triageNote` with the new picks (21.7). Nothing is stored.
+- **`styles/dock.css`**, next to `.sd-world .shell-triage-number`: `.sd-world .shell-triage-note { color: var(--color-bone-dim); font-family: var(--font-body); font-size: 17px; line-height: 1.5; }`. No margin: `.sd-world .shell-triage` keeps `gap: 12px`, so the line has 12 px above and below (the Ghosted P4 lesson: a gap from the parent on both sides, not a one-sided margin). No width, no media query. The colour is the pair the panel's numbers already use on the same panel, so `contrast.test.ts` needs no new row.
+- The Triage panel sits in the side column (one column below 640 px), after the hero, so the line cannot push "Fight the weakest" off the first screen.
+
+### Worked example: the sample facts
+
+From the Loss Forecast Line worked example (health, half-life and death day of each weak fact) and the triage rule `value = (100 − h) × (1 − h/100) × importance`:
+
+| Weak fact at `now` | Health | Minutes, importance | Value | Dies, days from `now` | Right answer at `now`: half-life, health at +7 d |
+|---|---|---|---|---|---|
+| Derivative of ln x? | 43.53 | 2, 3 | 95.67 | +21.22 | |
+| What does the mitochondrion do? | 24.11 | 5, 2 | 115.17 | +12.70 | |
+| Treaty that ended the Thirty Years' War? | 35.36 | 3, 3 | 125.37 | +18.22 | |
+| Enzyme that unwinds DNA? | 25.00 | 3, 2 | 112.50 | **+5.29** | 8, 100 × 0.5^(7/8) = 54.5 |
+
+- **20 minutes**: all four fit (13 minutes). Only helicase is at risk, and a right answer saves it. **Count 1**: "Answering these right saves 1 fact that would die in the next 7 days."
+- **10 minutes** (the default): the best set is derivative, mitochondrion and treaty (10 minutes, 336.21; derivative, treaty and helicase is 333.54 in 8 minutes). None is at risk. **No line.**
+- **5 minutes**: derivative and treaty (5 minutes, 221.04). **No line.**
+- **Previewed at +7 days, 10 minutes**: helicase is dead by then. The weak facts are binary search (59.46, 3 min, importance 3), derivative (26.79), mitochondrion (14.84) and treaty (21.76). The best 10-minute set is derivative, mitochondrion and treaty (values 160.8 + 145.0 + 183.6 = 489.4; binary search, derivative and treaty is 393.7). The mitochondrion dies 21.70 days after its wrong answer, 5.70 days after +7, so it is at risk; a right answer gives half-life 20 and health 78.5 at +14. **Count 1.** At 5 minutes the set is derivative and treaty: **no line**.
+
+### Tests
+
+All use fixed times from `test/fixtures`, a real engine on `InMemoryAdapter`, and never the real clock. Budget 1440 unless a row says otherwise.
+
+Fixture facts, all in one engine, `now = T0`:
+
+| Fact | Set-up | At T0 | Dies | Right answer at T0 | Role |
+|---|---|---|---|---|---|
+| f1, f2 | new (half-life 2) added at T0 − 2 d, never reviewed | 50, weak | T0 + 4.64 d | half-life 4, health 29.7 at T0 + 7 d | at risk, saved |
+| f3 | new added at T0 − 1 d, wrong answer at T0 − 1 h (health 71.7 then, so alive) | 45 × 0.5^(1/24) = 43.71, weak, half-life 1 | T0 + 2.13 d | half-life 2, health 100 × 0.5^3.5 = 8.84 at T0 + 7 d | at risk, not saved |
+| f4 | shaky (half-life 5) added at T0 − 4 d | 57.43, weak | T0 + 12.61 d | | not at risk |
+| f5 | solid added at T0 | 100, alive | | | never a candidate |
+
+New `src/triage-saves.test.ts`:
+
+| Case | Set-up | Expected |
+|---|---|---|
+| No picks | empty engine | 0 |
+| Zero, not at risk | f4 only | 0 |
+| Zero, at risk but not saved | f3 only | 0, `savedPicks` is `[]` |
+| One | f1 only | 1 |
+| Many | f1 to f5 | picks f1 to f4 (f5 is not a candidate); count 2 (f1, f2) |
+| Boundary in | f1's real pick with `diesAt` replaced by `T0 + 7 × DAY_MS` | 1 |
+| Boundary out | the same with `T0 + 7 × DAY_MS + 1` | 0 |
+| Missing `diesAt` | the same with `diesAt: null` | 0 |
+| Counted once | `[f1Pick, f1Pick]` | 1 |
+| Budget | f1 (3 min) and f4 (2 min) | budget 2: picks f4 only, 0. Budget 5: both, 1 |
+| The horizon | | `SAVE_EVENT` is a right answer, and the window uses `LOSS_FORECAST_DAYS` (7) |
+| Sample | `loadSampleData(engine, T0)` | 20 min: 1 (helicase); 10 and 5 min: 0; at `now = T0 + 7 d`, 10 min: 1 (mitochondrion) |
+
+New `src/triage-saves.property.test.ts` (`{ numRuns: 100 }`):
+
+- **Data**: new `src/test/fact-generators.ts`, modelled on Ghosted's `test/generators.ts`: 1 to 5 facts in one engine, each added at T0 with a knowledge level, then 0 to 5 reviews at increasing whole-minute times (0 to 10 days apart, right or wrong; a step on a fact that is dead at that moment is a challenge through `engine.resurrect`), and `now` 0 to 20 days after the latest step of any fact. Budget `fc.integer({ min: 1, max: 1440 })`. A coverage check at a fixed seed proves the generator reaches alive, weak and dead facts (each at least 10% of facts).
+- **Checks**, with `result = engine.triage(budget, now)`, `ids = savedPicks(result.picks, now)` and `end = now + 7 d`:
+  - `ids.length ≤ result.picks.length`, and every id is a pick's id;
+  - before any write, `engine.view(end)` shows each counted fact dead;
+  - after `engine.tend(id, SAVE_EVENT, now)` for every counted id, `engine.view(end)` shows each of them not dead, and `engine.forecast(now, 7 d)` lists none of them;
+  - every at-risk pick not counted is dead in `engine.view(end)` after a right answer at `now` (checked on the scenario built again).
+- **Coverage** of the checks' branches, at the fixed seed: of the generated picks, at least 5% are counted, at least 5% are at risk and not saved, and at least 5% are not at risk. If one is not reached, the generator is biased (for example more wrong answers on new facts); the threshold and `numRuns` are never lowered.
+- **Dependency**: `fast-check` (`^4.10.2`, the engine's and Ghosted's version) is added to `apps/study-dungeon/package.json` `devDependencies`. The developer runs `pnpm install` in WSL to update the lockfile.
+
+Changed existing tests (changed to match, never loosened, `no-fake-tests.md`). **Searched first** with a text search over the Study Dungeon and shell tests for `shell-triage`, "Fight these first", "Still lurking" and "Start the session"; only the matching lines were read:
+
+| Test | What the search showed | Change |
+|---|---|---|
+| `App.test.tsx` | `entries("Fight these first")` reads the spans inside each list item; other cases click "Triage" and "Start the session" | Unchanged: the line is outside the list and is not a button. New cases: with the sample at T0, "20 min" then "Triage" shows the line with the exact words between the list and "Start the session"; "10 min" then "Triage" shows none; "20 min" again shows it; after a right answer to helicase from its Dungeon card, "20 min" shows none (the `version` dependency). |
+| `App.hero-autopsy.test.tsx` or `App.test.tsx` (preview) | | New case: the sample previewed at "+7 days" (dock expanded first, as task 21.4 does), "10 min" then "Triage" shows the one-fact line while "Start the session" stays disabled; "5 min" shows none. |
+| `App.accessibility.test.tsx` | lists the names reached by Tab | Unchanged list. New case: the line is not inside any `[aria-live]` element and is not in the Tab order. |
+| `theme.test.ts` | the app's wording test, with the triage words | New case: the exact words of the table above for 1, 2 and 3, and no "this week". |
+| `styles/layout-css.test.ts` | | New case: `.sd-world .shell-triage` keeps `gap: 12px`, and no rule sets `display: none`, `visibility: hidden` or a negative margin on `.shell-triage-note`. |
+| `contrast.test.ts` | | Not edited (Claude Code's file); no new colour pair. |
+
+Not read in full: every file above except the matching lines. The build task runs `grep -rn "shell-triage\|Fight these first\|Start the session" apps/study-dungeon/src --include=*.test.*` before editing, in case a test compares the whole panel's text.
+
+### Property (Requirement 21.13)
+
+For any generated facts, `now` and budget, every pick the Triage line counts is dead at `now + 7 days` if left alone, and after a right answer at `now` through the real engine it is not dead at `now + 7 days`, so not at any time in the next 7 days. Every at-risk pick that is not counted is dead at `now + 7 days` even after a right answer. The count is never more than the number of picks. Test: `src/triage-saves.property.test.ts`.
+
+### Open points
+
+1. **The line says "right".** *Decided:* "Answering these right saves …", because a wrong answer cannot keep the promise. The roadmap's example, "These reviews save …", would over-claim for wrong answers.
+2. **Under-count, never over-count.** *Decided:* an at-risk pick a right answer cannot save (half-life 1 day) is left out, so the count can be less than "picks whose `diesAt` falls inside the horizon" (the roadmap's P5 wording). The two are equal on the sample data.
+3. **Shown while previewing.** *Proposed:* the line follows the picks, which follow the previewed `now`. The preview banner says "nothing is saved" and this line says "saves", in a different sense; if that reads badly, `App.tsx` passes no `picksNote` while previewing, one line. **Needs your decision.**
+4. **The default budget shows no line on the sample.** At 10 minutes the knapsack prefers the mitochondrion to helicase, so the line first appears at 20 minutes. FYI for the demo.
+5. **fast-check in the app.** This design said "fast-check (engine tests only, not app tests)"; Requirement 21.13 needs it in the app, so the dependency is added (see Dependencies and Property-Based Tests, amended).
+6. **Build order.** The shell prop is Ghosted task 10.1, so this group starts after it as well as after task 22.4.

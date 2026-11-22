@@ -68,6 +68,17 @@
   font-style: italic;
 }
 
+/*
+ * The loss forecast line (task P4, Requirement 20). Colour and size come from
+ * .sd-hero-sub (--color-bone-dim on the hero), so there is no new colour pair.
+ * 8px under the heading (the h2's margin) and 8px above what comes next (the
+ * "Start with …" line and the button), kept small for the first screen at
+ * 390px. Never hidden at any width.
+ */
+.sd-hero-loss {
+  margin: 0 0 8px;
+}
+
 .sd-world .sd-hero .sd-hero-action {
   min-height: 48px;
   padding: 12px 22px;

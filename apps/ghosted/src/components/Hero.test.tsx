@@ -197,6 +197,52 @@ describe("Hero counters (Req 8.4, 16.1)", () => {
   })
 })
 
+describe("Hero: the loss forecast line (task P4; Req 35.1, 35.6, 35.10)", () => {
+  const line = (container: HTMLElement) => container.querySelector<HTMLElement>(".gh-hero-loss")
+
+  it("with loss, the line sits straight after the h2 and before the buttons, with the exact words", () => {
+    const { container } = renderHero(peopleOf(mixed), { loss: { fade: 1, dark: 0 } })
+    const p = line(container)!
+    expect(p.tagName).toBe("P")
+    expect(p.textContent).toBe("If you do nothing, in the next 7 days 1 window starts to flicker.")
+    expect(heading().nextElementSibling).toBe(p)
+    expect(p.nextElementSibling).toBe(container.querySelector(".gh-hero-actions"))
+  })
+
+  it("shows the zero sentence and the plural words from its counts", () => {
+    const r = renderHero(peopleOf(mixed), { loss: { fade: 0, dark: 0 } })
+    expect(line(r.container)!.textContent).toBe("No window will start to flicker or go dark in the next 7 days.")
+    r.unmount()
+    const s = renderHero(peopleOf(mixed), { loss: { fade: 2, dark: 1 } })
+    expect(line(s.container)!.textContent).toBe(
+      "If you do nothing, in the next 7 days 2 windows start to flicker and 1 goes dark."
+    )
+  })
+
+  it("without loss, and with null, there is no line", () => {
+    const r = renderHero(peopleOf(mixed))
+    expect(line(r.container)).toBeNull()
+    r.unmount()
+    const s = renderHero(peopleOf(mixed), { loss: null })
+    expect(line(s.container)).toBeNull()
+  })
+
+  it("is a plain line: no aria-live, no role, no tabindex", () => {
+    const { container } = renderHero(peopleOf(mixed), { loss: { fade: 1, dark: 0 } })
+    const p = line(container)!
+    expect(p.hasAttribute("aria-live")).toBe(false)
+    expect(p.hasAttribute("role")).toBe(false)
+    expect(p.hasAttribute("tabindex")).toBe(false)
+    expect(p.closest("[aria-live]")).toBeNull()
+  })
+
+  it("leaves the rest of the hero unchanged: one filled button, the same heading", () => {
+    const { container } = renderHero(peopleOf(mixed), { loss: { fade: 1, dark: 0 } })
+    expect(heading().textContent).toBe("3 windows are flickering")
+    expect(filled(container).map((b) => b.textContent)).toEqual(["Reach out to Dan"])
+  })
+})
+
 describe("Hero during a preview (Req 8.5)", () => {
   it('shows "Future preview · <date>" and blocks the primary button with the reason', () => {
     const { container, onReachOut } = renderHero(peopleOf(mixed), { previewDate: "3 Mar 2027", blocked: previewBlockedText })

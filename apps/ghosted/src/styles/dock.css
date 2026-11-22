@@ -10,7 +10,14 @@
  * the jumps reach the same days), and the jumps, Play and "Back to today"
  * scroll sideways inside the dock instead of widening the page.
  *
- * No animation or transition here: the moon's movement is in motion.css.
+ * Task L2 (Req 34): the dock is collapsed unless it has data-expanded. The
+ * collapsed bar holds the small moon, the title, the date line, the slider,
+ * the hint and the "Coming up" toggle; the shell's jumps and Play are hidden.
+ * The page's room for the dock follows its measured height (--dock-h, set by
+ * MoonDock; see layout.css).
+ *
+ * No animation or transition here: the moon's movement and the toggle's
+ * chevron are in motion.css.
  */
 
 /* The street dims as the time machine looks ahead: --age is set on .gh-app (Req 12.2). */
@@ -181,6 +188,125 @@
   color: var(--dim);
 }
 
+/*
+ * A marker's short label (task L2, Req 34.6), shown on hover and on keyboard
+ * focus, never on hover alone. It sits above the marker; translate by --at
+ * (0 to 1, the marker's place) keeps it inside the track at both ends.
+ */
+.gh-dock-mark-tip {
+  position: absolute;
+  inset-block-end: calc(100% + 4px);
+  inset-inline-start: 50%;
+  z-index: 1;
+  display: none;
+  max-inline-size: 240px;
+  overflow: hidden;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-hi);
+  color: var(--bone);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  translate: calc(var(--at, 0) * -100%) 0;
+}
+.gh-dock-mark:hover .gh-dock-mark-tip,
+.gh-dock-mark:focus-visible .gh-dock-mark-tip {
+  display: block;
+}
+
+/* ----- The "Coming up" toggle and the collapsed bar (task L2, Req 34.1-34.3, 34.11) ----- */
+
+/* A quiet button (.gh-button, at least 44 × 44px), never filled: Play stays the dock's one primary. */
+.gh-dock-toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+}
+.gh-dock-chevron {
+  inline-size: 14px;
+  block-size: 14px;
+  flex: none;
+}
+/* Expanded: the chevron points down, to fold the dock away. Its turn is in motion.css. */
+.gh-dock[data-expanded] .gh-dock-chevron {
+  transform: rotate(180deg);
+}
+
+.gh-dock-hint {
+  margin: 0;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* Collapsed: the small moon, centred beside one slim bar. */
+.gh-dock:not([data-expanded]) .gh-dock-in {
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  padding-block: 8px;
+}
+.gh-dock:not([data-expanded]) .gh-moon {
+  inline-size: 40px;
+  block-size: 58px;
+}
+
+/*
+ * Collapsed: the shell's jumps and Play are not shown, so they are out of the
+ * Tab order too (Req 34.2). The app's own parts (markers, ticks, the marker
+ * list) are not rendered at all, so the panel is empty.
+ */
+.gh-dock:not([data-expanded]) .shell-time-machine-controls,
+.gh-dock:not([data-expanded]) .gh-dock-panel {
+  display: none;
+}
+
+/* Collapsed: one row of title, date, slider, hint and toggle. */
+.gh-dock:not([data-expanded]) .shell-time-machine {
+  display: grid;
+  grid-template-columns: auto auto minmax(120px, 1fr) auto auto;
+  grid-template-areas: "title showing slider hint toggle";
+  align-items: center;
+  gap: 8px 16px;
+}
+.gh-dock:not([data-expanded]) .shell-time-machine-title {
+  grid-area: title;
+}
+.gh-dock:not([data-expanded]) .shell-time-machine-showing {
+  grid-area: showing;
+}
+.gh-dock:not([data-expanded]) .shell-time-machine-slider {
+  grid-area: slider;
+}
+.gh-dock:not([data-expanded]) .gh-dock-hint {
+  grid-area: hint;
+}
+.gh-dock:not([data-expanded]) .gh-dock-toggle {
+  grid-area: toggle;
+  align-self: center;
+}
+
+/* Up to 760px the one row does not fit: title and date beside the toggle, then the slider and the hint. */
+@media (max-width: 760px) {
+  .gh-dock:not([data-expanded]) .shell-time-machine {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title toggle"
+      "showing toggle"
+      "slider slider"
+      "hint hint";
+    gap: 4px 12px;
+  }
+}
+
 /* The preview banner, as the wireframe's badge: glow words on the dark dock. */
 .gh-dock .shell-preview-banner {
   position: static;
@@ -225,5 +351,58 @@
   .gh-dock .shell-preview-banner .shell-button {
     flex: none;
     white-space: nowrap;
+  }
+}
+
+/*
+ * Task L2, found in the 8.6 check (Nov 22): up to 520px the 128px --dock-max cap
+ * (layout.css) clipped the collapsed bar (390px needs about 174px, 320px about
+ * 237px, because the narrow title column wrapped to four lines). The collapsed
+ * bar has no moon here, so the title and date get the full width beside the
+ * toggle, and it is not capped: its height is its content, and the page's room
+ * follows it through --dock-h. The expanded dock gets a taller cap (50vh, at most
+ * 320px), no moon and wrapping controls (see below), so its jumps and Play are all visible.
+ * (Written by Claude Code, outside Kiro, at the developer's request.)
+ */
+@media (max-width: 520px) {
+  .gh-dock:not([data-expanded]) {
+    max-block-size: none;
+    overflow-y: visible;
+  }
+  .gh-dock:not([data-expanded]) .gh-dock-in {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gh-dock:not([data-expanded]) .gh-moon {
+    display: none;
+  }
+  /*
+   * Expanded (re-check, Nov 22: Play and three of the four jumps were hidden behind a
+   * sideways scroll, 592px of buttons in a 210 to 280px area). Drop the moon so the
+   * controls get the full width, let them wrap onto rows so every one is visible, and
+   * allow up to half the screen (320px at most); anything taller scrolls inside the dock.
+   */
+  .gh-dock[data-expanded] {
+    max-block-size: min(50vh, 320px);
+  }
+  .gh-dock[data-expanded] .gh-dock-in {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gh-dock[data-expanded] .gh-moon {
+    display: none;
+  }
+  .gh-dock[data-expanded] .shell-time-machine-controls {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  /*
+   * While previewing, the banner (with "Back to today") adds a row and the dock scrolls
+   * inside its cap, which left the button below the screen (second re-check, Nov 22).
+   * Pin the banner to the bottom of the dock's scroll area so it is always in reach.
+   */
+  .gh-dock[data-expanded] .shell-preview-banner {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 1;
+    background: var(--panel);
   }
 }

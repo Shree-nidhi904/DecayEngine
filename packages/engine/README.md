@@ -139,4 +139,4 @@ See [`.kiro/steering/authorship.md`](../../.kiro/steering/authorship.md) and [`d
 
 ## Project
 
-This package is part of Decay Engine, a monorepo with three apps built on it (Study Dungeon, Ghosted and Expiry Reaper). See the [project root](../../).
+This package is part of Decay Engine, a monorepo with two apps built on it (Study Dungeon and Ghosted). See the [project root](../../).

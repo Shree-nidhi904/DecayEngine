@@ -399,25 +399,77 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - _Requirements: 18_
 
 - [ ] 21. A compact time dock (task L2, design "Compact Time Dock")
-  - [ ] 21.1 Session flag and wording
+  - [x] 21.1 Session flag and wording
     - New `dock-state.ts` (key `study-dungeon.dock-expanded`) and `dock-state.test.ts`; the optional `session` prop on `App`, passed to `TimeDock`
-    - `wording.ts`: `timelineText.toggle` replaces `fold` and `unfold`
-    - _Requirements: 19.5, 19.10_
-  - [ ] 21.2 The dock collapses at every width
-    - `TimeDock.tsx` (written by Claude Code; named here as `authorship.md` asks): `expanded` from the session flag; the toggle at the start of `belowSlider`; `.sd-timeline` only while expanded
+    - `wording.ts`: `timelineText.toggle` ("Coming up") replaces `fold` and `unfold`; new `timelineText.hint` ("Drag to look ahead"); a wording test for both
+    - Start only after Ghosted tasks 8.1 to 8.6 are done and checked
+    - _Requirements: 19.5, 19.10, 19.12, 19.14_
+  - [x] 21.2 The dock collapses at every width
+    - `TimeDock.tsx` (written by Claude Code; named here as `authorship.md` asks): `expanded` from the session flag; the toggle at the start of `belowSlider`; `.sd-timeline` only while expanded; the hint only while collapsed
     - `dock.css`: the shell controls hidden while collapsed at every width; the slider always shown; the toggle at 44 px in the flow; the small candle while collapsed; any transition inside `no-preference`
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.8, 19.9, 19.11_
-  - [ ] 21.3 The page's bottom room
-    - `useDockHeight` sets `--dock-h`; `world.css` uses it with today's values as the fallbacks
-    - _Requirements: 19.7_
-  - [ ] 21.4 Tests
+  - [x] 21.3 The page's bottom room
+    - `useDockHeight` feature-detects `ResizeObserver` and sets `--dock-h` only when it exists; `world.css` uses it with today's values as the fallbacks
+    - Tests stub `ResizeObserver` explicitly (with it: `--dock-h` equals the fired size; without it: not set). No assertion is weakened
+    - _Requirements: 19.7, 19.13_
+  - [x] 21.4 Tests
     - New `components/TimeDock.test.tsx`; update the tests listed in the design table. Change them to match the new behaviour; never loosen an assertion, skip a test or change an expected value to pass (`no-fake-tests.md`)
     - _Requirements: 19.1-19.11_
-  - [ ] 21.5 Check
+  - [x] 21.5 Check
     - `bash scripts/check.sh` passes; `scripts/check-engine-unchanged.sh` passes
     - Browser check at 320, 390 and 1280 px on a draft deploy or a developer-started server
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 19.7_
+
+- [ ] 22. The loss forecast line (task P4, design "Loss Forecast Line")
+  - [x] 22.1 Wording and the pure count
+    - `wording.ts`: `heroText.lossForecast(weaken, die)` with the sentences in the design's Wording table ("in the next 7 days", never "this week")
+    - New `loss-forecast.ts`: `LOSS_FORECAST_DAYS = 7`, `LossForecast`, `lossForecast(factsToday, deaths, realNow)`, built on the existing `timelineEvents` (imported unchanged; no policy formula repeated)
+    - New `loss-forecast.test.ts`: every case in the design's table (sample with its cross-check, zero, counted once, both boundaries in and out, only dead, no facts, exact words)
+    - _Requirements: 20.2, 20.3, 20.4, 20.5, 20.6, 20.11_
+  - [x] 22.2 The hero shows the line
+    - `components/HeroSection.tsx`: `forecast` added to the `engine` Pick; the `loss` memo on `[engine, realNow, version, previewing]`; the line straight after the `h2` in each branch; the preview forecast left exactly as it is
+    - `styles/hero.css`: only the optional `.sd-hero-loss` margin. No new colour
+    - No change to `timeline.ts`, `policy.ts`, `sample-data.ts`, `TimeDock.tsx` or any other file `authorship.md` lists as Claude Code's
+    - _Requirements: 20.1, 20.7, 20.8, 20.9, 20.10, 20.12_
+  - [x] 22.3 Update the existing tests to match
+    - The tests in the design's "Changed existing tests" table. First search the tests for `sd-hero-sub`, `sd-hero-main` and the hero's `textContent`. Change tests to match; never loosen an assertion, skip a test or change an expected value to make it pass (`no-fake-tests.md`)
+    - _Requirements: 20.1, 20.7, 20.8, 20.9, 20.10_
+    - **Status (Session 56):** every row of the table is done, with added cases only. No full-text search was possible (no commands); Claude Code then ran it (five test files mention `sd-hero`, only two compare hero text, both already updated), the typecheck and the full suite (532 passed), and fixed one selector in the new `App.test.tsx` case. Read and found no whole-hero text comparison: `App.hero-autopsy.test.tsx`, `App.first-run.test.tsx`, `App.test.tsx` (first 260 lines), `App.accessibility.test.tsx` (first 70 lines), `App.extras.test.tsx`, `theme.test.ts`. Not read: the rest of `App.test.tsx` and `App.accessibility.test.tsx`, and every other test file, including `App.tour.test.tsx`, `App.sound.test.tsx`, `App.storage-errors.test.tsx`, `Root.test.tsx`, `styles/layout-css.test.ts`, `contrast.test.ts` and the component tests. Confirm in 22.4 with `grep -rn "sd-hero" apps/study-dungeon/src --include=*.test.*`
+  - [x] 22.4 Check
+    - **Status (Session 57):** ticked by Claude Code after reading the 1280 screenshot and Kiro's measurements: 1280 and 390 pass (line under the heading, "Fight the weakest" 32 px above the dock at 390, contrast about 6.9:1, hidden while previewing). Not measured: 320×640 and the gap numbers. See the log.
+    - `bash scripts/check.sh` passes; `scripts/check-engine-unchanged.sh` passes
+    - A browser look at 1280 and 390 px with the sample data, on a draft deploy or a developer-started server: the line sits under the heading and does not push the "Fight the weakest" button off the first screen
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 20.1, 20.12_
+
+- [ ] 23. What this session saves (task P5, design "What This Session Saves")
+  - P5 starts only after task 22.4 (the P4 check) is ticked, and after Ghosted task 10.1 (the shell's `picksNote` prop) is done.
+  - [ ] 23.1 Wording and the pure count
+    - `wording.ts`: new `triageNoteText.saves(n)` with the sentences in the design's Wording table ("in the next 7 days", never "this week")
+    - New `triage-saves.ts`: `SAVE_EVENT`, `savedPicks(picks, now)`, `triageSaves(picks, now)`, using `LOSS_FORECAST_DAYS` from `loss-forecast.ts` (no new number) and only `studyDungeonPolicy.applyEvent` and `healthAt` (no formula written out)
+    - New `triage-saves.test.ts`: every case in the design's table (no picks, zero not at risk, zero at risk but not saved, one, many, both boundaries, missing `diesAt`, counted once, budget, sample at 20, 10 and 5 minutes and at +7 days)
+    - `theme.test.ts`: the exact words for 1, 2 and 3, and no "this week"
+    - _Requirements: 21.2, 21.3, 21.4, 21.5, 21.6_
+  - [ ] 23.2 The property test
+    - `package.json`: `fast-check` `^4.10.2` in `devDependencies`. The developer runs `pnpm install` in WSL
+    - New `src/test/fact-generators.ts` with its coverage check (alive, weak and dead facts, each at least 10%, fixed seed)
+    - New `triage-saves.property.test.ts`: the design's Property, `{ numRuns: 100 }`, right answers through the real engine, and the branch coverage (counted, at risk and not saved, not at risk, each at least 5% of picks). Never lower `numRuns` or a threshold to pass
+    - _Requirements: 21.4, 21.13_
+  - [ ] 23.3 Triage shows the line
+    - `App.tsx`: the `triageNote` callback on `[now]`, passed to `TriagePanel` as `picksNote`
+    - `styles/dock.css`: `.sd-world .shell-triage-note` in `--color-bone-dim`, body type, no margin, no media query
+    - No change to `packages/shell/` (the prop comes from Ghosted task 10.1), `packages/engine/`, or any file `authorship.md` lists as Claude Code's (`policy.ts`, `timeline.ts`, `sample-data.ts`, `contrast.test.ts`)
+    - _Requirements: 21.1, 21.7, 21.8, 21.9, 21.10, 21.11, 21.12_
+  - [ ] 23.4 Update the existing tests to match
+    - First run `grep -rn "shell-triage\|Fight these first\|Start the session" apps/study-dungeon/src --include=*.test.*`, or ask the developer to run it, and read every match
+    - The tests in the design's "Changed existing tests" table: `App.test.tsx` (the budget field and the `version` case), the preview case, `App.accessibility.test.tsx` (no `aria-live`, not in the Tab order), `styles/layout-css.test.ts`. Change tests to match; never loosen an assertion, skip a test or change an expected value to make it pass (`no-fake-tests.md`)
+    - _Requirements: 21.1, 21.6, 21.7, 21.8, 21.9, 21.10_
+  - [ ] 23.5 Check
+    - `bash scripts/check.sh` passes (the counts after Ghosted task 10.6, plus the new tests); `scripts/check-engine-unchanged.sh` passes
+    - A browser look at 1280 and 390 px with the sample data, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server: at 20 minutes the line reads "Answering these right saves 1 fact that would die in the next 7 days." under "Fight these first"; at 10 minutes there is none. Measure the gap from the last pick's bottom to the line and from the line to "Start the session" (at least 8 px each), and check the line is fully visible and not clipped at both widths
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 21.1, 21.10_
 
 ## Notes
 

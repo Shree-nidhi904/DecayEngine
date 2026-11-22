@@ -18,9 +18,14 @@ export interface AnswerPanelProps {
   onAnswer: (correct: boolean) => void
   /** True once answered (the panel then only shows what happened). */
   answered: boolean
+  /**
+   * True when the setting is "Picking from four" but the deck is too small, so the
+   * answer is typed instead: say why, once, above the box (task P6).
+   */
+  explainTyped?: boolean
 }
 
-export function AnswerPanel({ choices, answer, onAnswer, answered }: AnswerPanelProps) {
+export function AnswerPanel({ choices, answer, onAnswer, answered, explainTyped = false }: AnswerPanelProps) {
   const inputId = useId()
   const hintId = useId()
 
@@ -89,6 +94,7 @@ export function AnswerPanel({ choices, answer, onAnswer, answered }: AnswerPanel
 
   return (
     <form className="sd-typed" onSubmit={submit} noValidate>
+      {explainTyped && <p className="sd-answer-note">{answerText.fewFacts}</p>}
       <label htmlFor={inputId} className="sd-dialog-label">
         {answerText.typeLabel}
       </label>

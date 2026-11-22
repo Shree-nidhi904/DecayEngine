@@ -133,6 +133,81 @@ describe("layout.css: below 640px", () => {
   })
 })
 
+describe("the compact time dock (task 21, Req 19.1-19.3, 19.7, 19.8, 19.13)", () => {
+  // jsdom applies no CSS, so what is shown and the page's bottom room are
+  // checked in the source; the browser check at 320, 390 and 1280px is task 21.5.
+  const dock = parse(read("./dock.css"))
+  const world = parse(read("./world.css"))
+  const NARROW = "@media (max-width: 520px)"
+  const narrowRules = (parsed: ReturnType<typeof parse>) =>
+    parsed.blocks.filter((b) => b.prelude === NARROW).flatMap((b) => b.rules)
+  const allDockRules = [...dock.top, ...dock.blocks.flatMap((b) => b.rules)]
+
+  it("hides the shell's jumps and Play while collapsed at every width (a top-level rule)", () => {
+    expect(declarationsFor(dock.top, ".sd-dock:not([data-open]) .shell-time-machine-controls").display).toBe("none")
+  })
+
+  it("never hides the slider, and no longer hides the timeline on narrow screens", () => {
+    const hidden = allDockRules
+      .filter((r) => r.declarations.display === "none")
+      .flatMap((r) => r.selectors)
+      .filter((s) => /shell-time-machine-slider|sd-timeline/.test(s))
+    expect(hidden).toEqual([])
+  })
+
+  it("shows the toggle at every width, at least 44 × 44px, in the flow", () => {
+    const toggle = declarationsFor(dock.top, ".sd-dock-toggle")
+    expect(toggle["min-width"]).toBe("44px")
+    expect(toggle["min-height"]).toBe("44px")
+    expect(toggle.display).toBe("inline-flex")
+    for (const rule of allDockRules.filter((r) => r.selectors.includes(".sd-dock-toggle"))) {
+      expect(rule.declarations.display).not.toBe("none")
+      expect(rule.declarations.position).toBeUndefined()
+    }
+  })
+
+  it("uses the small candle while collapsed, at every width", () => {
+    expect(declarationsFor(dock.top, ".sd-dock:not([data-open]) .sd-candle").height).toBe("44px")
+  })
+
+  it("never caps the collapsed bar; the expanded dock is capped at min(60vh, 380px) on narrow screens, with wrapping controls", () => {
+    const capped = allDockRules
+      .filter((r) => r.declarations["max-height"] !== undefined || r.declarations["max-block-size"] !== undefined)
+      .flatMap((r) => r.selectors)
+    expect(capped).toEqual([".sd-dock[data-open] .sd-dock-in"])
+    const narrow = narrowRules(dock)
+    expect(declarationsFor(narrow, ".sd-dock[data-open] .sd-dock-in")["max-height"]).toBe("min(60vh, 380px)")
+    expect(declarationsFor(narrow, ".sd-dock[data-open] .sd-dock-in")["overflow-y"]).toBe("auto")
+    expect(declarationsFor(narrow, ".sd-dock[data-open] .shell-time-machine-controls")["flex-wrap"]).toBe("wrap")
+    // No sideways scroll for the controls anywhere (it hid Play in Ghosted's dock).
+    const nowrap = allDockRules
+      .filter((r) => r.declarations["flex-wrap"] === "nowrap")
+      .flatMap((r) => r.selectors)
+    expect(nowrap).toEqual([])
+  })
+
+  it("keeps the collapsed title and date on rows of their own up to 520px, so neither is squeezed", () => {
+    const areas = declarationsFor(narrowRules(dock), ".sd-dock:not([data-open]) .shell-time-machine")[
+      "grid-template-areas"
+    ]
+    expect(areas?.replace(/\s+/g, " ")).toBe('"title title" "showing showing" "slider slider" "toggle hint"')
+  })
+
+  it("has no transition or animation in dock.css (any would go inside prefers-reduced-motion: no-preference)", () => {
+    expect(stripComments(read("./dock.css"))).not.toMatch(/\b(?:transition|animation)\s*:/)
+  })
+
+  it("gives the page the dock's measured height as bottom room, with today's values as the fallbacks", () => {
+    expect(declarationsFor(world.top, ".sd-world")["padding-bottom"]).toBe("calc(var(--dock-h, 15rem) + 24px)")
+    expect(declarationsFor(narrowRules(world), ".sd-world")["padding-bottom"]).toBe("calc(var(--dock-h, 10rem) + 24px)")
+    // 238 + 12 = 250px and 118 + 12 = 130px: today's scroll padding until the dock is measured.
+    expect(declarationsFor(world.top, "html")["scroll-padding-bottom"]).toBe("calc(var(--dock-h, 238px) + 12px)")
+    expect(declarationsFor(narrowRules(world), "html")["scroll-padding-bottom"]).toBe(
+      "calc(var(--dock-h, 118px) + 12px)"
+    )
+  })
+})
+
 describe("nothing is wider than a 320px screen", () => {
   // At 320px the page content box is 320 − 2 × 0.75rem (12px) = 296px. Every
   // fixed width, minimum width, flex basis or grid column minimum that applies

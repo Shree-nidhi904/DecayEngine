@@ -21,10 +21,14 @@
 // order. It sets the preview offset; `--age` (offset / 365 days) goes on
 // .gh-app, where the dim layer and the moon read it, and every view reads at
 // `now`. Its markers are worked out at the real time. "Back to today" sets
-// the offset to 0, and useSettleTicks then ticks straight away. Task 5.2:
+// the offset to 0, and useSettleTicks then ticks straight away. Task L2: the
+// dock starts collapsed and keeps its expanded choice in the same
+// sessionStorage as the splash flag (the `session` prop). Task 5.2:
 // the forecast after the lists. Task 5.3: "Import people", "Back up" and
 // "Restore" in the toolbar; an import and a restore mark the people as the
 // user's own (the restore through applyBackup), which changes the privacy line.
+// Task P4: the hero's loss forecast line, worked out at the real time and
+// hidden while previewing and on the first run.
 //
 // Dialogs (tasks 4.6 to 4.12): the confirmation before Remove, the person
 // dialog, Reach out (alone or in a Triage session), Reconnect, Add and Edit,
@@ -59,11 +63,13 @@ import { SectionNav, ThreeLists, type ListSection } from "./components/ThreeList
 import type { GhostedEngine } from "./engine-instance"
 import { hasOwnPeople, markOwnPeople, markStarted, needsFirstRun, resetAllData, type FlagStorage } from "./first-run"
 import { lastLoggedContactAt, stateCounts, type SectionId, type StreetView } from "./lists"
+import { LOSS_FORECAST_DAYS, lossForecast } from "./loss-forecast"
 import type { Person } from "./policy"
 import { loadSampleData } from "./sample-data"
 import { markSplashSeen, mediaPrefersReducedMotion, shouldShowSplash, type SessionFlagStorage } from "./splash"
 import { classifyWriteError, storageProblemText, type WriteProblem } from "./storage-errors"
 import { useSettleTicks, type Scheduler } from "./ticking"
+import { CLOCK_BEHIND_NOTICE_MS, clockBehindText, heldClock } from "./clock-guard"
 import { DAY_MS } from "./time"
 import { DOCK_DAYS, dockMarkers } from "./timeline"
 import {
@@ -145,7 +151,7 @@ export function App({
   engine,
   storage,
   session: splashStorage,
-  clock = Date.now,
+  clock: clockProp = Date.now,
   tickScheduler,
   frameScheduler,
   frameClock,
@@ -153,6 +159,10 @@ export function App({
   timeZone,
   reload = reloadPage,
 }: AppProps) {
+  // The clock never runs behind the newest saved event (clock-guard.ts): the engine refuses a
+  // write dated before one it holds, so a device clock that moved back would crash every tick.
+  const clock = useMemo(() => heldClock(clockProp, engine), [clockProp, engine])
+
   // The clock, refreshed by every settle tick below.
   const [realNow, setRealNow] = useState(() => clock())
 
@@ -212,6 +222,14 @@ export function App({
   // time and stay put while the slider moves (design section 4.2).
   const markers = useMemo(
     () => dockMarkers(engine.view(realNow), engine.forecast(realNow, DOCK_DAYS * DAY_MS), realNow),
+    [engine, realNow, version]
+  )
+  // The hero's loss forecast line (task P4, Req 35, design section 12.4): at
+  // the real time, again after every write (`version`) and every settle tick
+  // (`realNow`). Its own 7-day forecast, so the 7-day boundary is exact
+  // (design section 12.1). It stores nothing.
+  const loss = useMemo(
+    () => lossForecast(engine.view(realNow), engine.forecast(realNow, LOSS_FORECAST_DAYS * DAY_MS), realNow),
     [engine, realNow, version]
   )
 
@@ -495,11 +513,20 @@ export function App({
     [announce]
   )
   // Called after every tick, failed or not (startTicking calls onError first).
-  const handleTick = useCallback((at: number) => {
-    if (!tickFailed.current) tickProblemShown.current = false
-    tickFailed.current = false
-    setRealNow(at)
-  }, [])
+  const clockNoticeShown = useRef(false)
+  const handleTick = useCallback(
+    (at: number) => {
+      if (!tickFailed.current) tickProblemShown.current = false
+      tickFailed.current = false
+      // Held behind the real clock by a saved event from the future: say so once.
+      if (at - clockProp() > CLOCK_BEHIND_NOTICE_MS && !clockNoticeShown.current) {
+        clockNoticeShown.current = true
+        announce(clockBehindText, true)
+      }
+      setRealNow(at)
+    },
+    [announce, clockProp]
+  )
   useSettleTicks(engine, previewing, handleTick, {
     getNow: clock,
     scheduler: tickScheduler,
@@ -544,6 +571,7 @@ export function App({
           onLoadSample={loadSample}
           onStartEmpty={startEmpty}
           onAdd={openAdd}
+          loss={previewing || firstRun ? undefined : loss}
         />
         {people.length > 0 && (
           <>
@@ -613,6 +641,7 @@ export function App({
         frames={frameScheduler}
         clock={frameClock}
         prefersReducedMotion={prefersReducedMotion}
+        session={splashStorage}
       />
 
       {openDialog?.kind === "import" && (
