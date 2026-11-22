@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for the error boundary and the problem screen (task 18.3).
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"

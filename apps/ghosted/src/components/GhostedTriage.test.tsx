@@ -56,9 +56,22 @@ describe("GhostedTriage: the panel (Req 9.1, 9.2, 27)", () => {
     expect(triage).toHaveBeenCalledWith(30, NOW)
   })
 
-  it("explains the rule in three steps, in order, above the panel", () => {
+  it("explains the rule in three steps, in order, above the panel, in a disclosure closed by default (Req 33.3)", () => {
     const { container } = setup()
-    const steps = screen.getByRole("list", { name: "How the picks are made" })
+    // The disclosure: a native <details>, closed, whose summary reads "How does this work?".
+    const disclosure = container.querySelector("details")!
+    expect(disclosure).not.toBeNull()
+    expect(disclosure.open).toBe(false)
+    expect(disclosure.hasAttribute("open")).toBe(false)
+    const summary = disclosure.querySelector(":scope > summary")!
+    expect(summary.textContent).toBe("How does this work?")
+    // The summary is the first child, which makes it the browser's toggle.
+    expect(disclosure.firstElementChild).toBe(summary)
+    // The steps are inside it, named by the summary. (`hidden: true` because a
+    // browser hides a closed disclosure's content.)
+    const steps = screen.getByRole("list", { name: "How does this work?", hidden: true })
+    expect(disclosure.contains(steps)).toBe(true)
+    expect(steps.getAttribute("aria-labelledby")).toBe(summary.id)
     expect(steps.tagName).toBe("OL")
     expect(within(steps).getAllByRole("listitem").map((li) => li.textContent)).toEqual([...triageSteps])
     expect(triageSteps).toEqual([

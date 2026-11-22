@@ -6,7 +6,7 @@ Study Dungeon is a spaced-repetition study app built on the Decay Engine. Facts 
 
 **All app tasks depend on the engine package being built (packages/engine must be completed first).**
 
-The implementation follows the authorship rules: the policy functions (init, healthAt, applyEvent, nextDueAt, resurrect) and autopsy cause-of-death sentences are HAND-WRITTEN by the developer; Kiro generates only the tests for those modules, plus all UI components, app glue code, and styling.
+The implementation follows the authorship rules: the policy functions (init, healthAt, applyEvent, nextDueAt, resurrect) and autopsy cause-of-death sentences are NOT written by Kiro (Claude Code wrote them outside Kiro, at the developer's request); Kiro generates only the tests for those modules, plus all UI components, app glue code, and styling.
 
 ## Tasks
 
@@ -24,8 +24,8 @@ The implementation follows the authorship rules: the policy functions (init, hea
   - Verify app runs with `pnpm dev`
   - _Requirements: all (foundation), 16_
 
-- [x] 2. Implement Study Dungeon Policy (HAND-WRITTEN BY DEVELOPER: Kiro writes only the tests)
-  - [x] 2.1 Create policy implementation (WRITTEN BY THE DEVELOPER; originally planned as hand-written)
+- [x] 2. Implement Study Dungeon Policy (NOT KIRO: written by Claude Code outside Kiro; Kiro writes only the tests)
+  - [x] 2.1 Create policy implementation (WRITTEN BY CLAUDE CODE, outside Kiro, at the developer's request; originally planned as hand-written)
     - Create `src/policy.ts`
     - Define `FactPayload`, `FactPolicyData`, `ReviewEvent` types
     - Implement `StudyDungeonPolicy` class with thresholds `{ weak: 60, dead: 10 }`
@@ -187,8 +187,8 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - When queue empty, show completion message
     - _Requirements: 9.5_
 
-- [x] 10. Implement Autopsy Dialog (HAND-WRITTEN cause-of-death sentences)
-  - [x] 10.1 Create autopsy-sentences module (WRITTEN BY THE DEVELOPER; originally planned as hand-written)
+- [x] 10. Implement Autopsy Dialog (cause-of-death sentences written by Claude Code outside Kiro)
+  - [x] 10.1 Create autopsy-sentences module (WRITTEN BY CLAUDE CODE, outside Kiro, at the developer's request; originally planned as hand-written)
     - Create `src/autopsy-sentences.ts`
     - Implement `generateCauseSentences(report: AutopsyReport<ReviewEvent>, payload: FactPayload): string[]` function
     - Craft narrative sentences using autopsy facts:
@@ -398,9 +398,30 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Verify no errors when sound disabled
     - _Requirements: 18_
 
+- [ ] 21. A compact time dock (task L2, design "Compact Time Dock")
+  - [ ] 21.1 Session flag and wording
+    - New `dock-state.ts` (key `study-dungeon.dock-expanded`) and `dock-state.test.ts`; the optional `session` prop on `App`, passed to `TimeDock`
+    - `wording.ts`: `timelineText.toggle` replaces `fold` and `unfold`
+    - _Requirements: 19.5, 19.10_
+  - [ ] 21.2 The dock collapses at every width
+    - `TimeDock.tsx` (written by Claude Code; named here as `authorship.md` asks): `expanded` from the session flag; the toggle at the start of `belowSlider`; `.sd-timeline` only while expanded
+    - `dock.css`: the shell controls hidden while collapsed at every width; the slider always shown; the toggle at 44 px in the flow; the small candle while collapsed; any transition inside `no-preference`
+    - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.8, 19.9, 19.11_
+  - [ ] 21.3 The page's bottom room
+    - `useDockHeight` sets `--dock-h`; `world.css` uses it with today's values as the fallbacks
+    - _Requirements: 19.7_
+  - [ ] 21.4 Tests
+    - New `components/TimeDock.test.tsx`; update the tests listed in the design table. Change them to match the new behaviour; never loosen an assertion, skip a test or change an expected value to pass (`no-fake-tests.md`)
+    - _Requirements: 19.1-19.11_
+  - [ ] 21.5 Check
+    - `bash scripts/check.sh` passes; `scripts/check-engine-unchanged.sh` passes
+    - Browser check at 320, 390 and 1280 px on a draft deploy or a developer-started server
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 19.7_
+
 ## Notes
 
-- **Decay-rule and cause-of-death modules**: The policy implementation (`src/policy.ts`) and autopsy cause-of-death sentences (`src/autopsy-sentences.ts`) are not Kiro's: both were written by the developer (originally planned as hand-written). Kiro generates only the tests for these modules, plus all UI components and app glue code.
+- **Decay-rule and cause-of-death modules**: The policy implementation (`src/policy.ts`) and autopsy cause-of-death sentences (`src/autopsy-sentences.ts`) are not Kiro's: both were written by Claude Code outside Kiro, at the developer's request (originally planned as hand-written). Kiro generates only the tests for these modules, plus all UI components and app glue code.
 - **Engine dependency**: All tasks depend on `packages/engine` being completed first. The engine provides `DecayEngine`, `LocalStorageAdapter`, and all core types.
 - **Vertical slice approach**: Build features end-to-end (policy → UI → interaction) before moving to the next feature, ensuring continuous integration.
 - **Shared shell**: ItemCard, Counters, HistoryLogViewer, TriagePanel, AutopsyDialog and TimeMachine live in `packages/shell` from the start (Requirement 16.1), with theme, wording and render functions passed in. Requirement 16.3 means they only have the features Study Dungeon needs now. App-only parts (fight and challenge dialogs, add/edit form, hero, first run) stay in the app.

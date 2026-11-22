@@ -76,7 +76,7 @@ export function markerSummary(counts: readonly { kind: string; label: string; co
   return parts.length === 0 ? "no contacts logged" : parts.join(", ")
 }
 
-/** The three Triage steps shown above the panel (Req 9.2). */
+/** The three Triage steps, in the "How does this work?" disclosure above the panel (Req 9.2, 33.3). */
 export const triageSteps: readonly string[] = [
   "Only fading windows are considered.",
   "The dimmer and more important the person, the more reaching out is worth.",
@@ -326,7 +326,8 @@ export const toolbarText = {
 
 /** The Triage panel's own words around the shell panel (task 4.12, Req 9.2, 9.4). */
 export const triageText = {
-  stepsLabel: "How the picks are made",
+  /** The summary of the closed disclosure that holds the three steps (Req 9.2 as amended, 33.3). */
+  howItWorks: "How does this work?",
   /** The quiet button (Req 9.4): "Today's 5-minute action: Reach out to Dan". */
   fiveMinute: (firstName: string) => `Today's 5-minute action: Reach out to ${firstName}`,
 } as const

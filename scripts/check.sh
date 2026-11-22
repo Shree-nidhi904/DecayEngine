@@ -6,7 +6,7 @@
 # Run it from anywhere in WSL:  bash scripts/check.sh
 # Exit code is 0 only when every step passes.
 #
-# Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+# Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 # The three Ghosted steps were added by Kiro (Ghosted task 2.10, design section 8.3).
 
 set -u

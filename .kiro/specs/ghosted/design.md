@@ -20,7 +20,7 @@ Key decisions:
 
 ### 1.1 File layout of `apps/ghosted`
 
-Files marked **(dev)** are hand-written by the developer. Files marked **(copy)** are adapted copies of Study Dungeon modules (section 1.3). Everything else is new and written by Kiro.
+Files marked **(dev)** are not written by Kiro (they were written by the developer or by Claude Code, outside Kiro). Files marked **(copy)** are adapted copies of Study Dungeon modules (section 1.3). Everything else is new and written by Kiro.
 
 ```
 apps/ghosted/
@@ -183,7 +183,7 @@ The App mirrors Study Dungeon's `App.tsx` pattern but is not copied from it: the
 
 ### 1.4 The scaffold files
 
-- `policy.ts` belongs to the developer (section 2).
+- `policy.ts` was written by Kiro from the developer's rules (section 2).
 - `policy.test.ts`: Kiro replaces the `it.todo` stubs with real tests. No stub is deleted without a real test taking its place.
 - `skin.css` holds the hook's generic names (`--text`, `--acc`, `--good`, …). Its values are moved into `styles/tokens.css` under the Ghosted token names from `design-tokens.md` (`--bg`, `--panel`, `--panel-hi`, `--line`, `--bone`, `--dim`, `--glow`, `--flick`, `--dark`, `--sign`, `--rust`, `--mint`, `--display`, `--logo`), plus `--lit` and `--age`. `skin.css` is then deleted. The steering rule is "add no colours outside" the Ghosted section, and `--panel-hi`, `--sign` and `--mint` are missing from `skin.css`.
 
@@ -657,7 +657,7 @@ interface GhostedTriageProps {
 }
 ```
 
-This wraps the shell `TriagePanel` with `budgets={[15, 30, 60, 120]}`, `defaultBudget={30}`, `initialBudget={30}`, `maxBudgetMinutes={1440}`, `triage={useCallback(b => engine.triage(b, now), [engine, now, version])}`, `startDisabled={blocked !== undefined}` and `startDisabledReason={blocked}`. Above the panel is an ordered list of the three steps from `wording.ts` (Req 9.2). `renderText` shows the triangle glyph, the word "flickering" and the person's name; the shell adds worth per minute, minutes and `diesIn` → "goes dark in N days" (Req 9.3, 16.1).
+This wraps the shell `TriagePanel` with `budgets={[15, 30, 60, 120]}`, `defaultBudget={30}`, `initialBudget={30}`, `maxBudgetMinutes={1440}`, `triage={useCallback(b => engine.triage(b, now), [engine, now, version])}`, `startDisabled={blocked !== undefined}` and `startDisabledReason={blocked}`. Above the panel is an ordered list of the three steps from `wording.ts` (Req 9.2), inside a native `<details>` closed by default whose `<summary>` reads "How does this work?" (Req 33.3, section 10). `renderText` shows the triangle glyph, the word "flickering" and the person's name; the shell adds worth per minute, minutes and `diesIn` → "goes dark in N days" (Req 9.3, 16.1).
 
 "Today's 5-minute action" (Req 9.4) reads `engine.triage(1440, now)`, takes `picks` and `others` (together, every weak person), keeps those with `costMinutes ≤ 5`, and picks the highest `valuePerMinute`, ties by id. It is a **quiet** button "Reach out to <name>", because amended 30.4 makes the shell's Run the region's primary button. It is hidden when nobody qualifies. Engine calls: `triage`. **Req 9.1-9.5, 16.1, 27, 30.4.**
 
@@ -1507,7 +1507,7 @@ What each part covers:
 - `git diff <base> -- packages/engine` compares the base with the working tree, so it catches later commits and staged or unstaged edits to tracked files.
 - `git status --porcelain --untracked-files=all` catches new untracked files. Ignored paths such as `node_modules` are reported by neither command.
 - The shell check fails on any change outside the files named in Requirements 26 to 28. Every existing shell test file is outside the list, so editing one fails here. It does not decide whether an old test is still correct; the old tests and Study Dungeon's tests still have to pass, and `check.sh` runs them.
-- Study Dungeon's own files are not checked by git. Comment-only edits there (the attribution comments have been reworded by hand) would make such a check fail without weakening any test.
+- Study Dungeon's own files are not checked by git. Comment-only edits there (the attribution comments were reworded in a separate correction) would make such a check fail without weakening any test.
 
 ### 8.3 How `scripts/check.sh` calls it
 
@@ -1579,13 +1579,13 @@ Tab order follows the DOM, which matches the visual order:
 
 1. the header sign (not focusable);
 2. inside `<main>`: the hero's primary and quiet buttons;
-3. Triage (choices, custom field, Run, start, the 5-minute action);
+3. the Street windows, house by house (moved up by Req 33.1);
 4. the section navigation;
-5. the Street windows, house by house;
+5. Triage (the "How does this work?" summary, choices, custom field, Run, start, the 5-minute action);
 6. Fading cards, Empty windows cards, Still lit rows;
 7. the forecast choices;
 8. the toolbar (Add a person, Import, Back up, Restore, Reset all data);
-9. the dock last: the slider, the marker buttons, the jumps, Play, then Back to today in the preview banner.
+9. the dock last: the slider, the "Jumps and markers" toggle, and only when expanded the marker buttons, the jumps and Play; then Back to today in the preview banner (Req 34.9, section 11).
 
 The dock is fixed at the bottom on screen but last in the DOM, so it comes last in the Tab order without any `tabindex` above 0. Disabled write controls use `aria-disabled` and stay focusable with their reason as the description (Req 12.5).
 
@@ -1599,6 +1599,116 @@ The focus outline is `2px solid var(--sign)` with a 2 px offset everywhere. `--s
 - jsdom cannot measure layout, so `layout-css.test.ts` checks the rules in the CSS source. The manual check at 320, 390 and 1280 px confirms them on screen (Open issue 3.5).
 
 ---
+
+## 10. First screen (Requirement 33, task L1)
+
+At 1280×800 the first screen used to show the sign, the hero and then Triage. The Street, Ghosted's main picture, started below the fold.
+
+**Order in `App.tsx`** (only while there are people; the first run is unchanged):
+
+```
+Hero → Street → SectionNav → GhostedTriage → ThreeLists → ForecastControl → toolbar → PrivacyLine
+```
+
+- The Street comes straight after the hero, so the first row of houses is on the first screen.
+- The section navigation stays just before Triage and the lists. Its "Street" entry now points back up the page. It still moves focus to `streetHeading`, so nothing changes in how it works.
+- Triage goes after the navigation and before the lists, so it is not pushed below a long list of cards.
+- Nothing about the Street changes, including its `headingRef`. The hero keeps `heroHeading`, which is still the focus target after the splash and when a dialog's opener is gone.
+
+**Triage steps.** `GhostedTriage` puts the three steps in `<details className="gh-triage-how">` with no `open` attribute. The `<summary>` text is `triageText.howItWorks` ("How does this work?"), which replaces `triageText.stepsLabel`. The `<ol>` keeps `aria-labelledby`, now pointing at the summary's id. A native `<summary>` can be reached with Tab and opened with Enter or Space, so no script is needed. `layout.css` styles the summary with the old title's mono label style and existing tokens only (`--dim`, and the shared `:focus-visible` outline).
+
+**Unchanged.** Every write still goes through `runGatedWrite` (the preview guard). The heading refs, the section navigation's `goTo`, and the dock last in the DOM all stay as they were. No positive `tabindex` is added.
+
+**Tests.**
+- `GhostedTriage.test.tsx`: the steps are inside a closed `<details>` whose summary reads "How does this work?". The list is named by the summary, holds the three steps in order, and comes before the shell panel.
+- `App.accessibility.test.tsx`: `summary` is added to the checked controls, so the summary has to be focusable, named and kept in the Tab order like every other control.
+- `App.test.tsx`: a new order test checks hero heading, then Street, then navigation, then Triage, then the Fading list in `<main>`, each one following the last. The existing "nav before the lists" test stays.
+- jsdom cannot measure the fold (open issue 3.5). Req 33.2 is checked with Playwright at 1280×800 and 390×844, against the viewport with the dock as it is then, and with screenshots, saved as `docs/screenshots/ghosted-l1-1280.png` and `ghosted-l1-390.png`.
+
+## 11. Compact moon dock (Requirement 34, task L2)
+
+At 1280×800 the dock is always open and covers about a quarter of the screen. Its marker rows are glyphs with no visible words.
+
+### 11.1 Structure (`MoonDock.tsx`, no shell change)
+
+The shell `TimeMachine` stays mounted the whole time, so the slider, the date line and Play's state are never lost. `MoonDock` passes a different `belowSlider` depending on whether the dock is expanded:
+
+```
+<div class="gh-dock" data-expanded?>      ← data-expanded only when expanded
+  <Moon/>                                  (small size while collapsed)
+  <TimeMachine belowSlider={
+      <>
+        <button class="gh-button gh-dock-toggle" aria-expanded aria-controls={panelId}>
+          <chevron aria-hidden/> {dockText.toggle}        ← "Jumps and markers"
+        </button>
+        <div id={panelId} class="gh-dock-panel">
+          {expanded && <>track with markers · ticks · <ol class="gh-sr-only"> marker list</>}
+        </div>
+      </>
+  }/>
+  {previewing && <PreviewBanner/>}         ← shown in both states (Req 34.4)
+</div>
+```
+
+- **The app's own parts** (markers, ticks and the marker list) are only rendered while expanded, so they are out of the DOM and the Tab order when collapsed.
+- **The shell's jumps and Play** (`.shell-time-machine-controls`) cannot be left out without a shell change. They are hidden with `.gh-dock:not([data-expanded]) .shell-time-machine-controls { display: none }`, which takes them out of the Tab order and the accessibility tree in a browser.
+- **The toggle:** a quiet `gh-button` with `min-block-size: 44px; min-inline-size: 44px`. Its name is the visible text and does not change with the state; `aria-expanded` carries the state. The chevron is an inline SVG with `aria-hidden`, turned 180° while expanded. The turn is a transition only inside `prefers-reduced-motion: no-preference`.
+- **Tab order** in the dock: slider, toggle, then (when expanded) markers, jumps, Play, then Back to today. This follows from `belowSlider` sitting right after the slider in the shell.
+
+### 11.2 Remembered for the session
+
+- `dock-state.ts` (new, pure) has `readDockExpanded(session)` and `writeDockExpanded(session, value)`. They use the key `ghosted.dock-expanded` ("1" or "0") on the App's existing `session: SessionFlagStorage | null` prop.
+- A missing value or an unreadable storage means collapsed. A failed write is ignored, so the choice then lasts as React state until the page closes.
+- The key is in `sessionStorage`, never `localStorage`, so it is not in `RESET_KEYS` and "Reset all data" does not need to know about it.
+- The App passes `session` to `MoonDock`. `MoonDock` reads the flag once, when it mounts.
+
+### 11.3 Marker labels (Req 34.6)
+
+- `dockText.fadesIn(name, n)` gives "Mira Castell starts fading in 12 days", and `dockText.darkIn(name, n)` gives "Mira Castell goes dark in 12 days". Both use the existing `days(n)` helper ("1 day", "N days"). `n` is `marker.day`, the whole days from today, already worked out in `timeline.ts`.
+- `markerSoonLabel(marker)` in `timeline.ts` picks one of the two.
+- **Visible label:** each marker button holds `<span class="gh-dock-mark-tip" aria-hidden="true">` with that text. It is shown by `.gh-dock-mark:hover .gh-dock-mark-tip, .gh-dock-mark:focus-visible .gh-dock-mark-tip`, so it never depends on hover alone. The tip sits above the track, on `--panel-hi` with a `--border` edge and `--bone` text (existing tokens only), and is clamped inside the dock with `max-inline-size` and `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`.
+- **Accessible name:** unchanged (`markerLabel`, "… goes dark on 3 March"). The tip is `aria-hidden`, so nothing is read twice.
+- **Screen-reader list:** `<ol class="gh-sr-only" aria-label={dockText.markerList}>` lists every marker with `markerSoonLabel`, in marker order. It is labelled "Who fades and goes dark next". `.gh-sr-only` is new in `layout.css`: the usual clip pattern (`position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap`).
+- Below 520 px the track and ticks stay hidden, as today. The list is still there for screen readers.
+
+### 11.4 The page's bottom room (Req 34.7)
+
+- `useDockHeight(ref)` (new, in `MoonDock.tsx`) watches the dock's root with a `ResizeObserver`. It sets `--dock-h: <border-box block size>px` on `document.documentElement`, removes it on unmount, and does nothing when `ResizeObserver` is missing (jsdom).
+- `layout.css` uses `var(--dock-h, var(--dock-max))`:
+  - `html { scroll-padding-bottom: calc(var(--dock-h, var(--dock-max)) + 12px) }`
+  - `.gh-main { padding-block-end: calc(var(--dock-h, var(--dock-max)) + 24px) }`
+- Before the first measurement the page keeps today's room, so it can never be too small. After it, the room follows the real height: collapsed, expanded, or with the banner.
+- `--dock-max` and the dock's `max-block-size` stay as the cap for the expanded dock.
+
+### 11.5 Wording (`wording.ts`)
+
+`dockText.toggle` "Jumps and markers", `dockText.markerList` "Who fades and goes dark next", and `dockText.fadesIn` and `dockText.darkIn` as above. No word judges anyone. `wording.test.ts` gets sample arguments for the two new functions, so the banned-phrase scan covers their output.
+
+### 11.6 Tests
+
+Existing tests are **changed to match the new behaviour, never loosened** (`no-fake-tests.md`): no assertion is removed or weakened and no expected value is changed to make a test pass. A test that clicks a marker, a jump or Play first expands the dock, as a user would.
+
+| Test | Change |
+|---|---|
+| `components/MoonDock.test.tsx` | New cases: collapsed by default (no markers in the DOM, `data-expanded` absent, toggle `aria-expanded="false"`); the toggle expands and collapses; the offset is kept; the banner shows in both states; slider while collapsed calls `onChange`; session flag read and written; the toggle's name is the same in both states. Existing marker and jump cases expand first. |
+| `dock-stagger.test.tsx` | Renders the markers expanded; row assertions unchanged. |
+| `dock-narrow.test.ts` | Adds the collapsed rule for `.shell-time-machine-controls`; the narrow rules it checks stay. |
+| `layout-css.test.ts` | The dock's room uses `var(--dock-h, var(--dock-max))`; new `.gh-sr-only` and the toggle's 44 px. |
+| `App.test.tsx` (dock section) | Jumps and markers after expanding. A new case: collapse during a preview keeps `--age`, the banner and the blocked writes. |
+| `App.preview.test.tsx`, `App.preview.property.test.tsx` | Expand before using a jump, wherever one is used. The preview-never-writes property keeps `numRuns` at 100 or more. |
+| `App.accessibility.test.tsx` | Expand before "+90 days". The toggle is among the controls checked, and has a name in words. |
+| `primary-buttons.test.tsx` | The toggle is quiet: the region's only filled button is still the shell's Play. |
+| `motion.test.ts` | The chevron's transition sits inside `no-preference`. |
+| `wording.test.ts` | Arguments for `dockText.fadesIn` and `dockText.darkIn`. |
+| `timeline.test.ts` | New cases for `markerSoonLabel` ("1 day" and "N days", both types). |
+| new `dock-state.test.ts` | Read and write, a missing key, a throwing storage, `null` storage. |
+
+jsdom cannot apply CSS or measure height. Req 34.2's "not shown" for the shell controls and Req 34.7 are therefore checked by CSS source tests plus a browser check at 320, 390 and 1280 px. The browser check uses a draft deploy (`netlify deploy --build`, no `--prod`) or a server the developer starts (`shell-commands.md` rule 6).
+
+### 11.7 Open points
+
+1. **Play while collapsing.** The shell owns Play, so collapsing cannot stop it without a shell change. A running Play goes on to the end (5 s at most), and moving the slider stops it as today. Under reduced motion Play is a single jump, so nothing keeps running. **Confirm, or ask for an optional shell prop instead.**
+2. **Toggle words.** "Jumps and markers" is a proposal. **Confirm or change.**
 
 ## Correctness Properties
 
@@ -1663,7 +1773,7 @@ For any rhythm and any last contact more than `9 × T / 10` before the add time,
 Places where the real code or the requirements do not fit what part 3 needs. Nothing here is solved by inventing API.
 
 1. **Policy tests fail until `policy.ts` is written.** Every scaffold function throws and its thresholds are `NaN`, so `new DecayEngine(ghostedPolicy, …)` rejects it. The policy, sample, property, autopsy and App tests will fail, not skip, until the developer writes `policy.ts` (`no-fake-tests.md`). The task list must put the developer's policy first. FYI.
-2. **Exact autopsy sentences.** `autopsy-sentences.ts` is hand-written, so Kiro cannot know its exact words in advance. `autopsy-sentences.test.ts` therefore checks facts (the day counts, the kind of the last contact, the rhythm ratio, the started-dark gap) and rules (no banned words, no "0 days"). Exact-sentence tests for fixed reports, like Study Dungeon's, need the developer's wording. They would be added after the file exists, or the developer supplies the expected sentences. **Needs your decision.**
+2. **Exact autopsy sentences.** `autopsy-sentences.ts` was written by Claude Code outside Kiro, so Kiro cannot know its exact words in advance. `autopsy-sentences.test.ts` therefore checks facts (the day counts, the kind of the last contact, the rhythm ratio, the started-dark gap) and rules (no banned words, no "0 days"). Exact-sentence tests for fixed reports, like Study Dungeon's, need the developer's wording. They would be added after the file exists, or the developer supplies the expected sentences. **Needs your decision.**
 3. **The whole-day gap in Property 13 and Req 19.6.** "The whole-day gap" does not say whether it is floored or rounded. The test asserts `floor(gap / DAY_MS)`, and its generator keeps the part below a day under 12 hours, so floor and round agree for every generated case. A gap like 95.6 days is therefore not tested. **Confirm floor, or say round.**
 4. **App-level Property 12 runtime.** 100 full App renders may take longer than the 20 s default (Req 32.4). The test sets its own per-test timeout of 120 s, keeping `numRuns` at 100. The cheap gate-level property runs 1000 times. **Confirm a per-test timeout is acceptable.**
 5. **No layout in jsdom.** Requirements 12.7, 24.4 and 24.7 (nothing behind the dock, no sideways scroll at 320 px, no column beside empty space) cannot be measured in jsdom. They are covered by CSS source tests plus the manual check at 320, 390 and 1280 px. No browser test runner is in the stack (`tech.md`). FYI.

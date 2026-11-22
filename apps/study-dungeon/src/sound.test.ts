@@ -2,7 +2,7 @@
 // A fake audio context records every call, so the tests check what would be
 // played without a sound card or a real clock.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { describe, expect, it, vi } from "vitest"
 import {

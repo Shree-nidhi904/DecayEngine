@@ -6,7 +6,7 @@
 // AA needs 4.5:1 for normal text. Every pair below is held to 4.5:1, so the
 // result does not depend on font size.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { describe, expect, it } from "vitest"
 import { studyDungeonShellTheme, studyDungeonTheme } from "./theme"

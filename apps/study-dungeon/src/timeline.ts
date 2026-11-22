@@ -2,7 +2,7 @@
 // fact turns weak or dies if nobody reviews it. Pure: takes the facts as seen
 // today and the engine's forecast of deaths; never reads the clock.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { DAY_MS, studyDungeonPolicy, type Fact } from "./policy"
 import { creatureOf } from "./creatures"

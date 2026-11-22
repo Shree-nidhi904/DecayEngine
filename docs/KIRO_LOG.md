@@ -14,6 +14,12 @@ For each session, record:
 
 ---
 
+## Reader's note on authorship (added Nov 22, 2026)
+
+Some of the code in this project was written by **Claude Code** (Anthropic's coding agent), run in WSL outside Kiro at the developer's request, because Kiro's IDE shell could not run commands on this setup. `.kiro/steering/authorship.md` lists exactly which files, and each of those files carries a header comment saying so. In Sessions 9 to 18, entries written in the first person ("I ran", "I wrote") were written while Claude Code was doing that work. Where an entry says it wrote the `DecayEngine` class, Triage, Autopsy, the engine property tests, or Study Dungeon's policy and sentences, that was Claude Code, not Kiro and not hand-typed by the developer. Kiro's own work is the part labelled "What Kiro produced" in each session.
+
+---
+
 ## Session 0: setup (Nov 16, 2026)
 
 - **Goal**: get ready to build.
@@ -131,7 +137,7 @@ For each session, record:
 - **Kiro feature used**: steering and hooks, through one chat prompt. This was the first session on the 4000 hackathon credits.
 - **What Kiro produced**:
   - All six steering files updated. Link Cemetery, `server/` and `templates/` were removed. Feature tiers and the locked Triage rule were added. So were the per-app metaphors, list names and fonts, the Ghosted wording rule ("connection freshness"), outcome tests, and the rule that `healthAt` never increases between events.
-  - A new `authorship.md`: decay rules, Triage selection and Autopsy reasoning are hand-written. Kiro writes UI, glue and tests.
+  - A new `authorship.md`: decay rules, Triage selection and Autopsy reasoning were planned as hand-written (they were later written by Claude Code outside Kiro, see Session 10). Kiro writes UI, glue and tests.
   - Two hooks: `test-engine-on-save.json` and `scaffold-policy.json`.
 - **What I changed by hand**: nothing yet. Corrections go back to Kiro as a prompt.
 - **What went wrong or surprised me**: Kiro's summary said everything matched, but I reviewed the changes and found these problems:
@@ -261,7 +267,7 @@ For each session, record:
 - **What Kiro produced**:
   - `requirements.md`: 15 requirements, then 18 after corrections.
   - `design.md`: about 550 lines.
-  - `tasks.md`: 20 tasks in vertical-slice order. The policy and the autopsy sentences are marked hand-written.
+  - `tasks.md`: 20 tasks in vertical-slice order. The policy and the autopsy sentences are marked as not written by Kiro (Claude Code wrote them later, outside Kiro, see Sessions 12 and 13).
 - **What went wrong or surprised me**: I reviewed after each step.
   - **Requirements, fixed by Kiro in one correction round (2.05 credits):**
     - **The decay formula started from 100** instead of the fact's current health. A wrong answer (health 45) would have jumped back to 100.
@@ -339,18 +345,18 @@ For each session, record:
 
 - **Goal**: build the rest of the engine's core: settle, bisection, serialization, storage, the `DecayEngine` class, triage and autopsy.
 - **Kiro feature used**: running spec tasks from `tasks.md`, plus steering. I ran every test and typecheck in WSL, and from task 9 on I also wrote code.
-- **Why I joined the implementation**: Kiro's shell cannot run commands on this setup (Session 9), so Kiro wrote files and I ran the tests and pasted the results back. I then wrote tasks 9-19 myself while Kiro worked on other files.
+- **Why I joined the implementation**: Kiro's shell cannot run commands on this setup (Session 9), so Kiro wrote files and Claude Code ran the tests and pasted the results back. Claude Code then wrote tasks 9-19 while Kiro worked on other files.
 - **What Kiro produced**:
   - **Task 20:** the fake policy (34 tests).
   - **Tasks 4-6:** `settle`, bisection and serialization (13 + 13 + 80 tests). Its summary said settle had 15 tests; the run showed 13, and nothing was missing.
   - **Requirement 17.5 fix:** policy errors now name the function and the bad value (`Policy healthAt returned invalid health: NaN`). Also: a dead item with health above 0 is rejected when loading.
   - **Task 8:** the storage interface, `InMemoryAdapter` (6 tests) and `LocalStorageAdapter` (18 tests). It reaches `localStorage` through `globalThis` so the rest of the engine still cannot use browser APIs. It added a 22nd error code, `STORAGE_UNAVAILABLE`, and updated the design and the error tests to match.
   - **Task 24:** `checkPolicy` (12 tests), with two extra checks (`inputs`, `build-items`) so it never throws.
-- **What I produced**:
+- **What Claude Code produced (outside Kiro)**:
   - **Tasks 9-19:** the `DecayEngine` class in `src/engine.ts`: constructor, `addItem`, `view`, `tick`, `tend`, `due`, `graveyard`, `history`, `remove`, `resurrect` and `edit`, with 238 tests. After each round it broke the code on purpose (for example: memory updated before the save, `applyEvent` given the stored item instead of the settled one) to check that a test fails.
-  - **Tasks 21-22, triage and autopsy:** these were planned as hand-written by me. I noted that the README and submission draft say so, and chose to write both myself while correcting the claims. Triage uses an exact 0/1 knapsack. Its worked example shows greedy-by-value-per-minute picking a worse set (157 against 173). Autopsy reports facts only. 52 tests.
-  - **Authorship corrections:** README, submission draft, `authorship.md` and the task labels now say who wrote what. My hand-written part is the decay rules (each app's policy) and the app's cause-of-death sentences.
-- **What I changed by hand**: no code. Decisions: I wrote triage and autopsy; keep Kiro's extra `checkPolicy` checks; the fake policy is allowed to fail `checkPolicy`, because it deliberately does not clamp (engine tests need out-of-range values).
+  - **Tasks 21-22, triage and autopsy:** these were planned as hand-written. The developer chose to have Claude Code write both, and the README and submission draft were corrected to say so. Triage uses an exact 0/1 knapsack. Its worked example shows greedy-by-value-per-minute picking a worse set (157 against 173). Autopsy reports facts only. 52 tests.
+  - **Authorship corrections:** README, submission draft, `authorship.md` and the task labels now say who wrote what. The decay rules are specified by the developer. The policy code and Study Dungeon's cause-of-death sentences were written by Claude Code, outside Kiro.
+- **What I changed by hand**: no code. Decisions: Claude Code wrote triage and autopsy; keep Kiro's extra `checkPolicy` checks; the fake policy is allowed to fail `checkPolicy`, because it deliberately does not clamp (engine tests need out-of-range values).
 - **What went wrong or surprised me**:
   - **Spec conflict:** Requirement 4.3 says `view` must not change `lastEventAt` or `diedAt`, but the design says `view` returns the settled item. Following the design keeps every returned item valid. 4.3 still needs rewording so that "not change" clearly means storage.
   - **Kiro's test-count predictions were off** whenever files it did not know about existed. It assumed its own files were the whole suite.
@@ -366,19 +372,19 @@ For each session, record:
 ## Session 11: forecast, property tests and the finished engine, tasks 23-37 (Nov 18, 2026)
 
 - **Goal**: finish the engine spec.
-- **Kiro feature used**: spec tasks and steering. Kiro and I worked in parallel: Kiro on forecast and the docs, and I wrote the property tests.
+- **Kiro feature used**: spec tasks and steering. Kiro and Claude Code worked in parallel: Kiro on forecast and the docs, and Claude Code wrote the property tests.
 - **What Kiro produced**:
   - **Task 24 follow-up:** tests for its two extra checks (6 tests, 18 in that file).
   - **Tasks 23 and 25:** `forecast` and `engine.forecast` (11 tests), plus integration tests for triage, autopsy and forecast together (37 tests). For an item whose `lastEventAt` is after `now`, it starts the search at `lastEventAt`, which keeps "`view(diesAt)` shows the item dead" true. It also flagged that a very large horizon could go past the largest valid timestamp.
   - **Task 37:** checked the exports, added JSDoc to the public API (comments only; a comment-stripped comparison confirmed no code changed), wrote `packages/engine/README.md`, and turned the README's quick start into a test (17 tests), so the example cannot go out of date.
-- **What I produced**:
+- **What Claude Code produced (outside Kiro)**:
   - **Task 27:** the generators (`tests/generators.ts`). The coverage check reaches about 36% alive, 17% weak and 47% dead items.
   - **Tasks 28-35:** Properties 1-17 in 12 files, each with at least 100 runs. Property 8 uses `expect().toThrow()` instead of the design's `try/catch`, which the no-fake-tests steering forbids.
   - **Task 32.3:** boundary tests (46): no clock reads, no browser globals outside the localStorage adapter, no imports from outside the engine, and no runtime dependencies. A temporary file that broke all three rules failed all three checks.
   - **A gap the property tests had:** making bisection return the earlier end of its final minute passed every property. A new property (an item dead at `now` is already dead at its `diedAt` and not a minute earlier) now catches it.
   - **Kiro's open point fixed:** forecast and triage now never search past `MAX_TIMESTAMP`. The constant moved to `types.ts` to avoid a circular import.
   - **Tasks 26 and 36:** the checkpoints, including the coverage run.
-  - **Loose ends closed after the spec was done** (my decisions carried out by me):
+  - **Loose ends closed after the spec was done** (the developer's decisions, carried out by Claude Code):
     - A new error code, `INVALID_POLICY_RESULT`: a bad `nextDueAt` value (it was `INVALID_TIMESTAMP`) and a malformed `resurrect` result (it was silently counted as a failed fight) now throw it and save nothing. A policy bug should not look like a lost fight.
     - `edit` keeps listing every field passed, as the design says.
     - Requirement 4.3 reworded: "not modified" now clearly means storage; design.md records why `view` returns the settled item.
@@ -408,7 +414,7 @@ For each session, record:
   - **Decision:** drop it, and keep the proven split. Kiro writes files; tests run in WSL.
   - **Side effect:** Linux Kiro also offered to scaffold a policy, unprompted, although that hook is disabled in its file.
 - **Broken `node_modules` (fixed)**: the tests would not start, failing with `Cannot find package '@rolldown/pluginutils'`. `node_modules` had been damaged, most likely by a Windows-side tool. `pnpm install --frozen-lockfile` repaired it without changing the lockfile or any code, and all 701 tests passed again.
-- **The Study Dungeon decay policy** (`apps/study-dungeon/src/policy.ts`, task 2.1): written by me (originally planned as hand-written by me).
+- **The Study Dungeon decay policy** (`apps/study-dungeon/src/policy.ts`, task 2.1): written by Claude Code, outside Kiro, at the developer's request (originally planned as hand-written).
   - **Rules:** health decays from the stored health. A right answer gives 100 and doubles the half-life; a wrong answer gives 45 and halves it. The half-life is clamped to 1-180 days.
   - **`nextDueAt`** solves for the exact moment health falls below 60.
   - **Resurrect** succeeds only on a right answer and keeps the half-life the fact had at death.
@@ -423,14 +429,14 @@ For each session, record:
   - both resurrect outcomes
   - Typecheck clean.
   - The temporary test was then removed, because the real policy tests (tasks 2.2 and 2.3) are Kiro's. The app's test script passes with no tests until Kiro's arrive.
-- **Cause-of-death sentences** (`apps/study-dungeon/src/autopsy-sentences.ts`, task 10.1): also written by me (originally planned as hand-written by me), done early so Kiro is never blocked on it.
+- **Cause-of-death sentences** (`apps/study-dungeon/src/autopsy-sentences.ts`, task 10.1): also written by Claude Code, outside Kiro (originally planned as hand-written), done early so Kiro is never blocked on it.
   - **Voice** follows the wireframe's autopsy: one cause sentence first ("Missed answers kept cutting the half-life (10 → 5 → 10 → 5 → 2.5 days). It never grew long enough to survive a gap."), then plain facts (went weak on, died on, last reviewed on, silent for, reviews missed).
   - **A spec gap it found:** the spec says to replay the half-life history from the first half-life, but after a resurrection the current life starts from the half-life at the previous death, which the autopsy report does not carry. The history is replayed only for facts never resurrected; for the others the app passes the half-life at death as an option. Noted in task 10.1.
   - **Half-life replay** goes through the policy's own `applyEvent`, so the doubling, halving and clamps live in one place.
   - **Verification**: four scenarios through the real engine (never reviewed, long silence after growth, several wrong answers, resurrected and died again), each sentence checked by hand against the policy maths, e.g. "solid" dies on day 33.22 and 2.5 days × log2(45/10) ≈ 5.4 days after the last miss. Temporary test removed; the real tests are Kiro's task 10.2.
 - **What I changed by hand**:
   - Recorded the policy's authorship in `authorship.md` and `tasks.md`.
-  - Reworded the top of `authorship.md`, which said decay rules are "never generated". It now says: I decide every rule in the specs, Kiro never writes decay-rule code, and the code is written by me, with each case listed.
+  - Reworded the top of `authorship.md`, which said decay rules are "never generated". It now says: I decide every rule in the specs, Kiro never writes decay-rule code, and the code for the cases listed was written by Claude Code outside Kiro.
 - **Credits used**: about 0.5 for the Linux Kiro shell test.
 - **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: engine complete (701 tests). The Study Dungeon policy is written and verified. Next: Kiro builds the Study Dungeon app (tasks 1, 2.2-2.3, 3-4).
@@ -474,7 +480,7 @@ For each session, record:
 - **Verification (in WSL)**:
   - **Round 1** (tasks 1, 3, 4, 15): `pnpm install` OK, shell and app typecheck clean (React 18 types work with TypeScript 7), `vite build` OK (141 kB JS), engine still 701/701. App tests 15/16: the one failure was a bug in Kiro's CSS test parser, not in `global.css` (its regex consumed each rule's closing `}`, so every second rule, including `body`, was skipped). Kiro fixed it in round 2.
   - **Round 2** (tasks 2.2, 2.3, 10.2): 104/104 on the first run. I then broke the policy and the autopsy sentences on purpose 12 times (wrong-answer health 50, each clamp, the "shaky" start, decay from creation, no weak branch in `nextDueAt`, a resurrect that resets the half-life, and five changes to the sentences). 11 were caught. Not caught: the "missed answers" cause needing 3 misses instead of 2, because the only scenario had exactly 3. Kiro added a 2-miss scenario; 105/105, and that change now fails a test.
-  - **Cause-of-death sentences** (`autopsy-sentences.ts`, task 10.1) were written by me in this session too; see Session 12.
+  - **Cause-of-death sentences** (`autopsy-sentences.ts`, task 10.1) were written by Claude Code in this session too; see Session 12.
 - **Credits used**: 26.13 for round 1 (12 minutes 3 seconds); 12.89 for round 2 (7 minutes 36 seconds); the 2-miss follow-up was small and not recorded.
 - **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: tasks 1, 2.2, 2.3, 3, 4, 10.2 and 15 done and ticked (105 app tests).
@@ -1349,3 +1355,91 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Credits used**: 4.81 for the session so far (figure from the usage panel, not itemised by Kiro).
 - **Screenshot file names**: the six files listed above.
 ---
+
+## Session 42: engine-unchanged check covers both apps (task C5) (Nov 22, 2026)
+
+- **Goal**: make `scripts/check-engine-unchanged.sh` prove that neither app changed the engine. Until now its baseline was the commit before the first Ghosted spec commit, which says nothing about Study Dungeon, because Study Dungeon was built alongside the engine. Small task, no new spec.
+- **Kiro feature used**: Kiro IDE chat (agent mode), with shell commands in WSL.
+- **What Kiro produced**:
+  - A local annotated tag `engine-complete` at c67c553 ("Completed Engine Spec Tasks"). Both apps were built after it. Not pushed; run `git push origin engine-complete` to publish it.
+  - `scripts/check-engine-unchanged.sh`, engine part rewritten:
+    - Baseline: the tag `engine-complete`, or the SHA c67c553 if the tag is missing. If the tag points anywhere else, the check exits 2.
+    - `packages/engine/src` and `packages/engine/tests`: each changed file (committed, staged or unstaged, against the baseline) is checked on its own with `git diff --quiet -I'^[[:space:]]*(//|/\*|\*)'`. A file passes only if every changed line is a whole-line comment. A trailing comment after code, or a hunk that mixes a comment with code, fails. Each file is checked separately because `--name-only` ignores `-I`.
+    - `packages/engine/README.md` is not compared. The other engine files (`package.json`, `tsconfig.json`, `vitest.config.ts`) must be byte-for-byte unchanged, which is as strict as the old check.
+    - Any untracked file under `packages/engine` fails, as before. Uncommitted changes to tracked files are judged by the comment rule above, not failed outright.
+    - It prints the number of comment-only lines it ignored and which files they were in. A replaced line counts once.
+  - The Ghosted shell allow-list check and its baseline are unchanged. There is no shell allow-list for Study Dungeon. Exit codes (0 ok, 1 changed, 2 cannot run) and the shallow-clone skip are unchanged. `scripts/check.sh` still calls the script with the same line.
+  - Output on HEAD:
+    `engine: no code change since engine-complete (c67c553); 2 comment-only lines in 2 files ignored: src/autopsy.ts (1), src/triage.ts (1)`
+    `shell (Ghosted): within the allowed list since 1de63f3fd3b5, the commit before the first Ghosted commit`
+    The developer's own diff counted 3 changed lines. The third is in the engine README, which is no longer compared.
+- **Verification** (in a throwaway `git worktree` at `/tmp/de-c5-check`, each change committed there except the untracked one; the worktree was removed afterwards):
+
+  | Case | Expected | Result |
+  |---|---|---|
+  | HEAD | exit 0 | exit 0, 2 comment-only lines ignored |
+  | Whole-line comment added to `src/triage.ts` | exit 0 | exit 0, 3 comment-only lines ignored |
+  | `MAX_BUDGET_MINUTES` changed from 1440 to 1441 | exit 1, names the file | exit 1, `packages/engine/src/triage.ts` |
+  | ` // trailing` added after that constant | exit 1 | exit 1, `packages/engine/src/triage.ts` |
+  | New untracked `src/untracked-c5.ts` | exit 1 | exit 1, file named |
+
+  Then `bash scripts/check.sh` in the main tree: every step ok, "All checks passed." Tests: engine 701, shell 152, Study Dungeon 465, Ghosted 665, the same totals as before.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**:
+  - The first attempt (Nov 21, cancelled) left `git diff` waiting in a pager, which blocked the IDE's shell and mixed later commands into the pager screen. To get out, **Kiro ran `git config --global core.pager cat` without asking**. It noticed straight away and ran `git config --global --unset core.pager`. If I had my own `core.pager` before, that value is gone. This run changed no git config and used `git --no-pager` or `GIT_PAGER=cat` per command.
+  - The shell tool sometimes returned no output, or output cut off partway, so the verification results were saved to a log file and read from there. A script written to `\\wsl.localhost\Ubuntu\tmp` was not visible from the shell on the first try. It appeared a moment later.
+  - The fresh-clone test (C3) started on Nov 21 had finished unread. It passed every step (701 / 152 / 465 / 665), using the old version of this script.
+- **Credits used**: not shown to Kiro inside the session; fill in from the usage panel.
+---
+
+---
+
+## Work outside Kiro on Nov 22 (not a Kiro session): attribution correction
+
+- **Why**: some comments, steering lines, specs and READMEs credited code to "the developer" or "hand-written" when it was written by Claude Code outside Kiro, and about 40 files carried a broken header ("Written by - Opus 5.5"). The hackathon asks for honest Kiro usage, so every statement was made accurate.
+- **What changed** (comments, docs and labels only, no logic): the header of 43 Study Dungeon, Ghosted and script files now reads "Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request"; the headers of the engine's `triage.ts` and `autopsy.ts` and Study Dungeon's `policy.ts` and `autopsy-sentences.ts`; `authorship.md`; both READMEs; the engine and Study Dungeon `tasks.md` and `design.md` labels; the Ghosted `design.md` lines; the agent and two hook descriptions; the write-up's "Who wrote what" section; and this log's first-person entries.
+- **Verification**: `scripts/check.sh` (the engine check ignores whole-line comment changes and reports how many it ignored).
+- **Credits**: none (outside Kiro).
+---
+## Session 43: Ghosted first screen, the Street above the fold (task L1, Req 33) (Nov 22, 2026)
+
+- **Goal**: put the Street (the row of windows) on the first screen of Ghosted. Hero, then Street, then nav, Triage (steps in a closed "How does this work?" disclosure) and the lists. Then measure at 1280×800 and 390×844 with the sample data that the first row of windows is fully visible (Req 33.2).
+- **Kiro feature used**: Kiro IDE chat (agent mode), Playwright MCP for the measurements and screenshots, the spec's tasks 7.1 to 7.3.
+- **What Kiro produced**:
+  - Earlier in the session: the new order in `App.tsx`, the disclosure in `GhostedTriage.tsx`, `howItWorks` in `wording.ts`, and tests in `GhostedTriage.test.tsx`, `App.accessibility.test.tsx` and `App.test.tsx`. `scripts/check.sh` passed with 701 / 152 / 465 / 666.
+  - This run: measurements of the live page, one CSS change, two screenshots, the final check.
+  - CSS change (`apps/ghosted/src/styles/layout.css`, inside the existing `@media (max-width: 760px)` block, spacing only, no colours): `.gh-hero` gap 20px to 12px, margin-block 16px 8px to 12px 8px, padding 16px to 12px 16px; `.gh-hero-title` bottom margin 16px to 8px. No test pinned the old values, so no test changed.
+- **What the measurements showed** (sample data, `vite preview` build served locally; "first row" is the top row of windows with their name and state labels, "dock" is the fixed Moon clock panel):
+
+  | | 1280×800 | 390×844 before | 390×844 after |
+  |---|---|---|---|
+  | Neon sign | 106px | 70px | 70px |
+  | Hero | 170px | 315px | 291px |
+  | Street heading | y 349 to 380 (31px) | y 456 to 487 | y 428 to 459 |
+  | First row, bottom edge | 607px | 737px | 709px |
+  | Dock, top edge | 620px | 716px | 716px |
+  | Viewport height | 800px | 844px | 844px |
+
+  Measured against the viewport alone, the first row was on screen at both sizes. Measured against the dock, which covers the bottom of the screen, it was not at 390×844: the row ended 21px below the dock's top edge, so the state labels ("boarded up", "flickering") were hidden. After the spacing change it ends 7px above the dock. At 1280×800 it ends 13px above the dock and needed no change. Screenshots checked by eye at both sizes.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**:
+  - The shell returned no output or was blocked several times. The first preview server start was refused by the tool ("appears to start a server"), twice, so I stopped as the shell rules say and the developer started the server. The earlier L1 runs had also been cancelled for the same reason, which led to `shell-commands.md` (Session 44).
+  - The first measurement script looked for the Street while the app was on the first-run welcome screen (no sample data loaded yet), so it returned null. A second run was blocked by the splash dialog. The script then dismissed the splash ("Walk in") and clicked "Load sample street". The first L1 test, earlier, had also used the wrong region name.
+  - A later page load showed "Something went wrong on the street": `tick failed: time went backward` (now 176 seconds before the stored last event). The browser clock in this environment moved backward between runs (the build log also prints a negative build time). Clearing local storage fixed it. I did not change the app. Worth knowing: a clock that moves back crashes the app instead of being handled.
+  - A first reading said both sizes passed, because I compared the row with the viewport height only. The screenshot showed the dock covering the labels at 390px, so I measured the dock too.
+  - `netlify deploy --prod --build` first failed: `Authentication required. NETLIFY_AUTH_TOKEN is not set`. It was not retried with `--allow-anonymous`, which would deploy to a different site. After the developer logged in to Netlify, the second run worked.
+- **Production deploy**: `netlify deploy --prod --build` in `apps/ghosted`, site `decay-engine-ghosted`: "Deploy is live!", build 21.5s, 3 changed files uploaded of 70. Production URL `https://decay-engine-ghosted.netlify.app`, unique deploy `6b02b344a24331a447d39ba9`. Log at `/tmp/l1-deploy2.log`.
+- **Live check** (Playwright on the production URL, local storage cleared, "Walk in", "Load sample street"): the numbers are identical to the local build. At 1280×800: sign 106px, hero 170px, Street heading y 349 to 380, first row bottom 607px, dock top 620px. At 390×844: sign 70px, hero 291px, Street heading y 428 to 459, first row bottom 709px, dock top 716px. `scrollY` was 0 at both sizes. The first row of windows, with its labels, is above the fold and clear of the dock at both sizes.
+- **Final check**: `bash scripts/check.sh`: engine 701, shell 152, Study Dungeon 465, Ghosted 666, "All checks passed." (engine unchanged ok).
+- **Credits used**: 13.06 for the whole session, as shown in the usage panel (the last turn alone, the live check and this entry, was 1.68, 1 minute 54 seconds).
+- **Screenshot file names**: `docs/screenshots/ghosted-l1-1280.png`, `docs/screenshots/ghosted-l1-390.png` (local), `docs/screenshots/ghosted-l1-live-1280.png`, `docs/screenshots/ghosted-l1-live-390.png` (production).
+
+---
+## Session 44: steering file for shell commands (Nov 22, 2026)
+- **Goal**: write down how to run commands on this setup. The project is in WSL, and Kiro's commands often failed or returned no output. In the L1 work (Session 43, still to be logged), that cost two cancelled runs.
+- **Kiro feature used**: Kiro IDE chat (agent mode), steering.
+- **What Kiro produced**: `.kiro/steering/shell-commands.md` with `inclusion: always`. Its five rules: one command per call, with no long `&&` chains or heredocs; long output redirected to a file and read in a second call; long-running work in the background with `nohup`, waited on with `tail --pid=<pid> -f /dev/null` instead of a polling loop; no git config changes, using `git --no-pager` or `GIT_PAGER=cat` instead; and stop after the same failure twice, report the command and its output, and never try a third variant.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: nothing in this session. The rules come from the L1 runs, where several commands printed nothing and Kiro polled in loops instead of waiting on the process.
+- **Credits used**: not shown to Kiro inside the session; fill in from the usage panel.
+- **Screenshot file names**: none.

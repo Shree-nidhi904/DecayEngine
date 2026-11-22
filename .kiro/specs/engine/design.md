@@ -1382,7 +1382,7 @@ A fixed seed keeps this check stable between runs. If the generators are changed
 
 Outcome tests check that the engine, driven by a real policy, produces hand-calculated results ("dies on day 34 if never reviewed").
 
-**Where they live**: with each app's policy, in `apps/<app>/src/policy.test.ts`, not in `packages/engine`. Two rules force this. The engine must never import an app (engine-boundary steering), and the real decay rules are hand-written by the developer inside each app (authorship steering). Each app's policy test file also runs `checkPolicy` on that policy. The engine package itself tests against the fake policy only, plus one engine-level outcome test for Triage (see Testing Strategy).
+**Where they live**: with each app's policy, in `apps/<app>/src/policy.test.ts`, not in `packages/engine`. Two rules force this. The engine must never import an app (engine-boundary steering), and the real decay rules live inside each app (authorship steering). Each app's policy test file also runs `checkPolicy` on that policy. The engine package itself tests against the fake policy only, plus one engine-level outcome test for Triage (see Testing Strategy).
 
 **Reference rules** (from the "four questions" table in `reports/Decay Engine Home Wireframe.html` (private)). All three use thresholds weak = 60, dead = 10. These are the rules the outcome tests check; the developer writes the actual policy code.
 

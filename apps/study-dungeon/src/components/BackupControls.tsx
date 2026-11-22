@@ -2,7 +2,7 @@
 // downloads your facts as a JSON file. Restore reads one, checks it, asks
 // before replacing everything, then reloads.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { useRef, useState } from "react"
 import { applyBackup, checkBackup, makeBackup } from "../backup"

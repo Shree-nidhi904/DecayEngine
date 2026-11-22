@@ -11,7 +11,7 @@
 // are aria-disabled with a reason while previewing; Autopsy never is.
 // Fight (or Challenge) is the one primary button; Edit and Remove are quiet.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { useId, type ReactNode } from "react"
 import type { Fact } from "../policy"

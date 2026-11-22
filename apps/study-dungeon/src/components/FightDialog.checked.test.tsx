@@ -6,7 +6,7 @@
 // times; solid starts at half-life 10 days, a right answer doubles it, a
 // wrong one sets health 45 and halves it.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import "../test/dialog-polyfill"
 import { afterEach, describe, expect, it, vi } from "vitest"

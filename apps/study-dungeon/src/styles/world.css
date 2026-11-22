@@ -5,7 +5,7 @@
  * docs/design/study-dungeon-wireframe.html, using the --color-* and --font-*
  * variables from global.css. --age (0 today, 1 at +60 days) is set on
  * .sd-world by App.tsx and ages the room. Motion lives in animations.css.
- * Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+ * Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
  */
 
 .sd-world {

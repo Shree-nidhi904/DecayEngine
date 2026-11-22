@@ -9,9 +9,10 @@
 //
 // Layout: the splash (task 4.14, once per tab, never under reduced motion),
 // <header> with the neon sign, the page's one h1 (task 4.14), <main> (live
-// region first, then the hero, task 4.5; Triage, task 4.12; the section
-// navigation, the Street, task 4.4, and the three lists, task 4.3; then the
-// toolbar and the privacy line) and a dock slot. With no people (the first
+// region first, then the hero, task 4.5; the Street, task 4.4, straight after
+// the hero so it is on the first screen (task L1, Req 33); the section
+// navigation; Triage, task 4.12; the three lists, task 4.3; then the forecast,
+// the toolbar and the privacy line) and a dock slot. With no people (the first
 // run, or after "Start empty") only the hero, the toolbar and the privacy
 // line are shown, so no empty list sits beside the hero (Req 20.9). The
 // open dialog is also exposed as data-dialog on .gh-app.
@@ -546,6 +547,8 @@ export function App({
         />
         {people.length > 0 && (
           <>
+            <Street people={people} onOpen={openPerson} headingRef={streetHeading} />
+            <SectionNav counts={counts} onGoTo={goTo} />
             <GhostedTriage
               engine={engine}
               now={now}
@@ -554,8 +557,6 @@ export function App({
               onStartSession={startSession}
               onReachOut={actions.onReachOut}
             />
-            <SectionNav counts={counts} onGoTo={goTo} />
-            <Street people={people} onOpen={openPerson} headingRef={streetHeading} />
             <ThreeLists
               view={view}
               engine={engine}

@@ -258,3 +258,21 @@ type ReviewEvent = {
 2. WHERE sound is enabled, WHEN playing sound effects, THE app SHALL use only original or CC0-licensed audio files.
 3. WHEN prioritizing features, THE implementation SHALL mark sound effects as "Could" priority (cut first if time is short).
 
+### Requirement 19: A Compact Time Dock (task L2)
+
+**User Story:** As a learner, I want the time dock to stay small until I need it, so that it does not cover the monsters and lists under it.
+
+#### Acceptance Criteria
+
+1. WHEN the page loads with no remembered choice, THE time dock SHALL be collapsed at every width: one slim bar with the candle at its small size, the time machine title, the shown date line (today's date, or the previewed date) and the slider.
+2. WHILE the dock is collapsed, THE quick jumps, Play, the marker track, its tick labels and the "Next: …" line SHALL not be shown and SHALL not be reachable with Tab.
+3. WHEN the user activates the toggle, THE dock SHALL expand and show everything in 19.2; activating it again SHALL collapse it. The toggle SHALL be a native `<button>`, shown at every width (today it shows only below 520 px), with `aria-expanded`, a visible name from `wording.ts` that stays the same in both states, and a target of at least 44×44 px.
+4. WHEN the dock collapses or expands, THE preview offset SHALL stay the same. THE preview banner (rendered by the App, outside the dock) SHALL keep showing while previewing, and every write SHALL stay blocked. Moving the slider while collapsed SHALL change the preview as it does when expanded.
+5. WHEN the user expands or collapses the dock, THE choice SHALL be kept in `sessionStorage` and restored on a reload in the same tab. WHERE `sessionStorage` cannot be used, THE choice SHALL last until the page is closed. No `localStorage` key SHALL be added.
+6. THE markers SHALL keep their current labels ("Day 12: Ana dies", as accessible name and title). No marker is missing a label, so nothing about the markers changes.
+7. AT 320, 390 and 1280 px wide, THE collapsed bar SHALL not cover page content: the page's bottom padding and scroll padding SHALL be at least the dock's measured height, and SHALL follow it when the dock expands or collapses.
+8. THE toggle and any change of size SHALL respect reduced motion: any transition sits inside `@media (prefers-reduced-motion: no-preference)`.
+9. Tab order SHALL follow the DOM. The dock stays last on the page. Inside it come the slider, then the toggle, then (when expanded) the markers, the jumps and Play.
+10. ALL new text SHALL come from `wording.ts`. No colour outside the Study Dungeon tokens. No change to `packages/engine/` or `packages/shell/`.
+11. THE first-run tour step that points at the time machine (`.shell-time-machine`) SHALL still find it, collapsed or expanded.
+

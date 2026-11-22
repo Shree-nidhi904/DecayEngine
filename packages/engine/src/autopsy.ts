@@ -1,7 +1,7 @@
 // Autopsy: the facts of how an item died, read from its history.
 // Source of truth: .kiro/specs/engine/requirements.md (Requirement 17c).
 //
-// Written by the developer (not by Kiro); see docs/KIRO_LOG.md.
+// Written by Claude Code, outside Kiro, at the developer's request; see docs/KIRO_LOG.md.
 //
 // Internal module: the public API is engine.autopsy.
 //

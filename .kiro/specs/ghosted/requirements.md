@@ -153,7 +153,7 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 #### Acceptance Criteria
 
 1. WHEN the Triage panel renders, THE app SHALL use the shell's `TriagePanel` with budget choices of 15, 30, 60 and 120 minutes (Requirement 27), plus the shell's custom choice.
-2. WHEN the panel renders, THE app SHALL explain the rule in three short steps: only fading windows are considered; the dimmer and more important the person, the more reaching out is worth; the picks give the most worth per minute that fits the time.
+2. WHEN the panel renders, THE app SHALL explain the rule in three short steps: only fading windows are considered; the dimmer and more important the person, the more reaching out is worth; the picks give the most worth per minute that fits the time. *(Amended by Requirement 33.3:)* the steps sit inside a disclosure labelled "How does this work?", closed by default, so the budget form and the picks are seen first.
 3. WHERE triage returns picks, THE panel SHALL show each pick's name, worth per minute, minutes and "goes dark in N days".
 4. WHERE at least one fading person's `costMinutes` is 5 or less, THE panel SHALL show "Today's 5-minute action: Reach out to <name>" for the pick with the best worth per minute among those people.
 5. WHEN the user starts the session, THE app SHALL open the Reach out dialog for each pick in order.
@@ -437,6 +437,36 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 3. WHEN `pnpm --filter @decay-engine/ghosted build` runs, THE output SHALL be a static bundle whose asset paths work when served from the site root, so that it can be deployed as its own URL.
 4. THE Ghosted `vite.config.ts` SHALL set `test.testTimeout` to 20000, so that its tests do not rely on Vitest's default 5-second timeout.
 5. THE README SHALL describe Ghosted as built and give its run command (`pnpm --filter @decay-engine/ghosted dev`).
+
+### Requirement 33: The Street on the First Screen (task L1)
+
+**User Story:** As someone opening Ghosted, I want to see the street of windows straight away, so that I take in everyone's connection freshness before anything else.
+
+#### Acceptance Criteria
+
+1. WHILE there is at least one person, THE App SHALL render inside `<main>`, in this order: the hero, the Street, the section navigation, Triage, the three lists, the forecast, the toolbar and the privacy line.
+2. WHEN the sample data is loaded and the viewport is 1280×800 or 390×844, THE first row of windows SHALL be fully visible in the viewport without scrolling, measured with the dock as it is when the check runs. (The check is re-run after task L2 changes the dock.)
+3. WHEN Triage renders, THE three steps (Req 9.2) SHALL sit inside a native `<details>` element, closed by default, whose `<summary>` reads "How does this work?". Opening it SHALL show the three steps in order, as an ordered list named by the summary.
+4. THE change SHALL keep: the preview write guard, focus on the hero heading and the Street heading through their refs, the section navigation moving focus to each section's heading, and a Tab order that follows the DOM (design section 9.5).
+5. THE new text SHALL come from `wording.ts`, and the banned-phrase wording tests SHALL still pass.
+6. THE change SHALL not touch `packages/engine/` or `packages/shell/`, and SHALL add no colour outside the Ghosted tokens.
+
+### Requirement 34: A Compact Moon Dock (task L2)
+
+**User Story:** As someone reading the street, I want the moon dock to stay small until I need it, so that it does not cover the windows and cards under it.
+
+#### Acceptance Criteria
+
+1. WHEN the page loads with no remembered choice, THE dock SHALL be collapsed: one slim bar with the moon at its small size, the time machine title, the shown date line (today's date, or the previewed date) and the slider.
+2. WHILE the dock is collapsed, THE quick jumps, Play, the marker track, its tick labels and the marker list (34.6) SHALL not be shown and SHALL not be reachable with Tab.
+3. WHEN the user activates the toggle, THE dock SHALL expand and show everything in 34.2; activating it again SHALL collapse it. The toggle SHALL be a native `<button>` with `aria-expanded`, a visible name from `wording.ts` that stays the same in both states, a target of at least 44×44 px, and a quiet (not filled) style.
+4. WHEN the dock collapses or expands, THE preview offset SHALL stay the same. WHILE previewing, THE preview banner with "Back to today" SHALL stay visible in the collapsed bar, and every write SHALL stay blocked (Req 12.5). Moving the slider while collapsed SHALL change the preview as it does when expanded.
+5. WHEN the user expands or collapses the dock, THE choice SHALL be kept in `sessionStorage` (through the App's existing `session` prop) and restored on a reload in the same tab. WHERE `sessionStorage` cannot be used, THE choice SHALL last until the page is closed. No `localStorage` key SHALL be added.
+6. WHEN the dock is expanded, EACH marker SHALL show a short visible label on hover and on keyboard focus: "<name> starts fading in N days" or "<name> goes dark in N days", where N is the marker's day from today. THE expanded dock SHALL also hold an ordered list of every marker in that wording, in marker order, hidden visually and read by screen readers. Each marker button SHALL keep its accessible name with the date (Req 12.4).
+7. AT 320, 390 and 1280 px wide, THE collapsed bar SHALL not cover page content: the page's bottom padding and scroll padding SHALL be at least the dock's measured height, and SHALL follow it when the dock expands, collapses or shows the banner.
+8. THE toggle and any change of size SHALL respect reduced motion: any transition sits inside `@media (prefers-reduced-motion: no-preference)` (Req 25.1).
+9. Tab order SHALL follow the DOM: the dock stays after `<main>` and so last in the Tab order (Req 12, design section 9.5). Inside it: the slider, the toggle, then (when expanded) the markers, the jumps and Play, then "Back to today" when previewing.
+10. ALL new text SHALL come from `wording.ts`, and the banned-phrase wording tests SHALL still pass. No colour outside the Ghosted tokens, no change to `packages/engine/` or `packages/shell/`.
 
 ## Correctness Properties
 

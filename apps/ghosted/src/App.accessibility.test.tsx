@@ -53,7 +53,9 @@ function renderSample() {
   return engine
 }
 
-const CONTROLS = "button, input, select, textarea, a[href], [role='button'], [role='link'], [contenteditable]"
+// `summary`: the Triage "How does this work?" disclosure (task L1, Req 33.3). A
+// native <summary> is focusable and opens on Enter and Space, like a button.
+const CONTROLS = "button, summary, input, select, textarea, a[href], [role='button'], [role='link'], [contenteditable]"
 const openDialog = () => document.querySelector<HTMLDialogElement>("dialog[open]")
 const heroHeading = () => within(screen.getByRole("main")).getAllByRole("heading", { level: 2 })[0]!
 const region = (name: string) => screen.getByRole("region", { name })
@@ -84,7 +86,7 @@ function expectReachable(where: string) {
   expect(all.length, where).toBeGreaterThan(30)
   for (const el of all) {
     const what = `${where}: ${el.tagName.toLowerCase()} "${accessibleName(el).trim()}"`
-    expect(["BUTTON", "INPUT", "SELECT", "TEXTAREA", "A"], what).toContain(el.tagName)
+    expect(["BUTTON", "SUMMARY", "INPUT", "SELECT", "TEXTAREA", "A"], what).toContain(el.tagName)
     expect(el.hasAttribute("disabled"), what).toBe(false)
     const tabindex = el.getAttribute("tabindex")
     expect(tabindex === null || Number(tabindex) === 0, `${what} tabindex ${tabindex}`).toBe(true)
@@ -102,7 +104,7 @@ function expectReachable(where: string) {
 }
 
 function expectNamed(where: string) {
-  for (const button of document.querySelectorAll<HTMLElement>("button")) {
+  for (const button of document.querySelectorAll<HTMLElement>("button, summary")) {
     const name = accessibleName(button).trim()
     expect(name, `${where}: a button with no name in words (${button.outerHTML.slice(0, 80)})`).toMatch(/\p{L}{2,}/u)
   }
@@ -119,6 +121,10 @@ function expectNamed(where: string) {
 describe("App: every control works from the keyboard (Req 24.1)", () => {
   it("on today's street: native controls, all focusable, none out of the Tab order", () => {
     renderSample()
+    // The Triage disclosure's summary is one of the controls checked (Req 33.3).
+    expect(controls().filter((el) => el.tagName === "SUMMARY").map((el) => el.textContent)).toEqual([
+      "How does this work?",
+    ])
     expectReachable("today")
   })
 

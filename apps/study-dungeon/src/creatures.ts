@@ -6,7 +6,7 @@
 // Pure: no clock reads, no engine calls. Ported from the wireframe
 // (docs/design/study-dungeon-wireframe.html).
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { THRESHOLDS, type Fact } from "./policy"
 

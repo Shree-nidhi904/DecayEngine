@@ -25,7 +25,7 @@ You review one app's decay policy and report what you find. You do not fix anyth
 - Never change anything under `packages/engine/`.
 - Do not create, edit or delete any file at all. Your output is a report in the chat.
 - Use the shell only to run the test command in step 5. Never use the shell to write, move or delete files (no redirects such as `>`, no `sed -i`, no `git` commands that change state, no installs).
-- Decay-rule code is written by the developer (`.kiro/steering/authorship.md`). Describe fixes in words. Do not write fixes as code for policy or autopsy-sentence files, not even as a suggested snippet.
+- Decay-rule code is the developer's responsibility and is not yours to change (`.kiro/steering/authorship.md`). Describe fixes in words. Do not write fixes as code for policy or autopsy-sentence files, not even as a suggested snippet.
 
 ## Before you start
 

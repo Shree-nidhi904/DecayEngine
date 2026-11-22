@@ -3,7 +3,7 @@
 // (docs/design/study-dungeon-wireframe.html). Original SVG, no assets.
 // Decoration only: hidden from screen readers, the card says the state in words.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import type { ReactNode } from "react"
 import { CREATURES, type CreatureKind, type Mood } from "../../creatures"

@@ -2,7 +2,7 @@
 // you know them, see what will be added and what is skipped, then add them
 // all with engine.addItem at the real time.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { useId, useMemo, useState, type FormEvent } from "react"
 import type { StudyDungeonEngine } from "../engine-instance"

@@ -3,7 +3,9 @@
 //
 // It wraps the shell TriagePanel with Ghosted's budget choices (15, 30, 60
 // and 120 minutes plus custom, 30 selected and run at once) and the engine's
-// triage at `now`. Above the panel, the rule in three steps (Req 9.2). Each
+// triage at `now`. Above the panel, the rule in three steps (Req 9.2), inside
+// a native <details> closed by default, so the form and the picks are seen
+// first (task L1, Req 33.3). Each
 // pick shows the triangle glyph, the word "flickering" and the name; the
 // shell adds worth per minute, minutes and "goes dark in N days" (Req 9.3).
 //
@@ -85,14 +87,16 @@ export function GhostedTriage({ engine, now, version, blocked, onStartSession, o
 
   return (
     <div className="gh-triage">
-      <p id={stepsId} className="gh-triage-steps-title">
-        {triageText.stepsLabel}
-      </p>
-      <ol className="gh-triage-steps" aria-labelledby={stepsId}>
-        {triageSteps.map((step) => (
-          <li key={step}>{step}</li>
-        ))}
-      </ol>
+      <details className="gh-triage-how">
+        <summary id={stepsId} className="gh-triage-steps-title">
+          {triageText.howItWorks}
+        </summary>
+        <ol className="gh-triage-steps" aria-labelledby={stepsId}>
+          {triageSteps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </details>
       <TriagePanel
         theme={ghostedShellTheme}
         wording={ghostedWording}

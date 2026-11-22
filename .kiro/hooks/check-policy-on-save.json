@@ -6,7 +6,7 @@
       "trigger": "PostFileSave",
       "action": {
         "type": "agent",
-        "prompt": "An app's decay policy was just saved. Work out the app folder from the saved file's path (apps/<app>/src/policy.ts). Run that app's policy tests with `pnpm --filter ./apps/<app> exec vitest run src/policy.test.ts` and report which tests passed and failed, including the checkPolicy result. Do NOT edit policy.ts: decay rules are hand-written by the developer (see .kiro/steering/authorship.md). If tests fail, explain why and suggest a fix in words only."
+        "prompt": "An app's decay policy was just saved. Work out the app folder from the saved file's path (apps/<app>/src/policy.ts). Run that app's policy tests with `pnpm --filter ./apps/<app> exec vitest run src/policy.test.ts` and report which tests passed and failed, including the checkPolicy result. Do NOT edit policy.ts: decay rules belong to the developer (see .kiro/steering/authorship.md). If tests fail, explain why and suggest a fix in words only."
       },
       "description": "When an app's decay policy is saved, run that app's policy tests, including checkPolicy.",
       "matcher": "apps[\\\\/][^\\\\/]+[\\\\/]src[\\\\/]policy\\.ts$",

@@ -3,8 +3,8 @@
 // Source of truth: .kiro/specs/study-dungeon/requirements.md (Requirement 10)
 // and tasks.md (task 10.1).
 //
-// Written by the developer (originally planned as hand-written);
-// see .kiro/steering/authorship.md.
+// Written by Claude Code, outside Kiro, at the developer's request (it was planned
+// as hand-written); the rules come from the spec. See .kiro/steering/authorship.md.
 //
 // Pure: no clock reads. Dates are formatted with Intl in the given time zone
 // (the viewer's own zone when none is given), so tests pass a fixed zone.

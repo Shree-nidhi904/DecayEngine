@@ -1,7 +1,7 @@
 // Hunter ranks: a title earned from souls banished (right answers), and how
 // far it is to the next one. Pure.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 export type Rank = { title: string; from: number }
 

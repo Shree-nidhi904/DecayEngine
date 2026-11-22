@@ -1,6 +1,6 @@
 // Tests for the first-run sample data (task 11.2, Requirement 13.2-13.3).
 // Real engine on InMemoryAdapter, fixed times, never the real clock.
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { describe, expect, it } from "vitest"
 import { DecayEngine, InMemoryAdapter } from "@decay-engine/engine"

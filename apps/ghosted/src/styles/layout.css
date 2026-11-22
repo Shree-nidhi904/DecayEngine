@@ -377,6 +377,13 @@
   color: var(--dim);
 }
 
+/* Task L1 (Req 33.3): the steps sit in a native disclosure, closed by default. */
+.gh-triage-how > summary {
+  cursor: pointer;
+}
+.gh-triage-how[open] > summary {
+  margin-block-end: 8px;
+}
 .gh-triage-steps {
   display: grid;
   gap: 4px;
@@ -812,7 +819,12 @@ html {
 @media (max-width: 760px) {
   .gh-hero {
     grid-template-columns: minmax(0, 1fr);
-    padding: 16px;
+    gap: 12px;
+    margin-block: 12px 8px;
+    padding: 12px 16px;
+  }
+  .gh-hero-title {
+    margin-block-end: 8px;
   }
   .gh-plot {
     padding: 14px 14px 20px;

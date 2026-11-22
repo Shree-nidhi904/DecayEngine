@@ -362,6 +362,51 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Record the file names in the matching `docs/KIRO_LOG.md` session
     - _Requirements: 30.5_
 
+- [x] 7. Group G: The Street on the first screen (task L1, design section 10)
+  - [x] 7.1 New order and the Triage disclosure
+    - `App.tsx`: inside `<main>`, Hero → Street → SectionNav → GhostedTriage → ThreeLists → ForecastControl; update the layout comment
+    - `GhostedTriage.tsx`: the three steps inside a closed `<details>`, `<summary>` from `triageText.howItWorks`, the `<ol>` labelled by the summary
+    - `wording.ts`: `howItWorks: "How does this work?"` replaces `stepsLabel`
+    - `layout.css`: summary style from existing Ghosted tokens only
+    - If the 7.3 screenshots show the first row of windows not fully visible at either size, the hero's vertical padding and margins in `layout.css` may be tightened. No other visual change, no new colours, no shell change
+    - _Requirements: 33.1, 33.3, 33.4, 33.5, 33.6, 9.2_
+  - [x] 7.2 Tests for the new order and the disclosure
+    - `GhostedTriage.test.tsx`: steps in a closed `<details>`, summary text, list named by the summary, three steps in order, before the panel
+    - `App.accessibility.test.tsx`: `summary` added to the checked controls (focusable, in the Tab order, named in words)
+    - `App.test.tsx`: new test for the order hero, Street, nav, Triage, lists
+    - _Requirements: 33.1, 33.3, 33.4, 24.1_
+  - [x] 7.3 Check and screenshots
+    - `bash scripts/check.sh` passes (at least 701 / 152 / 465 / 665) and `scripts/check-engine-unchanged.sh` passes
+    - Playwright at 1280×800 and 390×844 with the sample data: the first row of windows is fully visible in the viewport without scrolling, with the dock as it is now. Save `docs/screenshots/ghosted-l1-1280.png` and `ghosted-l1-390.png`
+    - If it still fails after the hero tightening in 7.1, stop and report the measured heights of the sign, the hero and the Street heading. Do not guess further fixes
+    - Log as Session 43 in `docs/KIRO_LOG.md`
+    - _Requirements: 33.2, 33.6_
+
+- [ ] 8. Group H: A compact moon dock (task L2, design section 11)
+  - [ ] 8.1 Session flag and wording
+    - New `dock-state.ts` (`readDockExpanded`, `writeDockExpanded`, key `ghosted.dock-expanded` on the `session` prop) and `dock-state.test.ts`
+    - `wording.ts`: `dockText.toggle`, `dockText.markerList`, `dockText.fadesIn`, `dockText.darkIn`; `wording.test.ts` arguments for the two functions
+    - `timeline.ts`: `markerSoonLabel`; cases in `timeline.test.ts`
+    - _Requirements: 34.5, 34.6, 34.10_
+  - [ ] 8.2 The dock collapses
+    - `MoonDock.tsx`: `expanded` state from the session flag; `data-expanded`; the toggle in `belowSlider`; the markers, ticks and list only while expanded; the banner in both states; the App passes `session`
+    - `dock.css`: the collapsed bar (small moon, controls hidden), the toggle at 44 px and quiet, the chevron's transition inside `no-preference`
+    - _Requirements: 34.1, 34.2, 34.3, 34.4, 34.8, 34.9_
+  - [ ] 8.3 Marker labels
+    - The tip span in each marker, shown on `:hover` and `:focus-visible`; the visually hidden `<ol>`; `.gh-sr-only` in `layout.css`
+    - _Requirements: 34.6_
+  - [ ] 8.4 The page's bottom room
+    - `useDockHeight` sets `--dock-h` on the root element; `layout.css` uses `var(--dock-h, var(--dock-max))` for the scroll padding and `.gh-main`'s bottom padding
+    - _Requirements: 34.7_
+  - [ ] 8.5 Update the existing tests to match
+    - The tests listed in design section 11.6. Change them to match the new behaviour; never loosen an assertion, skip a test or change an expected value to pass (`no-fake-tests.md`)
+    - _Requirements: 34.1-34.10_
+  - [ ] 8.6 Check
+    - `bash scripts/check.sh` passes (at least 701 / 152 / 465 / 665 plus the new tests); `scripts/check-engine-unchanged.sh` passes
+    - Browser check at 320, 390 and 1280 px on a draft deploy or a developer-started server: collapsed by default, nothing covered by the bar, the toggle works, the labels show on hover and focus. Then re-run the L1 check (Req 33.2) with the new dock
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 34.7, 33.2_
+
 ## Notes
 
 - **Module not written by Kiro.** `autopsy-sentences.ts` was written by Claude Code outside Kiro (task 0.3); Kiro writes only its tests and never edits it. `policy.ts` is written by Kiro in task 0.2 as a documented exception; after that, Kiro changes it only through a task that names it, and if a test seems to need a change Kiro stops and reports it.

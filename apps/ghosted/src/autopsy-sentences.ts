@@ -4,7 +4,7 @@
 // and design.md section 2.3.
 //
 // Written by Claude Code (Sonnet 5.5) at the developer's request, outside Kiro,
-// in place of the developer's hand-written version; see
+// in place of the version that was planned as hand-written; see
 // .kiro/steering/authorship.md. Kiro never edits this file.
 //
 // Pure: no clock reads. Dates are formatted with Intl in the given time zone

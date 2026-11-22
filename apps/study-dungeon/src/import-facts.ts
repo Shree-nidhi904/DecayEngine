@@ -6,7 +6,7 @@
 // are ignored. Each line is checked with the same limits as the Add fact form.
 // Pure: no engine, no clock.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { ANSWER_MAX, QUESTION_MAX, WHY_MAX } from "./fact-form"
 

@@ -8,7 +8,7 @@
 //
 // Reload and logging are injected so tests never reload the page or print.
 //
-// Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md.
+// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { Component, useState, type ErrorInfo, type ReactNode } from "react"
 import "../styles/problem.css"

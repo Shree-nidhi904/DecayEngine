@@ -1,6 +1,6 @@
 /* The problem screen (components/ErrorBoundary.tsx): a crash or a storage
    problem at startup. Calm and readable, centred, using the theme variables.
-   Written by - Opus 5.5 at the developer's request; see .kiro/steering/authorship.md. */
+   Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md. */
 
 .sd-problem {
   max-width: 34rem;

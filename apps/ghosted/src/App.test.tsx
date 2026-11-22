@@ -68,6 +68,25 @@ describe("App: section navigation", () => {
     ])
   })
 
+  it("main shows the hero, then the Street, the nav, Triage and the lists (task L1, Req 33.1)", () => {
+    renderApp()
+    const main = screen.getByRole("main")
+    const hero = main.querySelector(".gh-hero")!
+    const street = within(main).getByRole("region", { name: "The Street" })
+    const nav = within(main).getByRole("navigation", { name: "Sections" })
+    const triage = main.querySelector(".gh-triage")!
+    const fading = within(main).getByRole("region", { name: "Fading" })
+    const parts = [hero, street, nav, triage, fading]
+    for (const part of parts) expect(part).not.toBeNull()
+    // The Street is the hero's next sibling: nothing sits between them.
+    expect(hero.nextElementSibling).toBe(street)
+    for (let i = 1; i < parts.length; i++) {
+      expect(parts[i - 1]!.compareDocumentPosition(parts[i]!) & Node.DOCUMENT_POSITION_FOLLOWING, `part ${i}`).toBeTruthy()
+    }
+    // "Street" in the nav still moves focus to the Street's heading, now above it.
+    fireEvent.click(within(nav).getAllByRole("button").find((b) => b.textContent === "Street")!)
+    expect(document.activeElement).toBe(within(street).getByRole("heading", { level: 2, name: "The Street" }))
+  })
   it("keeps the page's one h1", () => {
     renderApp()
     expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["Ghosted"])

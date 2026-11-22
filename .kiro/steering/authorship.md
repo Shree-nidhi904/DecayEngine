@@ -2,7 +2,7 @@
 
 ## What the developer decides
 
-The developer decides the decay rules: every formula, threshold and limit is set in the specs (for example weak 60 / dead 10, half-life 1-180 days). **Kiro never writes decay-rule code.** The code for them is written by the developer; every such case is listed under "What the developer wrote" below. The rules cover:
+The developer decides the decay rules: every formula, threshold and limit is set in the specs (for example weak 60 / dead 10, half-life 1-180 days). For the engine's Triage and Autopsy and for Study Dungeon's policy and sentences, the developer had **Claude Code write the code outside Kiro**, from those specs, and Kiro did not. Every such case is listed under "What Claude Code wrote (outside Kiro)" below. For Ghosted's policy, Kiro wrote the code (see the exception below). The rules cover:
 
 1. **Decay rules**: The policy functions that define how an item decays and comes back:
    - `thresholds: { weak: number; dead: number }`
@@ -12,20 +12,20 @@ The developer decides the decay rules: every formula, threshold and limit is set
    - `nextDueAt(item, now)` → timestamp | null
    - `resurrect(item, event, now)` → { ok: true, ... } | { ok: false, reason } (synchronous)
 
-## What the developer wrote
+## What Claude Code wrote (outside Kiro)
 
-I ran the validation in WSL alongside Kiro, because Kiro's shell could not run commands on this setup. Besides running every test, I wrote:
+Claude Code ran in WSL alongside Kiro, because Kiro's shell could not run commands on this setup. Besides running tests and checks, it wrote the following at the developer's request. None of it used Kiro credits:
 
 - The `DecayEngine` class (`src/engine.ts`, tasks 9-19) and its tests.
 - The property-test generators and all engine property tests (`tests/generators.ts`, `tests/properties/`, tasks 27-35) and the boundary test (`tests/unit/boundary.test.ts`, task 32.3), run in parallel with Kiro to save time.
-- **Triage selection** (`src/triage.ts`, task 21): implements the locked value rule from `product.md` with an exact 0/1 knapsack. Originally planned as hand-written, and written by me.
-- **Autopsy analysis** (`src/autopsy.ts`, task 22): a facts-only report read from the history log. Originally planned as hand-written, and written by me. Each app still writes its own cause-of-death sentences from the report.
-- **Study Dungeon decay policy** (`apps/study-dungeon/src/policy.ts`, Study Dungeon task 2.1): the five policy functions and the 1-180 day half-life clamp, exactly as in the Study Dungeon spec. Originally planned as hand-written, and written by me. Its tests (tasks 2.2 and 2.3) are Kiro's.
-- **Study Dungeon cause-of-death sentences** (`apps/study-dungeon/src/autopsy-sentences.ts`, Study Dungeon task 10.1): turns the engine's autopsy report into the sentences shown in the autopsy dialog. Originally planned as hand-written, and written by me. Its tests (task 10.2) and the dialog (task 10.3) are Kiro's.
+- **Triage selection** (`src/triage.ts`, task 21): implements the locked value rule from `product.md` with an exact 0/1 knapsack. Originally planned as hand-written; the developer had Claude Code write it.
+- **Autopsy analysis** (`src/autopsy.ts`, task 22): a facts-only report read from the history log. Originally planned as hand-written; the developer had Claude Code write it. Each app still writes its own cause-of-death sentences from the report.
+- **Study Dungeon decay policy** (`apps/study-dungeon/src/policy.ts`, Study Dungeon task 2.1): the five policy functions and the 1-180 day half-life clamp, exactly as in the Study Dungeon spec. Originally planned as hand-written; the developer had Claude Code write it. Its tests (tasks 2.2 and 2.3) are Kiro's.
+- **Study Dungeon cause-of-death sentences** (`apps/study-dungeon/src/autopsy-sentences.ts`, Study Dungeon task 10.1): turns the engine's autopsy report into the sentences shown in the autopsy dialog. Originally planned as hand-written; the developer had Claude Code write it. Its tests (task 10.2) and the dialog (task 10.3) are Kiro's.
 
 Do not rewrite these files; change them only through a task that names them.
 
-## What Opus 5.5 wrote
+## What Claude Code (Opus 5.5) wrote (outside Kiro)
 
 Written at the developer's request, in new files, while Kiro worked on round 5 (time machine and Triage), so the two never edited the same file:
 
@@ -41,7 +41,7 @@ Written at the developer's request, in new files, while Kiro worked on round 5 (
 
 ## Exception: Ghosted's decay policy
 
-The rule above (Kiro never writes decay-rule code) was kept for the engine, Triage, Autopsy and the Study Dungeon policy. For Ghosted the developer chose to let Kiro write `apps/ghosted/src/policy.ts`, to save time and use Kiro more. The rules themselves were still set by the developer, in Requirements 1 to 4 and design section 2.2 of the Ghosted spec, with the formulas and expected values written out and checked by hand before Kiro wrote any code. A different reader, the `policy-reviewer` agent and the developer's own review, checks the result. `apps/ghosted/src/autopsy-sentences.ts` stays hand-written.
+The rule above (Kiro never writes decay-rule code) was kept for the engine's Triage and Autopsy and the Study Dungeon policy, in the sense that Kiro did not write them (Claude Code did, as listed above). For Ghosted the developer chose to let Kiro write `apps/ghosted/src/policy.ts`, to save time and use Kiro more. The rules themselves were still set by the developer, in Requirements 1 to 4 and design section 2.2 of the Ghosted spec, with the formulas and expected values written out and checked by hand before Kiro wrote any code. A different reader, the `policy-reviewer` agent and the developer's own review, checks the result. `apps/ghosted/src/autopsy-sentences.ts` was written by Claude Code, outside Kiro (next section).
 
 ## Ghosted cause-of-death sentences
 

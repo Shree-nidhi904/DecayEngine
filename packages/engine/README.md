@@ -131,9 +131,9 @@ pnpm typecheck
 
 ## Who wrote what
 
-- **The developer** wrote the `DecayEngine` class (`src/engine.ts`), Triage (`src/triage.ts`), Autopsy (`src/autopsy.ts`), the property-test generators and property tests (`tests/generators.ts`, `tests/properties/`) and the boundary test (`tests/unit/boundary.test.ts`).
+- **Claude Code** (outside Kiro, at the developer's request) wrote the `DecayEngine` class (`src/engine.ts`), Triage (`src/triage.ts`), Autopsy (`src/autopsy.ts`), the property-test generators and property tests (`tests/generators.ts`, `tests/properties/`) and the boundary test (`tests/unit/boundary.test.ts`).
 - **Kiro** wrote the rest of the engine: types, errors, state derivation, settle, bisection, serialization, the storage adapters, `checkPolicy`, forecast, and the unit tests for those modules.
-- The decay rules in each app's policy are written by hand.
+- The decay rules in each app's policy are specified by the developer. Claude Code wrote Study Dungeon's policy code and Kiro wrote Ghosted's.
 
 See [`.kiro/steering/authorship.md`](../../.kiro/steering/authorship.md) and [`docs/KIRO_LOG.md`](../../docs/KIRO_LOG.md).
 
