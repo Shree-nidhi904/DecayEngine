@@ -254,7 +254,7 @@ The decay rules are set by me in the specs. **Not all of the code was written in
 - [x] Engine spec: requirements, design, tasks
 - [x] Steering, hooks and the `policy-reviewer` agent
 - [x] Engine and tests (701)
-- [x] Study Dungeon (542 app tests, 152 shell tests)
+- [x] Study Dungeon (742 app tests, 166 shell tests)
 - [x] Ghosted (665 tests), with the engine unchanged
 - [x] Deployed sites
 - [ ] Demo video
