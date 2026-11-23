@@ -207,6 +207,35 @@ describe("App: the Triage saves line (task P5, Req 36.9)", () => {
   })
 })
 
+describe("App: the autopsy's rescue line (task R1, Req 37.8)", () => {
+  it("is the second plain paragraph, not in a live region and not focusable; focus still opens on the title", () => {
+    renderSample()
+    fireEvent.click(within(card("Empty windows", "Ayesha Khan")).getByRole("button", { name: "Autopsy" }))
+    const dialog = openDialog()!
+    const paragraphs = [...dialog.querySelectorAll<HTMLElement>(".shell-autopsy-sentence")]
+    const line = paragraphs[1]!
+    expect(line.tagName).toBe("P")
+    expect(line.textContent).toMatch(/^A call on .+, when the window started to flicker, would have kept the light on until .+, 16 days longer\.$/)
+    expect(line.closest("[aria-live]")).toBeNull()
+    expect(line.closest("[role='status'], [role='alert']")).toBeNull()
+    expect(line.hasAttribute("role")).toBe(false)
+    expect(line.hasAttribute("tabindex")).toBe(false)
+    expect(controls()).not.toContain(line)
+    expect(controls().some((el) => line.contains(el))).toBe(false)
+    // Req 28.5: the title has focus, not the line.
+    expect(document.activeElement?.tagName).toBe("H2")
+    expect(dialog.contains(document.activeElement)).toBe(true)
+  })
+
+  it("Tomas Novak, who started dark, has no rescue line", () => {
+    renderSample()
+    fireEvent.click(within(card("Empty windows", "Tomas Novak")).getByRole("button", { name: "Autopsy" }))
+    const texts = [...openDialog()!.querySelectorAll(".shell-autopsy-sentence")].map((p) => p.textContent ?? "")
+    expect(texts.length).toBeGreaterThan(0)
+    expect(texts.some((t) => t.startsWith("A call on"))).toBe(false)
+  })
+})
+
 describe("App: dialogs (Req 24.2, 24.3)", () => {
   type Opener = { name: string; opener: () => HTMLElement }
   const OPENERS: readonly Opener[] = [

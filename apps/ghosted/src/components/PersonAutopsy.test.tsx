@@ -14,6 +14,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { useState } from "react"
 import { PersonAutopsy } from "./PersonAutopsy"
 import { generateCauseSentences } from "../autopsy-sentences"
+import { generateRescueSentence, withRescue } from "../rescue-sentence"
 import type { GhostedEngine } from "../engine-instance"
 import type { ContactEvent, PersonPayload } from "../policy"
 import { previewBlockedText } from "../wording"
@@ -113,12 +114,21 @@ describe("PersonAutopsy: a window that went dark after contacts", () => {
     expect(label).toContain("Contacts: 3 calls, 2 messages, 1 meet-up.")
   })
 
-  it("shows the cause-of-death sentences from autopsy-sentences.ts, in order (Req 19.3)", () => {
+  it("shows the cause-of-death sentences from autopsy-sentences.ts, in order, with the rescue line second (Req 19.3, 37.8)", () => {
     const { engine, id } = setup((s) => s.ines)
-    const expected = generateCauseSentences(engine.autopsy(id, AT), INES, { timeZone: "UTC" })
+    const report = engine.autopsy(id, AT)
+    const person = engine.view(AT).find((p) => p.id === id)!
+    const causes = generateCauseSentences(report, INES, { timeZone: "UTC" })
+    const rescue = generateRescueSentence(person, engine.history(id), report, { timeZone: "UTC" })
     const shown = [...screen.getByRole("dialog").querySelectorAll(".shell-autopsy-sentence")].map((p) => p.textContent)
-    expect(shown).toEqual(expected)
+    expect(shown).toEqual(withRescue(causes, rescue))
+    expect(shown).toHaveLength(causes.length + 1)
     expect(shown[0]).toBe("After the last call there was no contact for 81 days, about 2.7 times your usual rhythm.")
+    // Her last call is on day 60: the window flickers on day 96 and goes dark after day 141.
+    expect(shown[1]).toBe(
+      "A call on 18 Feb 2024, when the window started to flicker, would have kept the light on until 9 May 2024, 36 days longer."
+    )
+    expect(shown.slice(2)).toEqual(causes.slice(1))
   })
 
   it("Reconnect asks the App to open the reconnect dialog", () => {
@@ -160,6 +170,9 @@ describe("PersonAutopsy: a person who was dark when added (Req 19.6)", () => {
     expect(points[0]!.split(",")[0]).not.toBe(points[points.length - 1]!.split(",")[0])
     expect(dialog.textContent).not.toMatch(/\b0 days\b/)
     expect(dialog.textContent).toContain("Already dark when added: no contact for 100 days")
+    // No flicker in this life, so no rescue line (Req 37.3).
+    const sentences = [...dialog.querySelectorAll(".shell-autopsy-sentence")].map((p) => p.textContent ?? "")
+    expect(sentences.some((s) => s.startsWith("A call on"))).toBe(false)
     // No contacts in this life: no marker and no marker legend entry.
     expect(dialog.querySelectorAll("[data-marker], [data-legend-marker]")).toHaveLength(0)
     expect(chart(dialog).getAttribute("aria-label")).toContain("Contacts: no contacts logged.")

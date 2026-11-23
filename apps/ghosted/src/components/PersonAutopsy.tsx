@@ -9,7 +9,8 @@
 //   messages, 1 meet-up"); tends={[]}, because the markers replace the
 //   right/wrong marks;
 // - the cause-of-death sentences from autopsy-sentences.ts (never edited
-//   here);
+//   here), with the rescue line from rescue-sentence.ts second (task R1,
+//   Req 37), computed in the same memo at this dialog's `now`;
 // - focusContentOnOpen, so focus opens on the title (Req 24.2, 28.5);
 // - Reconnect, which the App turns into the Reconnect dialog, disabled with
 //   the reason during a preview (Req 19.5).
@@ -25,6 +26,7 @@ import { generateCauseSentences } from "../autopsy-sentences"
 import type { GhostedEngine } from "../engine-instance"
 import type { BlockedReason } from "../lists"
 import { ghostedPolicy } from "../policy"
+import { generateRescueSentence, withRescue } from "../rescue-sentence"
 import { ghostedShellTheme } from "../theme"
 import { ghostedWording, markerSummary } from "../wording"
 import { ghostedIcons, renderContactMarker } from "./icons"
@@ -56,9 +58,12 @@ export function PersonAutopsy({ engine, personId, now, formatDate, timeZone, onC
     if (person === undefined || person.state !== "dead") return null
     const report = engine.autopsy(personId, now)
     const history = engine.history(personId)
+    const causes = generateCauseSentences(report, person.payload, { timeZone })
+    // Task R1 (Req 37): the rescue line, second, straight after the cause; none when it cannot be stated.
+    const rescue = generateRescueSentence(person, history, report, { timeZone })
     return {
       chart: buildAutopsyChart(history, person.payload, report),
-      sentences: generateCauseSentences(report, person.payload, { timeZone }),
+      sentences: withRescue(causes, rescue),
     }
   }, [engine, personId, now, timeZone])
 

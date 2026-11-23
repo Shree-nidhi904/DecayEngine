@@ -1,0 +1,47 @@
+/*
+ * The live-change message (task L3, Req 38.4, 38.8, design section 15.5).
+ *
+ * It is the first child of the fixed dock (.gh-dock), so it sits above the
+ * dock's bar inside the dock's own box and covers nothing; the page's
+ * bottom room follows the dock's measured height (--dock-h, layout.css).
+ * Sticky at the top of the dock, so it stays in view when the expanded
+ * dock scrolls inside itself. 8px from the bar below it and from the
+ * dock's edge above (the dock's padding). Its width is at most the dock's
+ * content box (100%), never a fixed width, so at 320 and 390px it wraps
+ * and the page never scrolls sideways; no rule hides it at any width.
+ *
+ * No animation here: the fade in and out is in motion.css.
+ */
+
+.gh-toast {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin-block: 0 8px;
+  margin-inline: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-hi);
+  color: var(--bone);
+  box-shadow: 0 6px 0 #000;
+  overflow-wrap: anywhere;
+}
+
+.gh-toast-text {
+  flex: 1 1 12em;
+  min-inline-size: 0;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.gh-toast-dismiss {
+  flex: none;
+}

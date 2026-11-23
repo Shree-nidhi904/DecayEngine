@@ -11,6 +11,7 @@
 import { describe, expect, it } from "vitest"
 import type { AutopsyChartSummary } from "@decay-engine/shell"
 import { generateCauseSentences } from "./autopsy-sentences"
+import { generateRescueSentence } from "./rescue-sentence"
 import { SAMPLE_PEOPLE, loadSampleData } from "./sample-data"
 import { storageProblemText } from "./storage-errors"
 import * as wording from "./wording"
@@ -89,6 +90,7 @@ const SAMPLE_CALLS: Readonly<Record<string, readonly unknown[][]>> = {
   "personFormText.edited": [[NAME]],
   "triageText.fiveMinute": [["Dan"]],
   "triageText.saves": [[1], [2], [3]],
+  "rescueText.sentence": [["9 Oct 2026", "16 Nov 2026", 16], ["9 Oct 2026", "11 Oct 2026", 1]],
   "sessionText.skippedDark": [[NAME]],
   "sessionText.skippedRemoved": [[NAME]],
   "sessionText.skipped": [[`${NAME} (removed)`]],
@@ -109,6 +111,15 @@ const SAMPLE_CALLS: Readonly<Record<string, readonly unknown[][]>> = {
   "listsText.count": [[1], [4]],
   "listsText.still.sub": [[3]],
   "listsText.startsFading": [[0], [1], [5]],
+  "liveText.one": [["flicker", NAME], ["dark", NAME], ["darkFromLit", NAME]],
+  "liveText.two": [
+    [{ kind: "flicker", name: NAME }, { kind: "flicker", name: "Dan Okafor" }],
+    [{ kind: "dark", name: NAME }, { kind: "darkFromLit", name: "Dan Okafor" }],
+    [{ kind: "dark", name: NAME }, { kind: "flicker", name: "Dan Okafor" }],
+    [{ kind: "darkFromLit", name: NAME }, { kind: "flicker", name: "Dan Okafor" }],
+  ],
+  "liveText.many": [[3, 0, NAME], [0, 3, NAME], [2, 1, NAME], [1, 2, NAME]],
+  "liveText.title": [[0, "Ghosted"], [2, "Ghosted"], [10, "Ghosted"]],
 }
 
 type Found = { strings: { path: string; text: string }[]; functions: string[] }
@@ -261,6 +272,122 @@ describe("the Triage saves line (task P5, Req 36.5)", () => {
     expect(wording.triageText.saves(3)).toBe(
       "A call or meet-up with these people keeps 3 windows from going dark in the next 7 days."
     )
+  })
+})
+
+describe("the rescue line (task R1, Req 37.7)", () => {
+  const NEVER = /\b(die|dies|died|dying|dead|late|later|should)\b/i
+  const lines = () => found.strings.filter((s) => s.path.startsWith("rescueText.sentence("))
+
+  it("the banned-phrase scan above reached both sample calls", () => {
+    expect(lines().map((s) => s.path)).toEqual([
+      'rescueText.sentence("9 Oct 2026", "16 Nov 2026", 16)',
+      'rescueText.sentence("9 Oct 2026", "11 Oct 2026", 1)',
+    ])
+  })
+
+  it('never says "die", "dead", "late", "later" or "should"', () => {
+    expect(lines().filter((s) => NEVER.test(s.text))).toEqual([])
+  })
+
+  it("has the exact words for 16 days and for 1 day", () => {
+    expect(wording.rescueText.sentence("9 Oct 2026", "16 Nov 2026", 16)).toBe(
+      "A call on 9 Oct 2026, when the window started to flicker, would have kept the light on until 16 Nov 2026, 16 days longer."
+    )
+    expect(wording.rescueText.sentence("9 Oct 2026", "11 Oct 2026", 1)).toBe(
+      "A call on 9 Oct 2026, when the window started to flicker, would have kept the light on until 11 Oct 2026, 1 day longer."
+    )
+  })
+
+  it("the rescue lines of the sample's dark windows pass the same checks; Tomas, who started dark, has none", () => {
+    const engine = makeEngine()
+    loadSampleData(engine, T0)
+    const dark = engine.view(T0).filter((p) => p.state === "dead")
+    const rescue = dark.map((p) => ({
+      name: p.payload.name,
+      text: generateRescueSentence(p, engine.history(p.id), engine.autopsy(p.id, T0), { timeZone: "UTC" }),
+    }))
+    expect(rescue.filter((r) => r.text === null).map((r) => r.name)).toEqual(["Tomas Novak"])
+    const shown = rescue.filter((r): r is { name: string; text: string } => r.text !== null)
+    expect(new Set(shown.map((r) => r.name))).toEqual(new Set(["Leo Marchetti", "Ayesha Khan", "Harun Aziz"]))
+    expect(shown.flatMap((r) => banned(r.text).map((b) => `${r.name}: ${r.text} (${b})`))).toEqual([])
+    expect(shown.filter((r) => NEVER.test(r.text))).toEqual([])
+  })
+})
+
+describe("the live-change message and tab title (task L3, Req 38.3, 38.6)", () => {
+  const lines = () => found.strings.filter((s) => /^liveText\.(one|two|many)\(/.test(s.path))
+
+  it("the banned-phrase scan above reached every sample call", () => {
+    expect(lines()).toHaveLength(11)
+  })
+
+  it('never says "die" or "dead" for a person, and judges nobody', () => {
+    expect(lines().filter((s) => /\b(die|dies|died|dying|dead)\b/i.test(s.text))).toEqual([])
+    expect(lines().filter((s) => /\b(should|forgot|neglect\w*|fault|failed)\b/i.test(s.text))).toEqual([])
+  })
+
+  it("has the exact words for one, two and many windows", () => {
+    expect(wording.liveText.one("flicker", NAME)).toBe("Mira Castell's window started to flicker.")
+    expect(wording.liveText.one("dark", NAME)).toBe("Mira Castell's window went dark.")
+    expect(wording.liveText.one("darkFromLit", NAME)).toBe("Mira Castell's window went from lit to dark.")
+    expect(wording.liveText.two({ kind: "flicker", name: NAME }, { kind: "flicker", name: "Dan Okafor" })).toBe(
+      "Mira Castell's and Dan Okafor's windows started to flicker."
+    )
+    expect(wording.liveText.two({ kind: "dark", name: NAME }, { kind: "darkFromLit", name: "Dan Okafor" })).toBe(
+      "Mira Castell's and Dan Okafor's windows went dark."
+    )
+    expect(wording.liveText.two({ kind: "dark", name: NAME }, { kind: "flicker", name: "Dan Okafor" })).toBe(
+      "Mira Castell's window went dark and Dan Okafor's started to flicker."
+    )
+    expect(wording.liveText.many(3, 0, NAME)).toBe("3 windows started to flicker, Mira Castell's among them.")
+    expect(wording.liveText.many(0, 3, NAME)).toBe("3 windows went dark, Mira Castell's among them.")
+    expect(wording.liveText.many(2, 1, NAME)).toBe("2 windows started to flicker and 1 went dark, Mira Castell's among them.")
+    expect(wording.liveText.dismiss).toBe("Dismiss")
+  })
+
+  it("the tab title: the plain title at 0, (n) up to 9, (9+) above", () => {
+    expect(wording.liveText.title(0, "Ghosted")).toBe("Ghosted")
+    expect(wording.liveText.title(2, "Ghosted")).toBe("(2) Ghosted")
+    expect(wording.liveText.title(9, "Ghosted")).toBe("(9) Ghosted")
+    expect(wording.liveText.title(10, "Ghosted")).toBe("(9+) Ghosted")
+  })
+})
+
+describe("the notification setting (task L5, Req 39.3, 39.8)", () => {
+  const lines = () => found.strings.filter((s) => s.path.startsWith("notifyText."))
+
+  it("the banned-phrase scan above reached every sentence", () => {
+    expect(lines().map((s) => s.path)).toEqual([
+      "notifyText.label",
+      "notifyText.stateOn",
+      "notifyText.stateOff",
+      "notifyText.region",
+      "notifyText.unsupported",
+      "notifyText.on",
+      "notifyText.denied",
+      "notifyText.blocked",
+      "notifyText.notSaved",
+      "notifyText.limit",
+      "notifyText.privacy",
+    ])
+  })
+
+  it('never says "die" or "dead", and has no guilt words', () => {
+    expect(lines().filter((s) => /\b(die|dies|died|dying|dead)\b/i.test(s.text))).toEqual([])
+    expect(lines().filter((s) => /\b(forgot|forget|overdue|late|later|should|neglect\w*|fault|failed)\b/i.test(s.text))).toEqual([])
+  })
+
+  it("has the exact label, limit and privacy sentence", () => {
+    expect(wording.notifyText.label).toBe("Notify me about changes while this tab is open")
+    expect(wording.notifyText.limit).toBe(
+      "There is no server, so nothing can notify you when this tab is closed or the computer is asleep."
+    )
+    expect(wording.notifyText.privacy).toBe(
+      "A notification shows only what is already on this page, and nothing is sent anywhere."
+    )
+    expect(wording.notifyText.stateOn).toBe("On")
+    expect(wording.notifyText.stateOff).toBe("Off")
   })
 })
 

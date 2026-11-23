@@ -1,0 +1,54 @@
+/*
+ * The notification setting under the toolbar (task L5, Req 39.1, 39.11,
+ * design section 16.3). Ghosted tokens only. No width in px, so it fits
+ * the 288px content box at 320px; the label wraps inside the switch. No
+ * animation and no hover rule of its own (.gh-button pairs hover with
+ * focus-visible). Nothing here hides it at any width.
+ */
+
+.gh-notify {
+  display: grid;
+  gap: 12px;
+  margin-block: 16px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+/* The switch: the 44px minimums come from .gh-button; full width so the long label can wrap. */
+.gh-notify-switch {
+  justify-content: space-between;
+  gap: 12px;
+  inline-size: 100%;
+  text-align: start;
+  white-space: normal;
+}
+
+.gh-notify-switch[aria-checked="true"] {
+  border-color: var(--glow);
+}
+
+.gh-notify-label {
+  min-inline-size: 0;
+}
+
+/* The state as a word as well as the border colour. */
+.gh-notify-state {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--dim);
+}
+
+.gh-notify-switch[aria-checked="true"] .gh-notify-state {
+  color: var(--glow);
+}
+
+.gh-notify-note {
+  margin: 0;
+  color: var(--dim);
+  font-size: 15px;
+  line-height: 1.5;
+}

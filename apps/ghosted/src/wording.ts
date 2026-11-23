@@ -360,6 +360,17 @@ export const triageText = {
     `A call or meet-up with these people keeps ${n === 1 ? "1 window" : `${n} windows`} from going dark in the next 7 days.`,
 } as const
 
+/**
+ * The rescue line in the autopsy (task R1, Req 37, design section 14): what
+ * one call, when the window started to flicker, would have given. `on` and
+ * `until` are dates already formatted by rescue-sentence.ts; `n` is at least
+ * 1. Neutral words: the light is kept on; never "die", "dead" or "late".
+ */
+export const rescueText = {
+  sentence: (on: string, until: string, n: number) =>
+    `A call on ${on}, when the window started to flicker, would have kept the light on until ${until}, ${days(n)} longer.`,
+} as const
+
 /** The Triage session (Req 9.5, design section 4.3). */
 export const sessionText = {
   finished: "Session finished.",
@@ -442,6 +453,86 @@ export const importDialogText = {
   /** After a storage problem part-way (design section 9.2). */
   stopped: (added: number) =>
     `Stopped after ${added === 1 ? "1 person" : `${added} people`}. The lines not yet added are still here.`,
+} as const
+
+/**
+ * Live state changes (task L3, Req 38, design section 15.4): the short
+ * message after a minute tick moved windows on its own. A window "starts to
+ * flicker" or "goes dark"; never "die" or "dead" for a person, and nothing
+ * that blames either person. `kind` is from live-changes.ts.
+ */
+export type LiveKind = "flicker" | "dark" | "darkFromLit"
+
+const liveVerb: Readonly<Record<LiveKind, string>> = {
+  flicker: "started to flicker",
+  dark: "went dark",
+  darkFromLit: "went from lit to dark",
+}
+
+export const liveText = {
+  /** One window: "Mira Castell's window started to flicker." */
+  one: (kind: LiveKind, name: string) => `${name}'s window ${liveVerb[kind]}.`,
+  /**
+   * Two windows, the more important first. The same kind of change (a lit to
+   * dark one counts as going dark): "Mira Castell's and Dan Okafor's windows
+   * went dark." Two kinds: "Mira Castell's window went dark and Dan
+   * Okafor's started to flicker."
+   */
+  two: (first: { kind: LiveKind; name: string }, second: { kind: LiveKind; name: string }) => {
+    const group = (kind: LiveKind) => (kind === "flicker" ? "flicker" : "dark")
+    if (group(first.kind) === group(second.kind)) {
+      const verb = group(first.kind) === "flicker" ? liveVerb.flicker : liveVerb.dark
+      return `${first.name}'s and ${second.name}'s windows ${verb}.`
+    }
+    return `${first.name}'s window ${liveVerb[first.kind]} and ${second.name}'s ${liveVerb[second.kind]}.`
+  },
+  /**
+   * Three or more windows, naming the most important one: "3 windows started
+   * to flicker, Mira Castell's among them." `flicker` and `dark` are counts.
+   */
+  many: (flicker: number, dark: number, name: string) => {
+    const windows = (n: number) => (n === 1 ? "1 window" : `${n} windows`)
+    if (dark === 0) return `${windows(flicker)} ${liveVerb.flicker}, ${name}'s among them.`
+    if (flicker === 0) return `${windows(dark)} ${liveVerb.dark}, ${name}'s among them.`
+    return `${windows(flicker)} ${liveVerb.flicker} and ${dark} ${liveVerb.dark}, ${name}'s among them.`
+  },
+  /** The message's only control. */
+  dismiss: "Dismiss",
+  /** The tab title while the tab was hidden: "(2) Ghosted", "(9+) Ghosted" (Req 38.6). */
+  title: (count: number, base: string) => (count <= 0 ? base : `(${count > 9 ? "9+" : count}) ${base}`),
+} as const
+
+/**
+ * Notifications while the tab is open (task L5, Req 39, design section 16.4).
+ * The notification itself uses appText.name as its title and the liveText
+ * sentence as its body, so no sentence about a window is written here. No
+ * "die" or "dead", and no guilt words.
+ */
+export const notifyText = {
+  label: "Notify me about changes while this tab is open",
+  /** The switch's visible state word. */
+  stateOn: "On",
+  stateOff: "Off",
+  /** The setting box's accessible name. */
+  region: "Notifications",
+  unsupported: "This browser cannot show notifications, so this setting is not available here.",
+  on: "On: when a window changes while this tab is in the background, your browser shows a notification.",
+  denied: "Your browser blocks notifications for this page; to allow them, open the site settings by the address bar.",
+  blocked:
+    "This is on, but your browser is blocking notifications for this page, so none are shown; allow them in the site settings by the address bar, or turn this off.",
+  notSaved: "This choice cannot be saved in this browser, so it lasts until the page is closed.",
+  /** The honest limit (Req 39.3). */
+  limit: "There is no server, so nothing can notify you when this tab is closed or the computer is asleep.",
+  /** Privacy (Req 39.9). */
+  privacy: "A notification shows only what is already on this page, and nothing is sent anywhere.",
+} as const
+
+/** The first ten seconds (task L6, Req 40, design section 17.5). */
+export const firstLookText = {
+  /** The one button while the first look plays. */
+  skip: "Skip the preview",
+  /** Said once, through the live region, when it starts (Req 40.9). */
+  announce: "Showing the next 30 days. Nothing is saved.",
 } as const
 
 /** The three lists and the section navigation (task 4.3, Req 11). */

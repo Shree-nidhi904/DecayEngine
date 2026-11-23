@@ -12,7 +12,8 @@
  * the splash is never shown under reduced motion). Task 5.1: the moon's
  * shade sliding across its face (its static position, read from --age, is in
  * dock.css). Task 5.9: smooth scrolling, inside the same block, so under
- * reduced motion scrolling is instant.
+ * reduced motion scrolling is instant. Task L3: a card's window flickering
+ * out once after a minute tick moved it, and the live-change message's fade.
  */
 
 /* Static end state: falling boards are simply gone, at once. */
@@ -119,6 +120,56 @@
   }
   .gh-splash-windows .gh-pane:nth-child(6) {
     animation-delay: 2.3s;
+  }
+
+  /* Task L3 (Req 38.2): a card whose window a minute tick moved flickers out
+     once. The App adds .gh-just-changed and removes it when this ends; under
+     reduced motion the class is never added, so nothing moves. */
+  .gh-card.gh-just-changed .gh-pane {
+    animation: gh-flicker-out 1.2s 1;
+  }
+
+  /* Task L3 (Req 38.4): the live-change message fades in, stays about six
+     seconds and fades out; the end of this animation removes it. Without
+     motion it stays still until Dismiss or the next minute tick. */
+  .gh-toast {
+    animation: gh-toast-life 6.5s forwards;
+  }
+
+  @keyframes gh-flicker-out {
+    0% {
+      filter: brightness(1.8);
+    }
+    20% {
+      filter: brightness(0.4);
+    }
+    35% {
+      filter: brightness(1.4);
+    }
+    50% {
+      filter: brightness(0.3);
+    }
+    70% {
+      filter: brightness(0.9);
+    }
+    100% {
+      filter: none;
+    }
+  }
+
+  @keyframes gh-toast-life {
+    0% {
+      opacity: 0;
+    }
+    5% {
+      opacity: 1;
+    }
+    92% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
   }
 
   @keyframes gh-sign {

@@ -30,6 +30,21 @@
 // Task P4: the hero's loss forecast line, worked out at the real time and
 // hidden while previewing and on the first run.
 //
+// Task L3 (Req 38, design section 15): after each minute tick (never the
+// first at mount, never the first after "Back to today", never while
+// previewing), diffStates compares the states with the last tick's; the
+// user's own writes re-read that baseline. A change gives one toast at the
+// top of the dock (LiveToast), said once through the live region below; the
+// card's window flickers out once (not under reduced motion); and while the
+// tab is hidden the title and favicon count the changes (tab-signal.ts).
+// The tick time comes from heldClock (clock-guard.ts), so it never runs
+// backwards and every tick reaches handleTick.
+//
+// Task L5 (Req 39, design section 16): the same tick's notice can also show
+// one browser notification, decided by shouldNotify (notify.ts): the setting
+// is on, the permission granted, the tab hidden, not a preview, not the
+// first tick. The setting (NotifySetting) sits under the toolbar.
+//
 // Dialogs (tasks 4.6 to 4.12): the confirmation before Remove, the person
 // dialog, Reach out (alone or in a Triage session), Reconnect, Add and Edit,
 // and the autopsy (which hands over to Reconnect); "Reset all data" in the
@@ -75,6 +90,7 @@ import { DOCK_DAYS, dockMarkers } from "./timeline"
 import {
   appText,
   backupText,
+  firstLookText,
   importDialogText,
   personFormText,
   previewBlockedText,
@@ -83,6 +99,22 @@ import {
   toolbarText,
 } from "./wording"
 import { runGatedWrite, type WriteOutcome } from "./write-guard"
+import { LiveToast } from "./components/LiveToast"
+import { liveNotice } from "./live-changes"
+import { diffStates, snapshotStates, type StateOf } from "./state-changes"
+import { useTabSignal } from "./tab-signal"
+import { NotifySetting } from "./components/NotifySetting"
+import {
+  browserNotificationApi,
+  readNotifyEnabled,
+  saveNotifyEnabled,
+  shouldNotify,
+  showNotification,
+  type NotificationApi,
+} from "./notify"
+import { FirstLookSkip } from "./components/FirstLookSkip"
+import { firstLookOffsetForProgress, firstLookSeen, markFirstLookSeen } from "./first-look"
+import type { FirstLookDockControl } from "./first-look-dock"
 import "./styles/layout.css"
 
 /** The id of the polite live region that announces changes and storage problems. */
@@ -112,6 +144,19 @@ export interface AppProps {
   timeZone?: string
   /** Reloads the page after a reset or a restore. */
   reload?: () => void
+  /**
+   * The browser's Notification class (task L5). Defaults to the browser's,
+   * or null when it has none; tests pass a fake class or null.
+   */
+  notifications?: NotificationApi | null
+  /** Brings the tab forward when a notification is clicked. Defaults to window.focus(). */
+  focusWindow?: () => void
+  /**
+   * Task L6 (Req 40.11): play the first look after the first "Load sample
+   * street" in this browser. main.tsx turns it on; off by default, so tests
+   * that load the sample are unchanged.
+   */
+  firstLook?: boolean
 }
 
 /** The one dialog open at a time, if any (design section 4.3). */
@@ -130,8 +175,15 @@ export type OpenDialog =
 /** The Triage session queue (Req 9.5, design section 4.3). */
 export type Session = { ids: string[]; position: number; skipped: { name: string; reason: "dark" | "removed" }[] }
 
-/** What the live region says. `id` changes every time, so the same words are read again. */
-type Announcement = { id: number; text: string; problem: boolean }
+/**
+ * What the live region says. `id` changes every time, so the same words are read again.
+ * `toast`: the words of the live-change message (task L3), which the toast shows, so
+ * here they are only read, not shown a second time.
+ */
+type Announcement = { id: number; text: string; problem: boolean; toast: boolean }
+
+/** The live-change message on screen (task L3). `id` changes with every new message. */
+type ToastState = { id: number; text: string; announced: boolean }
 
 /** "14 Nov 2023" in the given time zone (the viewer's when omitted). */
 function makeDateFormatter(timeZone: string | undefined): (ms: number) => string {
@@ -147,6 +199,9 @@ function makeDateFormatter(timeZone: string | undefined): (ms: number) => string
 /** The page's own reload, used after "Reset all data" when no reload is given. */
 const reloadPage = () => window.location.reload()
 
+/** Brings this tab forward, after a click on a notification (task L5). */
+const focusThisWindow = () => window.focus()
+
 export function App({
   engine,
   storage,
@@ -158,6 +213,9 @@ export function App({
   prefersReducedMotion = mediaPrefersReducedMotion,
   timeZone,
   reload = reloadPage,
+  notifications,
+  focusWindow = focusThisWindow,
+  firstLook = false,
 }: AppProps) {
   // The clock never runs behind the newest saved event (clock-guard.ts): the engine refuses a
   // write dated before one it holds, so a device clock that moved back would crash every tick.
@@ -271,7 +329,8 @@ export function App({
 
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
   const announce = useCallback(
-    (text: string, problem = false) => setAnnouncement((a) => ({ id: (a?.id ?? 0) + 1, text, problem })),
+    (text: string, problem = false, toast = false) =>
+      setAnnouncement((a) => ({ id: (a?.id ?? 0) + 1, text, problem, toast })),
     []
   )
 
@@ -420,14 +479,19 @@ export function App({
   // First run (Req 20.1, 20.6). Both buttons set the "started" flag, through
   // the gate like every other write. The sample is replayed at the real time,
   // which then becomes realNow, so the street is shown as it was just saved.
+  // Task L6: the first look is due after the first sample load in this browser (Req 40.1).
+  const [firstLookPhase, setFirstLookPhase] = useState<"idle" | "waiting" | "playing">("idle")
   const loadSample = useCallback(() => {
     const at = clock()
     const outcome = write(() => {
       loadSampleData(engine, at)
       markStarted(storage)
     })
-    if (outcome === "saved") setRealNow(at)
-  }, [clock, write, engine, storage])
+    if (outcome === "saved") {
+      setRealNow(at)
+      if (firstLook && !firstLookSeen(storage)) setFirstLookPhase("waiting")
+    }
+  }, [clock, write, engine, storage, firstLook])
   // "Start empty" opens "Add a person" (task 4.10).
   const startEmpty = useCallback(() => {
     if (write(() => markStarted(storage)) === "saved") setOpenDialog({ kind: "add" })
@@ -512,26 +576,162 @@ export function App({
     },
     [announce]
   )
+  // Live state changes (task L3, Req 38, design section 15). `baseline` is
+  // each person's state at the last minute tick. It is null before the first
+  // tick at mount and while previewing, so that tick and the first tick after
+  // "Back to today" only record it. After each of the user's own writes
+  // (`version`) it is read again, so a change the user caused is never
+  // reported as the street's. The toast, the cards' marker and the tab title
+  // all come from the same tick.
+  const baseline = useRef<StateOf[] | null>(null)
+  const [toast, setToast] = useState<ToastState | null>(null)
+  const [justChanged, setJustChanged] = useState<ReadonlySet<string>>(() => new Set())
+  const { record: recordTabChanges } = useTabSignal()
+  // Notifications while the tab is open (task L5, Req 39, design section 16):
+  // one more reader of the same tick's notice. Off by default; the setting is
+  // kept in `storage` and read again by handleTick through the ref.
+  const [notifyApi] = useState(() => (notifications === undefined ? browserNotificationApi() : notifications))
+  const [notifyOn, setNotifyOn] = useState(() => readNotifyEnabled(storage))
+  const [notifySaved, setNotifySaved] = useState(true)
+  const notifyOnRef = useRef(notifyOn)
+  notifyOnRef.current = notifyOn
+  const changeNotify = useCallback(
+    (enabled: boolean) => {
+      notifyOnRef.current = enabled
+      setNotifyOn(enabled)
+      setNotifySaved(saveNotifyEnabled(storage, enabled))
+    },
+    [storage]
+  )
+  const announcePlain = useCallback((text: string) => announce(text), [announce])
+  useEffect(() => {
+    if (previewing) baseline.current = null
+  }, [previewing])
+  useEffect(() => {
+    if (baseline.current !== null) baseline.current = snapshotStates(engine.view(clock()))
+  }, [engine, clock, version])
+  // Dismiss, the end of the fade, or the next tick. If focus was on Dismiss,
+  // it goes to the hero heading rather than to nowhere (as for dialogs, Req 24.3).
+  const clearToast = useCallback(() => {
+    const active = document.activeElement
+    const hadFocus = active instanceof Element && active.closest(".gh-toast") !== null
+    setToast(null)
+    if (hadFocus) heroHeading.current?.focus()
+  }, [])
+  const cardReacted = useCallback(
+    (id: string) =>
+      setJustChanged((ids) => {
+        if (!ids.has(id)) return ids
+        const next = new Set(ids)
+        next.delete(id)
+        return next
+      }),
+    []
+  )
+
   // Called after every tick, failed or not (startTicking calls onError first).
   const clockNoticeShown = useRef(false)
   const handleTick = useCallback(
     (at: number) => {
+      const failed = tickFailed.current
       if (!tickFailed.current) tickProblemShown.current = false
       tickFailed.current = false
       // Held behind the real clock by a saved event from the future: say so once.
+      let saidOther = false
       if (at - clockProp() > CLOCK_BEHIND_NOTICE_MS && !clockNoticeShown.current) {
         clockNoticeShown.current = true
         announce(clockBehindText, true)
+        saidOther = true
+      }
+      // Task L3: what this tick moved, against the last tick (never the first one).
+      const seen = engine.view(at)
+      const before = baseline.current
+      baseline.current = snapshotStates(seen)
+      const notice = before === null ? null : liveNotice(diffStates(before, baseline.current), seen)
+      // Task L5: the same notice, as a browser notification while the tab is hidden (Req 39.5).
+      const notify = shouldNotify({
+        enabled: notifyOnRef.current,
+        permission: notifyApi === null ? "unsupported" : notifyApi.permission,
+        visibility: document.visibilityState === "hidden" ? "hidden" : "visible",
+        previewing: previewingRef.current,
+        firstTick: before === null,
+        hasChange: notice !== null,
+      })
+      if (notify && notifyApi !== null && notice !== null) showNotification(notifyApi, notice, focusWindow)
+      if (before !== null) {
+        if (notice === null) {
+          // The last message has had its minute (reduced motion keeps it until now).
+          clearToast()
+          setJustChanged((ids) => (ids.size === 0 ? ids : new Set()))
+        } else {
+          // A storage problem or the clock notice keeps the live region this tick.
+          const quiet = failed || saidOther
+          if (!quiet) announce(notice.text, false, true)
+          setToast((t) => ({ id: (t?.id ?? 0) + 1, text: notice.text, announced: !quiet }))
+          setJustChanged(prefersReducedMotion() ? new Set() : new Set(notice.changes.map((c) => c.id)))
+          recordTabChanges(notice.changes.length, notice.worst)
+        }
       }
       setRealNow(at)
     },
-    [announce, clockProp]
+    [announce, clockProp, engine, clearToast, prefersReducedMotion, recordTabChanges, notifyApi, focusWindow]
   )
   useSettleTicks(engine, previewing, handleTick, {
     getNow: clock,
     scheduler: tickScheduler,
     onError: handleTickError,
   })
+
+  // The first ten seconds (task L6, Req 40, design section 17.4). A due first
+  // look starts once the splash is gone, no dialog is open and nothing is
+  // previewed. The flag is set first; under reduced motion, or when the flag
+  // cannot be saved, it does not play. While it plays it is an ordinary
+  // preview (every write blocked), driven by the dock's own Play; Skip,
+  // Escape, a touch of the time machine, "Back to today", a dialog or the
+  // last frame end it and return to today.
+  const firstLookPlaying = firstLookPhase === "playing"
+  const firstLookPlayingRef = useRef(firstLookPlaying)
+  firstLookPlayingRef.current = firstLookPlaying
+  useEffect(() => {
+    if (firstLookPhase !== "waiting" || showSplash || openDialog !== null || previewing) return
+    if (!markFirstLookSeen(storage) || prefersReducedMotion()) {
+      setFirstLookPhase("idle")
+      return
+    }
+    setFirstLookPhase("playing")
+    announce(firstLookText.announce)
+  }, [firstLookPhase, showSplash, openDialog, previewing, storage, prefersReducedMotion, announce])
+  const endFirstLook = useCallback(() => {
+    if (!firstLookPlayingRef.current) return
+    firstLookPlayingRef.current = false
+    const active = document.activeElement
+    const hadFocus = active instanceof Element && active.closest(".gh-first-look") !== null
+    setFirstLookPhase("idle")
+    setPreviewOffsetMs(0)
+    if (hadFocus) heroHeading.current?.focus()
+  }, [])
+  const firstLookFrame = useCallback(
+    (progress: number) => {
+      if (!firstLookPlayingRef.current) return
+      if (progress >= 1) endFirstLook()
+      else setPreviewOffsetMs(firstLookOffsetForProgress(progress))
+    },
+    [endFirstLook]
+  )
+  useEffect(() => {
+    if (firstLookPlaying && openDialog !== null) endFirstLook()
+  }, [firstLookPlaying, openDialog, endFirstLook])
+  useEffect(() => {
+    if (!firstLookPlaying) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") endFirstLook()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [firstLookPlaying, endFirstLook])
+  const firstLookControl: FirstLookDockControl | undefined = firstLook
+    ? { active: firstLookPlaying, onFrame: firstLookFrame, onTouch: endFirstLook }
+    : undefined
 
   const age = Math.min(1, previewOffsetMs / AGE_SPAN_MS)
   const appStyle = { "--age": age.toFixed(4) } as CSSProperties
@@ -558,7 +758,12 @@ export function App({
           aria-atomic="true"
           data-problem={announcement?.problem === true ? "" : undefined}
         >
-          {announcement !== null && <p key={announcement.id}>{announcement.text}</p>}
+          {announcement !== null && (
+            // A live-change message is shown by the toast in the dock, so here it is only read (task L3).
+            <p key={announcement.id} className={announcement.toast ? "gh-visually-hidden" : undefined}>
+              {announcement.text}
+            </p>
+          )}
         </div>
         <Hero
           people={people}
@@ -593,6 +798,8 @@ export function App({
               onOpen={openPerson}
               actions={actions}
               formatDate={formatDate}
+              justChanged={justChanged}
+              onReacted={cardReacted}
             />
             <ForecastControl engine={engine} now={now} version={version} formatDate={formatDate} />
           </>
@@ -629,6 +836,14 @@ export function App({
           />
           <ResetData onConfirm={confirmReset} blocked={blocked} />
         </div>
+        {/* Task L5: a preference, so it works in a preview too (Req 39.12). */}
+        <NotifySetting
+          api={notifyApi}
+          enabled={notifyOn}
+          saved={notifySaved}
+          onChange={changeNotify}
+          announce={announcePlain}
+        />
         <PrivacyLine ownPeople={ownPeople} />
       </main>
       <MoonDock
@@ -642,6 +857,17 @@ export function App({
         clock={frameClock}
         prefersReducedMotion={prefersReducedMotion}
         session={splashStorage}
+        notice={
+          toast === null && !firstLookPlaying ? undefined : (
+            <>
+              {firstLookPlaying && <FirstLookSkip onSkip={endFirstLook} />}
+              {toast !== null && (
+                <LiveToast key={toast.id} text={toast.text} announced={toast.announced} onDone={clearToast} />
+              )}
+            </>
+          )
+        }
+        firstLook={firstLookControl}
       />
 
       {openDialog?.kind === "import" && (

@@ -39,6 +39,10 @@ export interface ThreeListsProps {
   actions: PersonActions
   /** Dates in the cards' history. */
   formatDate: (ms: number) => string
+  /** Task L3 (Req 38.2): the ids a minute tick just moved; their cards react once. */
+  justChanged?: ReadonlySet<string>
+  /** Called when a card's reaction ends. */
+  onReacted?: (id: string) => void
 }
 
 export interface SectionNavProps {
@@ -71,7 +75,17 @@ export function SectionNav({ counts, onGoTo }: SectionNavProps) {
   )
 }
 
-export function ThreeLists({ view, engine, blocked, headingRefs, onOpen, actions, formatDate }: ThreeListsProps) {
+export function ThreeLists({
+  view,
+  engine,
+  blocked,
+  headingRefs,
+  onOpen,
+  actions,
+  formatDate,
+  justChanged,
+  onReacted,
+}: ThreeListsProps) {
   const { people, now, darkAt, version } = view
 
   // Each person's history, read once per version (a write changes it without changing `people`).
@@ -94,6 +108,8 @@ export function ThreeLists({ view, engine, blocked, headingRefs, onOpen, actions
         blocked={blocked}
         formatDate={formatDate}
         headingLevel={3}
+        justChanged={justChanged?.has(person.id) === true}
+        onReacted={onReacted}
         {...actions}
       />
     </li>

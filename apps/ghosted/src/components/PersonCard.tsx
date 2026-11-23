@@ -10,7 +10,7 @@
 // nothing (design section 4.2). Autopsy and History only read, so they never
 // are blocked.
 
-import { useId, useState, type ReactNode } from "react"
+import { useEffect, useId, useRef, useState, type ReactNode } from "react"
 import type { HistoryEntry } from "@decay-engine/engine"
 import { daysUntil } from "@decay-engine/shell"
 import type { GhostedEngine } from "../engine-instance"
@@ -51,6 +51,13 @@ export interface PersonCardProps extends PersonActions {
    * so useModalDialog moves focus to it when the dialog opens (Req 24.2).
    */
   focusHeading?: boolean
+  /**
+   * Task L3 (Req 38.2): a minute tick just moved this person. The card gets
+   * .gh-just-changed, and its window flickers out once (motion.css).
+   */
+  justChanged?: boolean
+  /** Called when that animation ends, so the App removes the class. */
+  onReacted?: (id: string) => void
 }
 
 type ContactKind = ContactEvent["kind"]
@@ -70,6 +77,8 @@ export function PersonCard({
   formatDate,
   headingLevel = 3,
   focusHeading = false,
+  justChanged = false,
+  onReacted,
   onReachOut,
   onReconnect,
   onAutopsy,
@@ -81,6 +90,17 @@ export function PersonCard({
   const blockedId = `${id}-blocked`
   const historyId = `${id}-history`
   const [historyOpen, setHistoryOpen] = useState(false)
+
+  // Task L3: the end of the window's flicker-out (it bubbles up from the pane)
+  // removes the marker. A native listener, so it hears the unprefixed event.
+  const cardRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const card = cardRef.current
+    if (!justChanged || card === null || onReacted === undefined) return
+    const done = () => onReacted(person.id)
+    card.addEventListener("animationend", done)
+    return () => card.removeEventListener("animationend", done)
+  }, [justChanged, onReacted, person.id])
 
   const state = shownState(person)
   const dead = person.state === "dead"
@@ -117,7 +137,12 @@ export function PersonCard({
   const relationship = person.payload.relationship.trim()
 
   return (
-    <article className="gh-card" data-state={state} aria-labelledby={headingId}>
+    <article
+      ref={cardRef}
+      className={justChanged ? "gh-card gh-just-changed" : "gh-card"}
+      data-state={state}
+      aria-labelledby={headingId}
+    >
       <div className="gh-card-top">
         <Window health={person.health} state={state} size="card" />
         <div className="gh-card-who">

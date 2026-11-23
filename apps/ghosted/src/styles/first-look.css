@@ -1,0 +1,17 @@
+/* "Skip the preview" (task L6, Req 40.7, design 17.4): the first thing in
+   the dock's box while the first look plays, 8 px above the bar. No colour,
+   width or motion of its own: .gh-button gives the quiet look and the shared
+   focus outline. It wraps at 320 px instead of pushing the page sideways. */
+
+.gh-first-look {
+  display: flex;
+  flex-wrap: wrap;
+  margin-block: 0 8px;
+  max-inline-size: 100%;
+}
+
+.gh-first-look-skip {
+  min-block-size: 44px;
+  min-inline-size: 44px;
+  white-space: normal;
+}

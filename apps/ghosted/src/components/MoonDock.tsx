@@ -37,10 +37,26 @@
 // measures its own height into --dock-h on the root element, so the page
 // keeps that much room at the bottom (layout.css); without ResizeObserver
 // the CSS fallback (--dock-max) applies.
+//
+// Task L6 (Req 40, design section 17.3): the optional `firstLook` prop lets
+// the App run the first look on this dock's own Play (first-look-dock.ts).
+// The slider, the jumps, Play and the markers then go through the hook's
+// `change`, and "Back to today" ends a running first look first.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react"
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from "react"
 import { PreviewBanner, TimeMachine, type FrameScheduler } from "@decay-engine/shell"
 import { readDockExpanded, writeDockExpanded } from "../dock-state"
+import { useFirstLookDock, type FirstLookDockControl } from "../first-look-dock"
 import type { SessionFlagStorage } from "../splash"
 import { ghostedShellTheme } from "../theme"
 import { DAY_MS } from "../time"
@@ -108,6 +124,18 @@ export interface MoonDockProps {
   prefersReducedMotion?: () => boolean
   /** Where the expanded choice is kept for the tab (the App's `session`). Null or omitted: React state only. */
   session?: SessionFlagStorage | null
+  /**
+   * Task L3 (Req 38.4): the live-change message, shown at the top of the
+   * dock, inside its box, so it covers nothing and the measured --dock-h
+   * includes it. Omitted: the dock is exactly as before.
+   */
+  notice?: ReactNode
+  /**
+   * Task L6 (Req 40.5, 40.8, design 17.3): while `active`, the first look runs
+   * on this dock's own Play, and a touch of the slider, a jump, a marker,
+   * Play or "Back to today" ends it. Omitted: the dock is exactly as before.
+   */
+  firstLook?: FirstLookDockControl
 }
 
 /** The moon over the rooftops, from the wireframe. Colours are in dock.css. */
@@ -144,6 +172,8 @@ export function MoonDock({
   clock,
   prefersReducedMotion,
   session = null,
+  notice,
+  firstLook,
 }: MoonDockProps) {
   const formatDay = useMemo(() => makeDayFormatter(timeZone), [timeZone])
   const previewing = offsetMs > 0
@@ -164,6 +194,9 @@ export function MoonDock({
 
   const dockRef = useRef<HTMLDivElement>(null)
   useDockHeight(dockRef)
+  // Task L6: the slider, the jumps, Play and the markers go through `change`.
+  const look = useFirstLookDock(dockRef, firstLook, onChange, DOCK_DAYS * DAY_MS, ".gh-dock-toggle")
+  const change = look.change
 
   const track = (
     <div className="gh-dock-timeline">
@@ -182,7 +215,7 @@ export function MoonDock({
               style={{ "--at": String(marker.day / DOCK_DAYS) } as CSSProperties}
               aria-label={label}
               title={label}
-              onClick={() => onChange(marker.day * DAY_MS)}
+              onClick={() => change(marker.day * DAY_MS)}
             >
               <StateGlyph state={marker.type === "fades" ? "weak" : "dead"} />
               {/* Shown on hover and on keyboard focus (dock.css). The button's name is the label above. */}
@@ -235,14 +268,16 @@ export function MoonDock({
       data-previewing={previewing ? "" : undefined}
       data-expanded={expanded ? "" : undefined}
       style={{ "--age": age.toFixed(4) } as CSSProperties}
+      {...(firstLook === undefined ? {} : look.handlers)}
     >
+      {notice}
       <div className="gh-dock-in">
         <Moon />
         <div className="gh-dock-main">
           <TimeMachine
             today={today}
             offsetMs={offsetMs}
-            onChange={onChange}
+            onChange={change}
             formatDate={formatDate}
             theme={ghostedShellTheme}
             wording={ghostedWording}
@@ -254,7 +289,11 @@ export function MoonDock({
             jumpDays={DOCK_JUMP_DAYS}
           />
           {previewing && (
-            <PreviewBanner theme={ghostedShellTheme} wording={ghostedWording} onBackToToday={() => onChange(0)} />
+            <PreviewBanner theme={ghostedShellTheme} wording={ghostedWording} onBackToToday={() => {
+                look.interrupt()
+                onChange(0)
+              }}
+            />
           )}
         </div>
       </div>

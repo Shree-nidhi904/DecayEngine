@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@decay-engine/engine": "workspace:*",
+    "@decay-engine/insight": "workspace:*",
     "@decay-engine/shell": "workspace:*",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/josefin-sans": "^5.3.0",

@@ -50,6 +50,12 @@ function browserSession(): SessionFlagStorage | null {
 // snapshot shows the problem screen instead of a blank page (design section 9.1).
 createRoot(rootElement).render(
   <React.StrictMode>
-    <Root createEngine={createEngine} storage={browserStorage()} session={browserSession()} />
+    {/* Task L6: the first look after the first sample load (Req 40.11). */}
+    <Root
+      createEngine={createEngine}
+      storage={browserStorage()}
+      session={browserSession()}
+      appProps={{ firstLook: true }}
+    />
   </React.StrictMode>
 )
