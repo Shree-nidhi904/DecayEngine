@@ -71,6 +71,13 @@ export type AppKitOptions = {
    * per kit, so an expanded dock in one test never leaks into the next.
    */
   session?: AppProps["session"]
+  /**
+   * Task L5: the Notification class. Defaults to null (no Notification API,
+   * as in jsdom), so earlier tests are unchanged.
+   */
+  notifications?: AppProps["notifications"]
+  /** Task L5: called when a notification is clicked. */
+  focusWindow?: AppProps["focusWindow"]
 }
 
 export function makeAppKit(
@@ -111,6 +118,8 @@ export function makeAppKit(
         createAudioContext={options.createAudioContext}
         defaultAnswerCheck={options.answerCheck ?? "self"}
         session={session}
+        notifications={options.notifications ?? null}
+        {...(options.focusWindow === undefined ? {} : { focusWindow: options.focusWindow })}
       />
     )
   }

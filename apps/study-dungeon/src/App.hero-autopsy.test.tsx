@@ -19,6 +19,7 @@ import { day } from "./test/fixtures"
 import { expandDock } from "./test/dock"
 import { DAY_MS } from "./policy"
 import { generateCauseSentences } from "./autopsy-sentences"
+import { generateRescueSentence, withRescue } from "./rescue-sentence"
 import { heroExtraText, previewBlockedText } from "./wording"
 
 afterEach(cleanup)
@@ -236,9 +237,17 @@ describe("autopsy", () => {
     // Never reviewed, half-life 2: the developer's cause sentence comes first.
     expect(shown[0]).toBe("It was never reviewed, so it faded with a half-life of 2 days.")
     const fact = kit.engine.view(day(10)).find((f) => f.id === "d1")!
-    expect(shown).toEqual(
-      generateCauseSentences(kit.engine.autopsy("d1", day(10)), fact.payload, { halfLifeAtDeath: 2, timeZone: "UTC" })
+    const report = kit.engine.autopsy("d1", day(10))
+    const causes = generateCauseSentences(report, fact.payload, { halfLifeAtDeath: 2, timeZone: "UTC" })
+    const rescue = generateRescueSentence(fact, kit.engine.history("d1"), report, { timeZone: "UTC" })
+    // The rescue line (task R1, Req 22.7) is second, straight after the cause; the rest follow unchanged.
+    expect(shown).toEqual(withRescue(causes, rescue))
+    expect(shown).toHaveLength(causes.length + 1)
+    // Weak at 1.474 d (2 Oct); a right review then gives half-life 4 and death 13.29 d later (15 Oct): 8.12 d longer.
+    expect(shown[1]).toBe(
+      "A review on 2 Oct 2026, when it went weak, would have kept it alive until 15 Oct 2026, 8 days longer."
     )
+    expect(shown.slice(2)).toEqual(causes.slice(1))
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }))
     expect(screen.queryAllByRole("dialog")).toEqual([])
@@ -275,6 +284,10 @@ describe("autopsy", () => {
     fireEvent.click(challenge)
     expect(screen.queryByRole("dialog", { name: "Challenge" })).toBeNull()
     expect(autopsy()).toBeTruthy()
+    // The rescue line shows in the preview too (Req 22.9): weak at day 17.37, a right review then
+    // gives half-life 20, 66.44 − 25.85 = 40.59 days longer. Nothing about it is stored.
+    const second = dialog.querySelectorAll(".shell-autopsy-sentence")[1]!.textContent
+    expect(second).toMatch(/^A review on .+, when it went weak, would have kept it alive until .+, 40 days longer\.$/)
     expect(kit.engine.history("p1").map((e) => e.type)).toEqual(["created"])
   })
 })

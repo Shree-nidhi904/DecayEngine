@@ -12,9 +12,13 @@ import {
   previewBlockedText,
   removeCancelLabel,
   removeConfirmText,
+  liveText,
+  notifyText,
+  rescueText,
   sessionText,
   studyDungeonWording,
   timelineText,
+  triageNoteText,
 } from "./wording"
 
 // Study Dungeon palette, copied from .kiro/steering/theme-and-wording.md.
@@ -271,6 +275,51 @@ describe("fight and challenge text", () => {
     }
   })
 
+  it('gives the Triage saves line in the words of Requirement 21.5, "in the next 7 days", never "this week" (task P5)', () => {
+    expect(triageNoteText.saves(1)).toBe("Answering these right saves 1 fact that would die in the next 7 days.")
+    expect(triageNoteText.saves(2)).toBe("Answering these right saves 2 facts that would die in the next 7 days.")
+    expect(triageNoteText.saves(3)).toBe("Answering these right saves 3 facts that would die in the next 7 days.")
+    for (const n of [1, 2, 3, 4, 10]) {
+      expect(triageNoteText.saves(n)).not.toMatch(/\bthis week\b/i)
+    }
+  })
+
+  it("gives the autopsy's rescue line in the words of Requirement 22.1, for 8 days and for 1 day (task R1)", () => {
+    expect(rescueText.sentence("23 Oct 2026", "6 Nov 2026", 8)).toBe(
+      "A review on 23 Oct 2026, when it went weak, would have kept it alive until 6 Nov 2026, 8 days longer."
+    )
+    expect(rescueText.sentence("23 Oct 2026", "25 Oct 2026", 1)).toBe(
+      "A review on 23 Oct 2026, when it went weak, would have kept it alive until 25 Oct 2026, 1 day longer."
+    )
+    // No "first": the weak time is the last weak spell of the life (decision on the spec's open point 1).
+    expect(rescueText.sentence("a", "b", 8)).not.toMatch(/\bfirst\b/i)
+  })
+
+  it("gives the live-change message in the words of Requirement 23.3, for 1, 2 and many facts (task L3)", () => {
+    expect(liveText.one("wake", "Gaze")).toBe("Gaze just weakened.")
+    expect(liveText.one("die", "Gaze")).toBe("Gaze just died and went to the Graveyard.")
+    expect(liveText.one("dieAsleep", "Gaze")).toBe("Gaze just died in its sleep and went to the Graveyard.")
+    expect(liveText.two({ kind: "wake", name: "Gaze" }, { kind: "wake", name: "Wisp" })).toBe("Gaze and Wisp just weakened.")
+    expect(liveText.two({ kind: "die", name: "Gaze" }, { kind: "dieAsleep", name: "Wisp" })).toBe(
+      "Gaze and Wisp just died and went to the Graveyard."
+    )
+    expect(liveText.two({ kind: "wake", name: "Gaze" }, { kind: "die", name: "Wisp" })).toBe(
+      "Gaze just weakened and Wisp went to the Graveyard."
+    )
+    expect(liveText.two({ kind: "dieAsleep", name: "Gaze" }, { kind: "wake", name: "Wisp" })).toBe(
+      "Gaze just went to the Graveyard in its sleep and Wisp weakened."
+    )
+    expect(liveText.many(3, 0, "Gaze")).toBe("3 facts weakened, Gaze's among them.")
+    expect(liveText.many(0, 3, "Gaze")).toBe("3 facts went to the Graveyard, Gaze's among them.")
+    expect(liveText.many(2, 1, "Gaze")).toBe("2 facts weakened and 1 went to the Graveyard, Gaze's among them.")
+    expect(liveText.many(1, 2, "Gaze")).toBe("1 fact weakened and 2 went to the Graveyard, Gaze's among them.")
+    expect(liveText.dismiss).toBe("Dismiss")
+    expect(liveText.title(0, "Study Dungeon")).toBe("Study Dungeon")
+    expect(liveText.title(2, "Study Dungeon")).toBe("(2) Study Dungeon")
+    expect(liveText.title(9, "Study Dungeon")).toBe("(9) Study Dungeon")
+    expect(liveText.title(10, "Study Dungeon")).toBe("(9+) Study Dungeon")
+  })
+
   it("sums up the autopsy chart in words, health rounded down", () => {
     const label = studyDungeonWording.autopsy.chartLabel
     expect(label({ from: "1 Oct 2026", to: "8 Oct 2026", startHealth: 100, endHealth: 9.99, right: 1, wrong: 2 })).toBe(
@@ -289,5 +338,27 @@ describe("fight and challenge text", () => {
     expect(formatHalfLifeDays(11.25)).toBe("11.25")
     expect(formatHalfLifeDays(5.625)).toBe("5.63")
     expect(formatHalfLifeDays(2.8125)).toBe("2.81")
+  })
+})
+
+describe("the notification setting's words (task L5, Requirement 24.3, 24.8)", () => {
+  it("has the exact words for every state", () => {
+    expect(notifyText).toEqual({
+      label: "Notify me about changes while this tab is open",
+      unsupported: "This browser cannot show notifications, so this setting is not available here.",
+      on: "On: when a fact changes while this tab is in the background, your browser shows a notification.",
+      denied: "Your browser blocks notifications for this page; to allow them, open the site settings by the address bar.",
+      blocked:
+        "This is on, but your browser is blocking notifications for this page, so none are shown; allow them in the site settings by the address bar, or turn this off.",
+      notSaved: "This choice cannot be saved in this browser, so it lasts until the page is closed.",
+      limit: "There is no server, so nothing can notify you when this tab is closed or the computer is asleep.",
+      privacy: "A notification shows only what is already on this page, and nothing is sent anywhere.",
+    })
+  })
+
+  it("has no guilt words", () => {
+    for (const text of Object.values(notifyText)) {
+      expect(text).not.toMatch(/\b(you forgot|forgot|overdue|late|later|should|fault|failed)\b/i)
+    }
   })
 })

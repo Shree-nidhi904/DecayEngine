@@ -169,6 +169,90 @@ describe("hero: the loss forecast line follows writes and ticks (task P4, Req 20
   })
 })
 
+describe("Triage: the saves line under the picks (task P5, Req 21.1, 21.6, 21.7)", () => {
+  const note = () => document.querySelector<HTMLElement>(".shell-triage-note")
+  const ONE = "Answering these right saves 1 fact that would die in the next 7 days."
+  const runWith = (minutes: number) => {
+    fireEvent.click(screen.getByRole("radio", { name: `${minutes} min` }))
+    fireEvent.click(button("Triage"))
+  }
+
+  it("follows the budget and the writes on the sample: 20 min shows it, 10 min does not, a right answer to helicase removes it", () => {
+    const kit = makeAppKit()
+    loadSampleData(kit.engine, T0)
+    kit.renderApp(T0)
+
+    // 20 minutes: all four weak facts fit; helicase dies at +5.29 days and a right answer saves it.
+    runWith(20)
+    const line = note()
+    expect(line).not.toBeNull()
+    expect(line!.textContent).toBe(ONE)
+    // Between the "Fight these first" list and the "Start the session" button.
+    const picks = screen.getByRole("list", { name: "Fight these first" })
+    expect(line!.previousElementSibling).toBe(picks)
+    expect(line!.nextElementSibling!.contains(button("Start the session"))).toBe(true)
+    expect(picks.querySelectorAll("li")).toHaveLength(4)
+
+    // 10 minutes (the default): derivative, mitochondrion and treaty; none is at risk.
+    runWith(10)
+    expect(entries("Fight these first")).toHaveLength(3)
+    expect(note()).toBeNull()
+    expect(document.body.textContent).not.toContain("Answering these right")
+
+    runWith(20)
+    expect(note()!.textContent).toBe(ONE)
+
+    // A right answer to helicase from its Dungeon card: the write bumps version and the panel works its picks out again.
+    fireEvent.click(tab("Dungeon"))
+    const card = screen
+      .getAllByText("Enzyme that unwinds DNA?")
+      .map((el) => el.closest("article"))
+      .find((a): a is HTMLElement => a !== null)!
+    fireEvent.click(within(card).getByRole("button", { name: "Fight" }))
+    const fight = screen.getByRole("dialog", { name: "Fight" })
+    fireEvent.click(within(fight).getByRole("button", { name: "Show answer" }))
+    fireEvent.click(within(fight).getByRole("button", { name: "I knew it" }))
+    fireEvent.click(within(fight).getByRole("button", { name: "Close" }))
+
+    // Helicase is alive now, so it is no pick; the three picks left are not at risk.
+    expect(entries("Fight these first")).toHaveLength(3)
+    expect(note()).toBeNull()
+    runWith(20)
+    expect(note()).toBeNull()
+  })
+
+  it("never says 0: no line with no weak facts or when no pick is saved", () => {
+    // One solid fact, alive: the panel shows the empty message and no line.
+    const kit = makeAppKit()
+    kit.add("fresh", "solid", T0)
+    kit.renderApp(T0)
+    runWith(20)
+    expect(screen.getByText("No monsters in the Dungeon. Nothing needs saving right now.")).toBeTruthy()
+    expect(note()).toBeNull()
+    expect(document.body.textContent).not.toMatch(/saves 0/)
+  })
+
+  it("shows while previewing, at the previewed time; Start the session stays disabled (Req 21.8)", () => {
+    const kit = makeAppKit()
+    loadSampleData(kit.engine, T0)
+    kit.renderApp(T0)
+    expandDock()
+    fireEvent.click(button("+7 days"))
+    expect(banner()).not.toBeNull()
+
+    // At +7 days, 10 minutes: derivative, mitochondrion and treaty; the mitochondrion dies 5.70 days later and is saved.
+    runWith(10)
+    expect(note()!.textContent).toBe(ONE)
+    const start = button("Start the session")
+    expect(start.getAttribute("aria-disabled")).toBe("true")
+    expect(start.getAttribute("title")).toBe(previewBlockedText)
+
+    // 5 minutes: derivative and treaty, none at risk.
+    runWith(5)
+    expect(note()).toBeNull()
+  })
+})
+
 describe("time machine: the lists follow the previewed day", () => {
   it("a solid fact added on day 0 is in the Dungeon at +30 days and the Graveyard at +34", () => {
     const kit = makeKit()

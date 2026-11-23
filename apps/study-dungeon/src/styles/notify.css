@@ -1,0 +1,36 @@
+/*
+ * The notification setting in the settings row (task L5, Requirement 24.1,
+ * 24.11). It takes the row's full width, because it has sentences under it;
+ * the row's own 12px gap (.sd-settings) stays around it. The switch looks
+ * like the sound switch. No width in px, no animation, nothing hidden at
+ * any width.
+ */
+
+.sd-notify {
+  flex: 1 1 100%;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sd-notify-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* The whole row is the tap target: at least 44px high (found in the L5 browser check: it was 19.5px). */
+  min-block-size: 44px;
+}
+
+.sd-notify-toggle input {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-pumpkin);
+}
+
+.sd-notify-note {
+  margin: 0;
+  color: var(--color-bone-dim);
+  font-size: 15px;
+  line-height: 1.5;
+}

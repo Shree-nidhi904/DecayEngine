@@ -5,6 +5,8 @@
 // - generateCauseSentences: the developer's cause-of-death sentences, given
 //   the dead fact's half-life at death.
 // - buildAutopsyChart: the health line, replayed from the whole history.
+// - generateRescueSentence (task R1, Req 22): the rescue line, put second
+//   in the cause sentences, worked out in the same memo at this `now`.
 // The Challenge button hands the fact back to the App, which opens the
 // challenge; it is disabled while previewing.
 
@@ -14,6 +16,7 @@ import type { StudyDungeonEngine } from "../engine-instance"
 import { studyDungeonPolicy, type Fact } from "../policy"
 import { generateCauseSentences } from "../autopsy-sentences"
 import { buildAutopsyChart } from "../autopsy-chart"
+import { generateRescueSentence, withRescue } from "../rescue-sentence"
 import { epitaphOf } from "../lists"
 import { studyDungeonShellTheme } from "../theme"
 import { studyDungeonWording } from "../wording"
@@ -54,13 +57,18 @@ export function FactAutopsy({
     const fact = engine.view(now).find((f) => f.id === factId)
     if (fact === undefined || fact.state !== "dead") return null
     const report = engine.autopsy(factId, now)
+    const history = engine.history(factId)
+    const zone = timeZone === undefined ? {} : { timeZone }
+    const causes = generateCauseSentences(report, fact.payload, {
+      halfLifeAtDeath: fact.policyData.halfLifeDays,
+      ...zone,
+    })
+    // Task R1 (Req 22): the rescue line, second, straight after the cause; none when it cannot be stated.
+    const rescue = generateRescueSentence(fact, history, report, zone)
     return {
       fact,
-      chart: buildAutopsyChart(engine.history(factId), fact.payload, report),
-      sentences: generateCauseSentences(report, fact.payload, {
-        halfLifeAtDeath: fact.policyData.halfLifeDays,
-        ...(timeZone === undefined ? {} : { timeZone }),
-      }),
+      chart: buildAutopsyChart(history, fact.payload, report),
+      sentences: withRescue(causes, rescue),
     }
   }, [engine, factId, now, timeZone])
 

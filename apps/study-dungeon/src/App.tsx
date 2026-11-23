@@ -30,7 +30,10 @@ import { RaidIntro } from "./components/RaidIntro"
 import { ImportFactsDialog } from "./components/ImportFactsDialog"
 import { BackupControls } from "./components/BackupControls"
 import { buildChoices, loadAnswerCheck, saveAnswerCheck, type AnswerCheck } from "./answer-check"
-import { answerText, dailyRaidText, importText } from "./wording"
+import { answerText, dailyRaidText, firstLookText, importText } from "./wording"
+import { FirstLookSkip } from "./components/FirstLookSkip"
+import { firstLookOffsetForProgress, firstLookSeen, markFirstLookSeen } from "./first-look"
+import type { FirstLookDockControl } from "./first-look-dock"
 import { studyDungeonPolicy } from "./policy"
 import { loadSampleData } from "./sample-data"
 import {
@@ -55,14 +58,39 @@ import {
   previewBlockedText,
   sessionText,
   studyDungeonWording,
+  triageNoteText,
 } from "./wording"
+import { triageSaves } from "./triage-saves"
 import "./styles/dialogs.css"
 import "./styles/app.css"
 import "./styles/world.css"
 import "./styles/dock.css"
 import "./styles/fx.css"
 import "./styles/animations.css"
+import "./styles/live.css"
 import "./styles/layout.css"
+import { LiveToast } from "./components/LiveToast"
+import { liveNotice } from "./live-changes"
+import { diffStates, snapshotStates, type StateOf } from "./state-changes"
+import { useTabSignal } from "./tab-signal"
+import { NotifySetting } from "./components/NotifySetting"
+import {
+  browserNotificationApi,
+  readNotifyEnabled,
+  saveNotifyEnabled,
+  shouldNotify,
+  showNotification,
+  type NotificationApi,
+} from "./notify"
+
+/** Brings this tab forward, after a click on a notification (task L5). */
+const focusThisWindow = () => window.focus()
+
+/** Whether the user asked for reduced motion, when the App is given no answer. Without matchMedia, motion is treated as unwanted. */
+function mediaPrefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
 
 /** engine.triage accepts budgets from 1 to 1440 minutes (engine Requirement 17b). */
 export const TRIAGE_MAX_BUDGET_MINUTES = 1440
@@ -115,6 +143,19 @@ export interface AppProps {
    * pass an in-memory fake.
    */
   session?: SessionFlagStorage | null
+  /**
+   * The browser's Notification class (task L5). Defaults to the browser's,
+   * or null when it has none; tests pass a fake class or null.
+   */
+  notifications?: NotificationApi | null
+  /** Brings the tab forward when a notification is clicked. Defaults to window.focus(). */
+  focusWindow?: () => void
+  /**
+   * Task L6 (Requirement 25.11): play the first look after the first "Load
+   * sample data" in this browser. main.tsx turns it on; off by default, so
+   * tests that load the sample are unchanged.
+   */
+  firstLook?: boolean
 }
 
 /** The one dialog open at a time, if any. */
@@ -135,8 +176,15 @@ type Skipped = { question: string; reason: "died" | "removed" }
 /** The fight queue: the picks in triage order, and which one is being fought. */
 type Session = { entries: SessionEntry[]; position: number; skipped: Skipped[] }
 
-/** What the live region says. `id` changes every time, so the same words are read again. */
-type Announcement = { id: number; text: string; problem: boolean }
+/**
+ * What the live region says. `id` changes every time, so the same words are read again.
+ * `toast`: the words of the live-change message (task L3), which the toast shows, so
+ * here they are only read, not shown a second time.
+ */
+type Announcement = { id: number; text: string; problem: boolean; toast: boolean }
+
+/** The live-change message on screen (task L3). `id` changes with every new message. */
+type ToastState = { id: number; text: string; announced: boolean }
 
 const defaultFormatDate = (ms: number) => formatPreviewDate(ms)
 const browserReload = () => window.location.reload()
@@ -155,6 +203,9 @@ export function App({
   createAudioContext,
   defaultAnswerCheck,
   session: sessionProp,
+  notifications,
+  focusWindow = focusThisWindow,
+  firstLook = false,
 }: AppProps) {
   // The dock's session storage (task 21.1). `session` below is the Triage session.
   const [dockSession] = useState(() => (sessionProp === undefined ? browserSessionStorage() : sessionProp))
@@ -190,7 +241,8 @@ export function App({
   // The polite live region (task 16.4): state changes and storage problems.
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
   const announce = useCallback(
-    (text: string, problem = false) => setAnnouncement((a) => ({ id: (a?.id ?? 0) + 1, text, problem })),
+    (text: string, problem = false, toast = false) =>
+      setAnnouncement((a) => ({ id: (a?.id ?? 0) + 1, text, problem, toast })),
     []
   )
 
@@ -298,20 +350,110 @@ export function App({
     },
     [announce]
   )
+  // Live state changes (task L3, Requirement 23, design "Live State Changes").
+  // `baseline` is each fact's state at the last minute tick. It is null before
+  // the first tick at mount and while previewing, so that tick and the first
+  // tick after "Back to today" only record it. After each of the user's own
+  // writes (`version`) it is read again, so a change the user caused is never
+  // reported as time's. The toast, the cards' marker and the tab title all
+  // come from the same tick. The tick time comes from heldClock
+  // (clock-guard.ts), so it never runs backwards and every tick reaches here.
+  const baseline = useRef<StateOf[] | null>(null)
+  const [toast, setToast] = useState<ToastState | null>(null)
+  const [justChanged, setJustChanged] = useState<ReadonlySet<string>>(() => new Set())
+  const { record: recordTabChanges } = useTabSignal()
+  const reducedMotion = prefersReducedMotion ?? mediaPrefersReducedMotion
+  // Notifications while the tab is open (task L5, Requirement 24): one more
+  // reader of the same tick's notice. Off by default; kept in `storage`
+  // beside the sound setting, and read by handleTick through the ref.
+  const [notifyApi] = useState(() => (notifications === undefined ? browserNotificationApi() : notifications))
+  const [notifyOn, setNotifyOn] = useState(() => readNotifyEnabled(storage))
+  const [notifySaved, setNotifySaved] = useState(true)
+  const notifyOnRef = useRef(notifyOn)
+  notifyOnRef.current = notifyOn
+  const notifyPreviewingRef = useRef(previewing)
+  notifyPreviewingRef.current = previewing
+  const changeNotify = useCallback(
+    (enabled: boolean) => {
+      notifyOnRef.current = enabled
+      setNotifyOn(enabled)
+      setNotifySaved(saveNotifyEnabled(storage, enabled))
+    },
+    [storage]
+  )
+  const announcePlain = useCallback((text: string) => announce(text), [announce])
+  useEffect(() => {
+    if (previewing) baseline.current = null
+  }, [previewing])
+  useEffect(() => {
+    if (baseline.current !== null) baseline.current = snapshotStates(engine.view(clock()))
+  }, [engine, clock, version])
+  // Dismiss, the end of the fade, or the next tick. If focus was on Dismiss,
+  // it goes to <main> (the focus target after the tour) rather than to nowhere.
+  const clearToast = useCallback(() => {
+    const active = document.activeElement
+    const hadFocus = active instanceof Element && active.closest(".sd-toast") !== null
+    setToast(null)
+    if (hadFocus) mainRef.current?.focus()
+  }, [])
+  const cardReacted = useCallback(
+    (id: string) =>
+      setJustChanged((ids) => {
+        if (!ids.has(id)) return ids
+        const next = new Set(ids)
+        next.delete(id)
+        return next
+      }),
+    []
+  )
+
   // Called after every tick, failed or not (startTicking calls onError first).
   const clockNoticeShown = useRef(false)
   const handleTick = useCallback(
     (now: number) => {
+      const failed = tickFailed.current
       if (!tickFailed.current) tickProblemShown.current = false
       tickFailed.current = false
       // Held behind the real clock by a saved event from the future: say so once.
+      let saidOther = false
       if (now - clockProp() > CLOCK_BEHIND_NOTICE_MS && !clockNoticeShown.current) {
         clockNoticeShown.current = true
         announce(clockBehindText, true)
+        saidOther = true
+      }
+      // Task L3: what this tick moved, against the last tick (never the first one).
+      const seen = engine.view(now)
+      const before = baseline.current
+      baseline.current = snapshotStates(seen)
+      const notice =
+        before === null ? null : liveNotice(diffStates(before, baseline.current), seen, (id) => creatureOf(id).name)
+      // Task L5: the same notice, as a browser notification while the tab is hidden (Requirement 24.5).
+      const notify = shouldNotify({
+        enabled: notifyOnRef.current,
+        permission: notifyApi === null ? "unsupported" : notifyApi.permission,
+        visibility: document.visibilityState === "hidden" ? "hidden" : "visible",
+        previewing: notifyPreviewingRef.current,
+        firstTick: before === null,
+        hasChange: notice !== null,
+      })
+      if (notify && notifyApi !== null && notice !== null) showNotification(notifyApi, notice, focusWindow)
+      if (before !== null) {
+        if (notice === null) {
+          // The last message has had its minute (reduced motion keeps it until now).
+          clearToast()
+          setJustChanged((ids) => (ids.size === 0 ? ids : new Set()))
+        } else {
+          // A storage problem or the clock notice keeps the live region this tick.
+          const quiet = failed || saidOther
+          if (!quiet) announce(notice.text, false, true)
+          setToast((t) => ({ id: (t?.id ?? 0) + 1, text: notice.text, announced: !quiet }))
+          setJustChanged(reducedMotion() ? new Set() : new Set(notice.changes.map((c) => c.id)))
+          recordTabChanges(notice.changes.length, notice.worst)
+        }
       }
       setRealNow(now)
     },
-    [announce, clockProp]
+    [announce, clockProp, engine, clearToast, reducedMotion, recordTabChanges, notifyApi, focusWindow]
   )
   useSettleTicks(engine, previewing, handleTick, {
     getNow: clock,
@@ -337,6 +479,9 @@ export function App({
     if (!isTourDone(storage)) setTouring(true)
   }, [storage])
 
+  // Task L6: the first look is due after the first sample load in this browser (Requirement 25.1).
+  const [firstLookPhase, setFirstLookPhase] = useState<"idle" | "waiting" | "playing">("idle")
+
   const loadSample = useCallback(() => {
     const at = writeNow()
     let count = 0
@@ -350,7 +495,8 @@ export function App({
     if (!ok) return
     finishFirstRun()
     announce(announceText.sampleLoaded(count))
-  }, [engine, writeNow, storage, bumpVersion, guardWrite, finishFirstRun, announce])
+    if (firstLook && !firstLookSeen(storage)) setFirstLookPhase("waiting")
+  }, [engine, writeNow, storage, bumpVersion, guardWrite, finishFirstRun, announce, firstLook])
 
   const startEmpty = useCallback(() => {
     if (!guardWrite(() => markStarted(storage))) return
@@ -455,6 +601,18 @@ export function App({
   // dependency on purpose: a write changes the result without changing now.
   const runTriage = useCallback((budgetMinutes: number) => engine.triage(budgetMinutes, now), [engine, now, version])
 
+  // The line under the Triage picks (task P5, Requirement 21): how many of the
+  // picks shown a right answer saves from dying in the next 7 days. The same
+  // `now` as runTriage, preview included; the panel calls it again whenever it
+  // works its picks out again (a new budget, `now` or a write). Stores nothing.
+  const triageNote = useCallback(
+    (picks: TriageCandidate<FactPayload, FactPolicyData>[]) => {
+      const n = triageSaves(picks, now)
+      return n === 0 ? null : triageNoteText.saves(n)
+    },
+    [now]
+  )
+
   /**
    * Opens the fight for the first entry from `start` on that can still be
    * fought. Each fact is looked up fresh at the real time when its turn
@@ -527,6 +685,57 @@ export function App({
   // Only adding or removing facts changes the names (version), not time.
   useMemo(() => nameCreatures(engine.view(realNow)), [engine, version])
 
+  // The first ten seconds (task L6, Requirement 25, design "The First Ten
+  // Seconds"). A due first look starts once first run and the tour are over,
+  // no dialog is open and nothing is previewed. The flag is set first; under
+  // reduced motion, or when the flag cannot be saved, it does not play. While
+  // it plays it is an ordinary preview (every write blocked), driven by the
+  // dock's own Play; Skip, Escape, a touch of the time machine, "Back to
+  // today", a dialog or the last frame end it and return to today.
+  const firstLookPlaying = firstLookPhase === "playing"
+  const firstLookPlayingRef = useRef(firstLookPlaying)
+  firstLookPlayingRef.current = firstLookPlaying
+  useEffect(() => {
+    if (firstLookPhase !== "waiting" || firstRun || touring || dialog !== null || previewing) return
+    if (!markFirstLookSeen(storage) || reducedMotion()) {
+      setFirstLookPhase("idle")
+      return
+    }
+    setFirstLookPhase("playing")
+    announce(firstLookText.announce)
+  }, [firstLookPhase, firstRun, touring, dialog, previewing, storage, reducedMotion, announce])
+  const endFirstLook = useCallback(() => {
+    if (!firstLookPlayingRef.current) return
+    firstLookPlayingRef.current = false
+    const active = document.activeElement
+    const hadFocus = active instanceof Element && active.closest(".sd-first-look") !== null
+    setFirstLookPhase("idle")
+    setPreviewOffsetMs(0)
+    if (hadFocus) mainRef.current?.focus()
+  }, [])
+  const firstLookFrame = useCallback(
+    (progress: number) => {
+      if (!firstLookPlayingRef.current) return
+      if (progress >= 1) endFirstLook()
+      else setPreviewOffsetMs(firstLookOffsetForProgress(progress))
+    },
+    [endFirstLook]
+  )
+  useEffect(() => {
+    if (firstLookPlaying && (dialog !== null || touring)) endFirstLook()
+  }, [firstLookPlaying, dialog, touring, endFirstLook])
+  useEffect(() => {
+    if (!firstLookPlaying) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") endFirstLook()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [firstLookPlaying, endFirstLook])
+  const firstLookControl: FirstLookDockControl | undefined = firstLook
+    ? { active: firstLookPlaying, onFrame: firstLookFrame, onTouch: endFirstLook }
+    : undefined
+
   // 0 today, 1 at +60 days: ages the room (torches dim, fog and cobwebs).
   const age = Math.min(1, previewOffsetMs / TIME_MACHINE_MAX_OFFSET_MS)
   const worldStyle = { "--age": age.toFixed(3) } as CSSProperties
@@ -538,7 +747,11 @@ export function App({
         <PreviewBanner
           theme={studyDungeonShellTheme}
           wording={studyDungeonWording}
-          onBackToToday={() => setPreviewOffsetMs(0)}
+          onBackToToday={() => {
+            // Task L6: a running first look ends first (its dock then stops Play).
+            endFirstLook()
+            setPreviewOffsetMs(0)
+          }}
         />
       )}
       <header className="sd-header">
@@ -559,7 +772,12 @@ export function App({
           aria-atomic="true"
           data-problem={announcement?.problem === true ? "" : undefined}
         >
-          {announcement !== null && <p key={announcement.id}>{announcement.text}</p>}
+          {announcement !== null && (
+            // A live-change message is shown by the toast in the dock, so here it is only read (task L3).
+            <p key={announcement.id} className={announcement.toast ? "sd-visually-hidden" : undefined}>
+              {announcement.text}
+            </p>
+          )}
         </div>
 
         {firstRun ? (
@@ -602,6 +820,7 @@ export function App({
                   startDisabled={previewing}
                   startDisabledReason={previewing ? previewBlockedText : undefined}
                   initialBudget={10}
+                  picksNote={triageNote}
                 />
               </div>
               <div className="sd-layout-main">
@@ -661,6 +880,8 @@ export function App({
                   onRemove={handleRemove}
                   onAutopsy={openAutopsy}
                   writesDisabledReason={previewing ? previewBlockedText : undefined}
+                  justChanged={justChanged}
+                  onReacted={cardReacted}
                 />
               </div>
 
@@ -669,6 +890,14 @@ export function App({
             <ResetData onConfirm={reset} disabledReason={previewing ? previewBlockedText : undefined}>
               <AnswerCheckSetting value={answerCheck} onChange={changeAnswerCheck} />
               <SoundToggle enabled={soundOn} onChange={changeSound} />
+              {/* Task L5: a preference beside the sound switch, so it works in a preview too. */}
+              <NotifySetting
+                api={notifyApi}
+                enabled={notifyOn}
+                saved={notifySaved}
+                onChange={changeNotify}
+                announce={announcePlain}
+              />
               <BackupControls
                 storage={storage}
                 reload={reload}
@@ -787,6 +1016,17 @@ export function App({
           clock={frameClock}
           prefersReducedMotion={prefersReducedMotion}
           session={dockSession}
+          notice={
+            toast === null && !firstLookPlaying ? undefined : (
+              <>
+                {firstLookPlaying && <FirstLookSkip onSkip={endFirstLook} />}
+                {toast !== null && (
+                  <LiveToast key={toast.id} text={toast.text} announced={toast.announced} onDone={clearToast} />
+                )}
+              </>
+            )
+          }
+          firstLook={firstLookControl}
         />
       )}
     </div>

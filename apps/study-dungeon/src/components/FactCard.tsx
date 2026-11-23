@@ -12,8 +12,9 @@
 // Fight (or Challenge) is the one primary button; Edit and Remove are quiet.
 //
 // Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
+// Changed by Kiro for task L3 (task 25.4): the optional `justChanged` and `onReacted` props.
 
-import { useId, type ReactNode } from "react"
+import { useEffect, useId, useRef, type ReactNode } from "react"
 import type { Fact } from "../policy"
 import { DAY_MS } from "../policy"
 import { creatureOf, moodOf, quipOf, urgencyOf } from "../creatures"
@@ -42,7 +43,18 @@ export interface FactCardProps {
   /** Disables every write button (not Autopsy). */
   disabled?: boolean
   disabledReason?: string
+  /**
+   * Task L3 (Requirement 23.2, added by Kiro): a minute tick just moved this
+   * fact. The card gets .sd-just-changed and its creature wakes (or its stone
+   * drops) once (live.css). Omitted: the card is exactly as before.
+   */
+  justChanged?: boolean
+  /** Called when that animation ends, so the App removes the class. */
+  onReacted?: (id: string) => void
 }
+
+/** The two L3 animations whose end removes the marker (live.css). */
+const REACTIONS = new Set(["sd-wake", "sd-grave-drop"])
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
@@ -58,7 +70,25 @@ export function FactCard({
   onRemove,
   disabled = false,
   disabledReason,
+  justChanged = false,
+  onReacted,
 }: FactCardProps) {
+  // Task L3: the end of the wake (it bubbles up from the creature) removes the
+  // marker. A native listener, so it hears the unprefixed event; another
+  // animation ending inside the card (a named one that is not L3's) is ignored.
+  const cardRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const card = cardRef.current
+    if (!justChanged || card === null || onReacted === undefined) return
+    const done = (event: Event) => {
+      const name = (event as Event & { animationName?: unknown }).animationName
+      if (typeof name === "string" && name !== "" && !REACTIONS.has(name)) return
+      onReacted(fact.id)
+    }
+    card.addEventListener("animationend", done)
+    return () => card.removeEventListener("animationend", done)
+  }, [justChanged, onReacted, fact.id])
+  const marker = justChanged ? " sd-just-changed" : ""
   const textId = useId()
   const reasonId = useId()
   const state = fact.state
@@ -139,7 +169,13 @@ export function FactCard({
     const urgency = urgencyOf(fact.health)
     const lost = baseHealth === undefined ? 0 : Math.max(0, Math.floor(baseHealth) - Math.floor(fact.health))
     return (
-      <article className="shell-item-card sd-card sd-monster" data-state={state} data-mood={mood} aria-labelledby={textId}>
+      <article
+        ref={cardRef}
+        className={`shell-item-card sd-card sd-monster${marker}`}
+        data-state={state}
+        data-mood={mood}
+        aria-labelledby={textId}
+      >
         <div className="sd-card-top">
           <Creature kind={creature.kind} mood={mood} />
           <div className="sd-card-who">
@@ -168,7 +204,13 @@ export function FactCard({
 
   if (state === "alive") {
     return (
-      <article className="shell-item-card sd-card sd-sleeper" data-state={state} data-mood={mood} aria-labelledby={textId}>
+      <article
+        ref={cardRef}
+        className={`shell-item-card sd-card sd-sleeper${marker}`}
+        data-state={state}
+        data-mood={mood}
+        aria-labelledby={textId}
+      >
         <div className="sd-sleeper-art">
           <Creature kind={creature.kind} mood="sleep" className="sd-art-sm" />
           <span className="sd-zzz" aria-hidden="true">
@@ -192,7 +234,7 @@ export function FactCard({
 
   const daysDead = fact.diedAt === undefined ? null : Math.max(0, Math.floor((now - fact.diedAt) / DAY_MS))
   return (
-    <article className="shell-item-card sd-card sd-grave" data-state={state} aria-labelledby={textId}>
+    <article ref={cardRef} className={`shell-item-card sd-card sd-grave${marker}`} data-state={state} aria-labelledby={textId}>
       <Tombstone kind={creature.kind} />
       {stateLine()}
       {question}

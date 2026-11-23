@@ -43,6 +43,10 @@ export interface ThreeListsProps {
    * machine is previewing). They stay visible and say why.
    */
   writesDisabledReason?: string
+  /** Task L3 (Requirement 23.2): the ids a minute tick just moved; their cards react once. */
+  justChanged?: ReadonlySet<string>
+  /** Called when a card's reaction ends. */
+  onReacted?: (id: string) => void
 }
 
 const TABS: readonly FactState[] = ["alive", "weak", "dead"]
@@ -57,6 +61,8 @@ export function ThreeLists({
   onRemove,
   onAutopsy,
   writesDisabledReason,
+  justChanged,
+  onReacted,
 }: ThreeListsProps) {
   const writesDisabled = writesDisabledReason !== undefined
   const [selected, setSelected] = useState<FactState>("weak")
@@ -120,6 +126,8 @@ export function ThreeLists({
         onRemove={() => setRemoving(fact)}
         disabled={writesDisabled}
         disabledReason={writesDisabledReason}
+        justChanged={justChanged?.has(fact.id) === true}
+        onReacted={onReacted}
       />
     </li>
   )

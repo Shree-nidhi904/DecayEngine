@@ -217,6 +217,18 @@
 }
 
 /*
+ * The line under the picks (task P5, Req 21.9, 21.10): the colour the
+ * panel's numbers use, body type. No margin: .sd-world .shell-triage keeps
+ * gap: 12px, so the line has 12 px above and below. No width, no media query.
+ */
+.sd-world .shell-triage-note {
+  color: var(--color-bone-dim);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+/*
  * ---- The compact dock (task L2, tasks 21.2 and 21.3; Req 19.1-19.4, 19.7-19.9) ----
  * Changed by Kiro, as the spec names this file (see docs/KIRO_LOG.md).
  *

@@ -31,7 +31,8 @@ function browserStorage(): FlagStorage | null {
 // snapshot shows the problem screen instead of a blank page (task 18.3).
 createRoot(rootElement).render(
   <React.StrictMode>
-    <Root createEngine={createEngine} storage={browserStorage()} />
+    {/* Task L6: the first look after the first sample load (Requirement 25.11). */}
+    <Root createEngine={createEngine} storage={browserStorage()} appProps={{ firstLook: true }} />
     <DoorSplash />
   </React.StrictMode>,
 );

@@ -17,9 +17,12 @@
 //
 // Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 // Changed by Kiro for task L2 (tasks 21.2 and 21.3), as the spec names it; see docs/KIRO_LOG.md.
+// Changed by Kiro for task L3 (task 25.4): the optional `notice` slot, first in the dock.
+// Changed by Kiro for task L6 (task 27.3): the optional `firstLook` prop (first-look-dock.ts); the onChange prop is wrapped by its hook.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from "react"
-import { TimeMachine, TIME_MACHINE_MAX_DAYS, type FrameScheduler } from "@decay-engine/shell"
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type RefObject } from "react"
+import { useFirstLookDock, type FirstLookDockControl } from "../first-look-dock"
+import { TimeMachine, TIME_MACHINE_MAX_DAYS, TIME_MACHINE_MAX_OFFSET_MS, type FrameScheduler } from "@decay-engine/shell"
 import { readDockExpanded, writeDockExpanded, type SessionFlagStorage } from "../dock-state"
 import type { StudyDungeonEngine } from "../engine-instance"
 import { DAY_MS } from "../policy"
@@ -70,19 +73,33 @@ export interface TimeDockProps {
   prefersReducedMotion?: () => boolean
   /** Where the expanded choice is kept for the tab (the App's `session`). Null or omitted: React state only. */
   session?: SessionFlagStorage | null
+  /**
+   * Task L3 (Requirement 23.4, added by Kiro): the live-change message, shown
+   * at the top of the dock, inside its box, so it covers nothing and the
+   * measured --dock-h includes it. Omitted: the dock renders exactly as before.
+   */
+  notice?: ReactNode
+  /**
+   * Task L6 (Requirement 25.5, 25.8, added by Kiro): while `active`, the
+   * first look runs on this dock's own Play, and a touch of the slider, a
+   * jump, a marker or Play ends it. Omitted: the dock behaves as before.
+   */
+  firstLook?: FirstLookDockControl
 }
 
 export function TimeDock({
   engine,
   realNow,
   offsetMs,
-  onChange,
+  onChange: onChangeProp,
   formatDate,
   version,
   frames,
   clock,
   prefersReducedMotion,
   session = null,
+  notice,
+  firstLook,
 }: TimeDockProps) {
   const events = useMemo(
     () =>
@@ -100,6 +117,9 @@ export function TimeDock({
 
   const dockRef = useRef<HTMLDivElement>(null)
   useDockHeight(dockRef)
+  // Task L6: the slider, the jumps, Play and the markers below go through the hook's `change`.
+  const look = useFirstLookDock(dockRef, firstLook, onChangeProp, TIME_MACHINE_MAX_OFFSET_MS, ".sd-dock-toggle")
+  const onChange = look.change
 
   const shownDay = Math.floor(offsetMs / DAY_MS)
   const next = upcoming(events, shownDay)
@@ -193,7 +213,9 @@ export function TimeDock({
       className="sd-dock"
       data-previewing={offsetMs > 0 ? "" : undefined}
       data-open={expanded ? "" : undefined}
+      {...(firstLook === undefined ? {} : look.handlers)}
     >
+      {notice}
       <div className="sd-dock-in">
         <Candle age={age} />
         <TimeMachine

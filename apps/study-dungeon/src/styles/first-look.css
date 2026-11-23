@@ -1,0 +1,18 @@
+/* "Skip the preview" (task L6, Requirement 25.7): the first thing in the
+   dock's box while the first look plays, 8 px above the bar. No colour,
+   width or motion of its own: .sd-button and .sd-button-quiet give the
+   quiet look and the focus outline. It wraps at 320 px instead of pushing
+   the page sideways. */
+
+.sd-first-look {
+  display: flex;
+  flex-wrap: wrap;
+  margin-block: 0 8px;
+  max-inline-size: 100%;
+}
+
+.sd-first-look-skip {
+  min-block-size: 44px;
+  min-inline-size: 44px;
+  white-space: normal;
+}

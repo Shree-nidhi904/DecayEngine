@@ -212,6 +212,29 @@ export const heroText = {
 } as const
 
 /**
+ * The line under the Triage picks (task P5, Requirement 21, design "What This
+ * Session Saves", Wording). Called only with n ≥ 1: with no saved pick there
+ * is no line (Req 21.6). "These" points at "Fight these first"; "the next 7
+ * days" is the same rolling window as the hero's line, never "this week".
+ * A separate object, because studyDungeonWording.triage is the shell's shape.
+ */
+export const triageNoteText = {
+  saves: (n: number) =>
+    `Answering these right saves ${n} ${n === 1 ? "fact" : "facts"} that would die in the next 7 days.`,
+} as const
+
+/**
+ * The rescue line in the autopsy (task R1, Requirement 22, design "Rescue
+ * Point"): what one right review, when the fact went weak, would have given.
+ * `on` and `until` are dates already formatted by rescue-sentence.ts; `n` is
+ * at least 1.
+ */
+export const rescueText = {
+  sentence: (on: string, until: string, n: number) =>
+    `A review on ${on}, when it went weak, would have kept it alive until ${until}, ${daysText(n)} longer.`,
+} as const
+
+/**
  * What the App's polite live region says after a change (task 16.4). The
  * list is the one the fact is in afterwards, read from the engine
  * (studyDungeonWording.lists). Storage problems use storageProblemText.
@@ -419,4 +442,88 @@ export const backupText = {
   confirmButton: "Replace",
   cancel: "Cancel",
   failed: "The backup could not be saved here. Storage may be full.",
+} as const
+
+/**
+ * Live state changes (task L3, Requirement 23, design "Live State Changes",
+ * Wording): the short message after a minute tick moved facts on its own.
+ * `name` is the creature's name (creatureOf(id).name). A fact's creature
+ * wakes when it weakens (Crypt to Dungeon); a fact that dies goes to the
+ * Graveyard, from the Dungeon or, in one tick, straight from the Crypt
+ * ("in its sleep"). `kind` is from live-changes.ts. The list name comes from
+ * studyDungeonWording.lists, so "Graveyard" is written once.
+ */
+export type LiveKind = "wake" | "die" | "dieAsleep"
+
+const graveyard = () => studyDungeonWording.lists.dead
+
+/** The verb after "just" for one fact, or after "and" for a second one. */
+const liveVerb = (kind: LiveKind): string =>
+  kind === "wake"
+    ? "weakened"
+    : kind === "die"
+      ? `died and went to the ${graveyard()}`
+      : `died in its sleep and went to the ${graveyard()}`
+
+/** The shorter verb for the second of two different changes. */
+const liveVerbShort = (kind: LiveKind): string =>
+  kind === "wake" ? "weakened" : kind === "die" ? `went to the ${graveyard()}` : `went to the ${graveyard()} in its sleep`
+
+export const liveText = {
+  /** One fact: "Gaze just weakened.", "Gaze just died and went to the Graveyard." */
+  one: (kind: LiveKind, name: string) => `${name} just ${liveVerb(kind)}.`,
+  /**
+   * Two facts, the more important first. The same kind of change (dying in
+   * its sleep counts as dying): "Gaze and Wisp just died and went to the
+   * Graveyard." Two kinds: "Gaze just weakened and Wisp went to the Graveyard."
+   */
+  two: (first: { kind: LiveKind; name: string }, second: { kind: LiveKind; name: string }) => {
+    const group = (kind: LiveKind): LiveKind => (kind === "wake" ? "wake" : "die")
+    if (group(first.kind) === group(second.kind)) {
+      return `${first.name} and ${second.name} just ${liveVerb(group(first.kind))}.`
+    }
+    return `${first.name} just ${liveVerbShort(first.kind)} and ${second.name} ${liveVerbShort(second.kind)}.`
+  },
+  /**
+   * Three or more facts, naming the most important one: "3 facts weakened,
+   * Gaze's among them." `weakened` and `died` are counts.
+   */
+  many: (weakened: number, died: number, name: string) => {
+    const facts = (n: number) => (n === 1 ? "1 fact" : `${n} facts`)
+    if (died === 0) return `${facts(weakened)} weakened, ${name}'s among them.`
+    if (weakened === 0) return `${facts(died)} went to the ${graveyard()}, ${name}'s among them.`
+    return `${facts(weakened)} weakened and ${died} went to the ${graveyard()}, ${name}'s among them.`
+  },
+  /** The message's only control. */
+  dismiss: "Dismiss",
+  /** The tab title while the tab was hidden: "(2) Study Dungeon", "(9+) Study Dungeon" (Requirement 23.6). */
+  title: (count: number, base: string) => (count <= 0 ? base : `(${count > 9 ? "9+" : count}) ${base}`),
+} as const
+
+/**
+ * Notifications while the tab is open (task L5, Requirement 24, design
+ * "Notifications While the Tab Is Open", Wording). The notification itself
+ * uses headerText.title and the liveText sentence, so no sentence about a
+ * fact is written here. No guilt words.
+ */
+export const notifyText = {
+  label: "Notify me about changes while this tab is open",
+  unsupported: "This browser cannot show notifications, so this setting is not available here.",
+  on: "On: when a fact changes while this tab is in the background, your browser shows a notification.",
+  denied: "Your browser blocks notifications for this page; to allow them, open the site settings by the address bar.",
+  blocked:
+    "This is on, but your browser is blocking notifications for this page, so none are shown; allow them in the site settings by the address bar, or turn this off.",
+  notSaved: "This choice cannot be saved in this browser, so it lasts until the page is closed.",
+  /** The honest limit (Requirement 24.3). */
+  limit: "There is no server, so nothing can notify you when this tab is closed or the computer is asleep.",
+  /** Privacy (Requirement 24.9). */
+  privacy: "A notification shows only what is already on this page, and nothing is sent anywhere.",
+} as const
+
+/** The first ten seconds (task L6, Requirement 25, design "The First Ten Seconds", Wording). */
+export const firstLookText = {
+  /** The one button while the first look plays. */
+  skip: "Skip the preview",
+  /** Said once, through the live region, when it starts (Requirement 25.9). */
+  announce: "Showing the next 30 days. Nothing is saved.",
 } as const

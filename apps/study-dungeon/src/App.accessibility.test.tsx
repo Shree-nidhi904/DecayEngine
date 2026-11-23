@@ -22,7 +22,8 @@ import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { makeAppKit } from "./test/app-kit"
-import { day } from "./test/fixtures"
+import { T0, day } from "./test/fixtures"
+import { loadSampleData } from "./sample-data"
 import { announced, announcer } from "./test/round7-helpers"
 import { dockToggle, expandDock } from "./test/dock"
 import { landmarkText } from "./wording"
@@ -68,6 +69,65 @@ describe("the hero's loss forecast line (task P4, Req 20.10)", () => {
     expect(line.hasAttribute("role")).toBe(false)
     expect(line.hasAttribute("tabindex")).toBe(false)
     expect(line.querySelector("a, button, input, select, textarea, summary, [tabindex]")).toBeNull()
+  })
+})
+
+describe("the Triage saves line (task P5, Req 21.9)", () => {
+  it("is a plain paragraph: not inside any live region, no role, and not in the Tab order", async () => {
+    // The sample at T0, 20 minutes: all four weak facts are picked and a right answer saves helicase.
+    const kit = makeAppKit()
+    loadSampleData(kit.engine, T0)
+    kit.renderApp(T0)
+    fireEvent.click(screen.getByRole("radio", { name: "20 min" }))
+    fireEvent.click(button("Triage"))
+
+    const line = document.querySelector<HTMLElement>(".shell-triage-note")!
+    expect(line.textContent).toBe("Answering these right saves 1 fact that would die in the next 7 days.")
+    expect(line.tagName).toBe("P")
+    expect(line.closest("[aria-live]")).toBeNull()
+    expect(line.closest("[role='status'], [role='alert']")).toBeNull()
+    expect(line.hasAttribute("role")).toBe(false)
+    expect(line.hasAttribute("tabindex")).toBe(false)
+    expect(line.querySelector("a, button, input, select, textarea, summary, [tabindex]")).toBeNull()
+
+    // Tab goes through the whole page and never lands on the line or inside it,
+    // while it does reach the button just after it.
+    const user = userEvent.setup({ delay: null })
+    const reached = new Set<Element>()
+    for (let i = 0; i < 200; i++) {
+      await user.tab()
+      if (document.activeElement === document.body || reached.has(document.activeElement!)) break
+      reached.add(document.activeElement!)
+    }
+    expect(reached.has(button("Start the session"))).toBe(true)
+    expect([...reached].filter((el) => line === el || line.contains(el))).toEqual([])
+  })
+})
+
+describe("the autopsy's rescue line (task R1, Req 22.7)", () => {
+  it("is the second plain paragraph: not in a live region, no role, not focusable, and Tab never lands on it", async () => {
+    // The dead fact (new, added day 0): weak at 1.474 d, a right review then gives 8.12 days more.
+    setup()
+    fireEvent.click(tab("Graveyard"))
+    open(cardButton("Autopsy"))
+    const dialog = screen.getByRole("dialog", { name: "Autopsy" })
+    const line = dialog.querySelectorAll<HTMLElement>(".shell-autopsy-sentence")[1]!
+    expect(line.tagName).toBe("P")
+    expect(line.textContent).toMatch(/^A review on .+, when it went weak, would have kept it alive until .+, 8 days longer\.$/)
+    expect(line.closest("[aria-live]")).toBeNull()
+    expect(line.closest("[role='status'], [role='alert']")).toBeNull()
+    expect(line.hasAttribute("role")).toBe(false)
+    expect(line.hasAttribute("tabindex")).toBe(false)
+    expect(line.querySelector("a, button, input, select, textarea, summary, [tabindex]")).toBeNull()
+
+    const user = userEvent.setup({ delay: null })
+    const reached = new Set<Element>()
+    for (let i = 0; i < 50; i++) {
+      await user.tab()
+      if (document.activeElement === document.body || reached.has(document.activeElement!)) break
+      reached.add(document.activeElement!)
+    }
+    expect([...reached].filter((el) => line === el || line.contains(el))).toEqual([])
   })
 })
 

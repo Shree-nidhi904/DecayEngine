@@ -1,0 +1,131 @@
+/*
+ * Live state changes (task L3, Requirement 23.2, 23.4, 23.5, 23.8, design
+ * "Live State Changes"). Written by Kiro. A new file: no existing style
+ * file is edited.
+ *
+ * The toast is the first child of the fixed dock (.sd-dock), so it sits
+ * above the dock's bar inside the dock's own box and covers nothing; the
+ * page's bottom room follows the dock's measured height (--dock-h,
+ * world.css). The dock lets clicks through (pointer-events: none), so the
+ * toast takes them back. 8px from the bar below it; above it, the dock's own
+ * top padding. Its width is at most the dock's content box, never a fixed
+ * width, so at 320 and 390px it wraps and the page never scrolls sideways.
+ * No rule hides it at any width.
+ *
+ * All movement is in the one no-preference block at the end: the creature
+ * waking (a weak card), the stone dropping (a dead card) and the toast's
+ * fade. Under reduced motion the App adds no marker class and the toast
+ * stays still.
+ */
+
+.sd-toast {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin-block: 0 8px;
+  margin-inline: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-stone-hi);
+  color: var(--color-bone);
+  box-shadow: 0 6px 0 #000;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+}
+
+.sd-toast-text {
+  flex: 1 1 12em;
+  min-inline-size: 0;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.sd-toast-dismiss {
+  flex: none;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+}
+
+/* Read by screen readers, not shown: the live region's copy of the toast's words. */
+.sd-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A weak card's creature wakes: it jolts up, stretches and settles, once. */
+  .sd-card.sd-just-changed .sd-card-top > :first-child {
+    animation: sd-wake 1.1s ease-out 1;
+  }
+
+  /* A dead card's stone drops a little and settles, once. */
+  .sd-card.sd-grave.sd-just-changed > :first-child {
+    animation: sd-grave-drop 0.9s ease-out 1;
+  }
+
+  /* The toast fades in, stays about six seconds and fades out; its end removes it. */
+  .sd-toast {
+    animation: sd-toast-life 6.5s forwards;
+  }
+
+  @keyframes sd-wake {
+    0% {
+      transform: translateY(0) scale(1);
+    }
+    25% {
+      transform: translateY(-10px) scale(1.08, 0.94);
+    }
+    50% {
+      transform: translateY(-4px) scale(0.96, 1.06);
+    }
+    75% {
+      transform: translateY(-2px) scale(1.02);
+    }
+    100% {
+      transform: none;
+    }
+  }
+
+  @keyframes sd-grave-drop {
+    0% {
+      transform: translateY(-12px);
+      opacity: 0.6;
+    }
+    70% {
+      transform: translateY(2px);
+      opacity: 1;
+    }
+    100% {
+      transform: none;
+    }
+  }
+
+  @keyframes sd-toast-life {
+    0% {
+      opacity: 0;
+    }
+    5% {
+      opacity: 1;
+    }
+    92% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}

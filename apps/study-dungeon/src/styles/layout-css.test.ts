@@ -208,6 +208,70 @@ describe("the compact time dock (task 21, Req 19.1-19.3, 19.7, 19.8, 19.13)", ()
   })
 })
 
+describe("the Triage saves line (task P5, Req 21.9, 21.10)", () => {
+  // jsdom applies no CSS, so the spacing and visibility are checked in the
+  // source; the measured gaps at 1280 and 390px are the browser check (task 23.5).
+  const files = [
+    "./global.css",
+    "./app.css",
+    "./dialogs.css",
+    "./lists.css",
+    "./hero.css",
+    "./problem.css",
+    "./tour.css",
+    "./layout.css",
+    "./animations.css",
+    "./world.css",
+    "./dock.css",
+    "./fx.css",
+    "../../../../packages/shell/src/shell.css",
+  ]
+  const everyRule = files.flatMap((file) => {
+    const parsed = parse(read(file))
+    return [...parsed.top, ...parsed.blocks.flatMap((b) => b.rules)].map((rule) => ({ file, rule }))
+  })
+  const dock = parse(read("./dock.css"))
+
+  it("keeps gap: 12px on the panel, so the line has 12px above and below", () => {
+    expect(declarationsFor(dock.top, ".sd-world .shell-triage").gap).toBe("12px")
+    // No other app rule changes the panel's gap.
+    const gaps = everyRule
+      .filter(({ rule }) => rule.declarations.gap !== undefined && rule.selectors.some((s) => /\.shell-triage$/.test(s)))
+      .map(({ file, rule }) => `${file} ${rule.selectors.join(", ")} { gap: ${rule.declarations.gap} }`)
+    expect(gaps.sort()).toEqual([
+      "../../../../packages/shell/src/shell.css .shell-triage { gap: 0.75rem }",
+      "./dock.css .sd-world .shell-triage { gap: 12px }",
+    ])
+  })
+
+  it("styles the line in --color-bone-dim and body type, with no margin and no media query", () => {
+    expect(declarationsFor(dock.top, ".sd-world .shell-triage-note")).toEqual({
+      color: "var(--color-bone-dim)",
+      "font-family": "var(--font-body)",
+      "font-size": "17px",
+      "line-height": "1.5",
+    })
+    const inMedia = dock.blocks.flatMap((b) => b.rules).filter((r) => r.selectors.some((s) => s.includes("shell-triage-note")))
+    expect(inMedia).toEqual([])
+  })
+
+  it("no rule at any width hides the line or pulls it in with a negative margin", () => {
+    const noteRules = everyRule.filter(({ rule }) => rule.selectors.some((s) => s.includes("shell-triage-note")))
+    // The check finds the shell's rule and the app's rule, so it cannot pass by reading nothing.
+    expect(noteRules.map(({ file }) => file).sort()).toEqual(["../../../../packages/shell/src/shell.css", "./dock.css"])
+    const bad: string[] = []
+    for (const { file, rule } of noteRules) {
+      const d = rule.declarations
+      if (d.display === "none") bad.push(`${file}: display none`)
+      if (d.visibility === "hidden") bad.push(`${file}: visibility hidden`)
+      for (const [name, value] of Object.entries(d)) {
+        if (/^margin/.test(name) && /-\d|-\./.test(value)) bad.push(`${file}: ${name} ${value}`)
+      }
+    }
+    expect(bad).toEqual([])
+  })
+})
+
 describe("nothing is wider than a 320px screen", () => {
   // At 320px the page content box is 320 − 2 × 0.75rem (12px) = 296px. Every
   // fixed width, minimum width, flex basis or grid column minimum that applies
