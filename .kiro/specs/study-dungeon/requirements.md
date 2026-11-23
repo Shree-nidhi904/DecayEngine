@@ -322,3 +322,102 @@ Terms: `now` is the time the Triage panel runs at (the App's `now`, the one `run
 12. THE change SHALL not touch `packages/engine/`, SHALL store nothing and SHALL make no network request. It SHALL not edit any file that `authorship.md` lists as written by Claude Code (`policy.ts`, `timeline.ts`, `sample-data.ts` and `contrast.test.ts` are used unchanged).
 13. A property test SHALL prove that every counted pick, after a right answer at `now` through the real engine, is not dead at any time in the next 7 days, and that every at-risk pick not counted is dead at `now + 7 days` even after a right answer.
 
+### Requirement 22: Rescue Point (task R1)
+
+**User Story:** As a learner looking at a grave, I want one line in the autopsy that says how much longer the fact would have lived if I had reviewed it right when it first went weak, so that I see what one review at the right moment was worth.
+
+R1 depends on `@decay-engine/insight` (task E1, `.kiro/specs/insight/`). It uses only Insight's public API: `whatIf(policy, item, history, { at, event }, options?)` and `DEATH_TIME_PRECISION_MS`.
+
+Terms:
+
+- The **report** is `engine.autopsy(id, now)` for the dead fact, at the dialog's `now` (the App's `now`, the previewed time while previewing).
+- **The good event** is `RESCUE_EVENT = { kind: "review", correct: true }`, a right review.
+- **The what-if** is `whatIf(studyDungeonPolicy, fact, engine.history(id), { at: report.wentWeakAt, event: RESCUE_EVENT })`, where `fact` is the dead fact from `engine.view(now)`.
+- **P** is `DEATH_TIME_PRECISION_MS` (60,000 ms), imported from Insight.
+- **The extra days** are `N = floor((diesAt − baselineDiesAt + P) / DAY_MS)`, from the what-if result (amended by the developer's decision, Session 67: P is added, not taken off).
+- **The end date** is the calendar date of `diesAt` itself in the viewer's time zone (amended, Session 67).
+
+#### Acceptance Criteria
+
+1. WHEN the autopsy dialog of a dead fact opens and the rescue point exists (22.3), THE dialog SHALL show one sentence: "A review on <date of at>, when it went weak, would have kept it alive until <end date>, <N> days longer." For N = 1 it SHALL say "1 day longer". (Amended, Session 67: no "first".) The template SHALL live in `wording.ts` (`rescueText.sentence`), and `theme.test.ts` SHALL check its exact words.
+2. THE good event SHALL be a right review. A right review is the only event that restores health (100) and doubles the half-life; a wrong review sets health to 45 and halves it, so it can never be a rescue.
+3. THE sentence SHALL not be shown, and nothing SHALL take its place, WHEN any of these holds: `report.wentWeakAt` is `null`; the what-if returns `ok: false`; its `stoppedAt` is not `null`; its `diesAt` or `baselineDiesAt` is `null`; `baselineDiesAt` differs from `report.diedAt` by more than P (the replay does not reproduce the real death); or N is less than 1 (the what-if death is not at least one whole day later after the precision is taken off).
+4. THE date of `at`, the end date and N SHALL come only from the what-if result (`at`, `diesAt`, `baselineDiesAt`) and P. No policy formula SHALL be written in the new code, and no second death time SHALL be worked out.
+5. THE precision rule (amended, Session 67): N adds P to the difference, and the end date is the date of `diesAt`. Both come only from the what-if result.
+6. DATES SHALL be formatted as the cause sentences of `autopsy-sentences.ts` format them: day, short month and year ("14 Nov 2026", locale `en-GB` by default), in the given time zone, the viewer's own when none is given (amended, Session 67). The options are copied into `rescue-sentence.ts`, because that file's formatter is not exported, and a test SHALL check that both give the same text for the same time.
+7. THE sentence SHALL be the second entry of the dialog's cause sentences, straight after the cause sentence from `autopsy-sentences.ts`, so the shell renders it as a plain `<p class="shell-autopsy-sentence">` in the cause section. It SHALL not be in a live region, SHALL not be focusable and SHALL add no colour or animation.
+8. FOR a resurrected fact, THE sentence SHALL describe the current life only (the life in the report). A dead fact has no later resurrection, so the what-if's life cut never applies to it; WHEN `stoppedAt` is not `null` anyway, 22.3 applies.
+9. WHILE previewing, THE sentence SHALL follow the same rules at the previewed `now`. It is read-only: it stores nothing, and "Challenge" stays disabled with its reason, as today.
+10. THE new code SHALL never read the clock. Time reaches it only through the report (`wentWeakAt`, `diedAt`) and the what-if result.
+11. THE sentence SHALL be built in a new file `apps/study-dungeon/src/rescue-sentence.ts`, written by Kiro. `autopsy-sentences.ts` and `policy.ts` (Claude Code's files, `authorship.md`) SHALL not be edited. `packages/engine/`, `packages/shell/` and `packages/insight/` SHALL not change.
+12. `apps/study-dungeon/package.json` SHALL list `"@decay-engine/insight": "workspace:*"` in `dependencies`. `netlify.toml` SHALL not change: Netlify's base is the app folder and pnpm installs the whole workspace, so Insight is built from source with the app, as the shell is. The `pnpm-lock.yaml` written by `pnpm install` SHALL be committed with it.
+13. Property tests SHALL prove, through the real engine and the real policy: the what-if death is never earlier than the real death by more than P; it is more than one day later WHEN no recorded tend follows `wentWeakAt` in the fact's life; the sentence's N equals `floor((diesAt − baselineDiesAt + P) / DAY_MS)` of the same what-if (amended, Session 67); and no sentence is shown WHEN `wentWeakAt` is `null`.
+
+### Requirement 23: Live State Changes (task L3)
+
+**User Story:** As a learner with the tab open, I want to see when a fact weakens or dies on its own, so that I notice the moment a creature wakes in the Dungeon or a grave appears in the Graveyard.
+
+Terms: a **tick** is one settle tick of `useSettleTicks` (on load, then every minute while not previewing). A **reported change** is a fact whose state went `alive → weak`, `weak → dead` or `alive → dead` between two ticks. A fact's **name** in the message is its creature's name (`creatureOf(id).name`, for example "Gaze"), the name its card shows. Ghosted has the same feature in its own words (Ghosted Requirement 38).
+
+#### Acceptance Criteria
+
+1. A NEW pure function `diffStates(before, after)` in a new file `src/state-changes.ts` SHALL return one `{ id, from, to }` for each item present in both lists whose state differs, in the order of `after`. It SHALL read only ids and states, read no clock, call no engine and repeat no policy formula. Items present in only one list SHALL not be changes. It SHALL change neither input. Its logic SHALL be the same as Ghosted's `state-changes.ts`, with no import between the apps.
+2. WHEN a tick finds reported changes, THE card of each changed fact SHALL react once: the creature wakes on a Dungeon card (alive → weak), and the tombstone drops into place on a Graveyard card (→ dead), by a CSS animation inside `@media (prefers-reduced-motion: no-preference)` only. The card SHALL carry the marker class `sd-just-changed` only until that animation ends, and the class SHALL then be removed. WHILE the user prefers reduced motion, THE class SHALL not be added.
+3. WHEN a tick finds reported changes, THE App SHALL show ONE message (a toast) for the whole tick, with the sentences in design "Live State Changes", Wording: one fact, two facts (the more important first), and three or more (counted, naming the most important one). Its words SHALL come from `wording.ts` (`liveText`), SHALL use the app's own words ("just weakened" when a creature wakes, "went to the Graveyard" for a death, "facts" when counted, as in "Gaze just weakened." and "3 facts weakened, Gaze's among them."; amended by the developer, Session 69) and SHALL be checked exactly by `theme.test.ts`.
+4. THE toast SHALL never cover the time dock (`--dock-h`), the Triage panel or other content; SHALL stay a few seconds (about 6) with motion, and until Dismiss or the next tick without motion; SHALL have one quiet Dismiss button; and SHALL never take focus.
+5. THE toast's words SHALL be said once through the App's existing polite live region (`#sd-announcer`, `announce`). No second live region SHALL be added: the toast has no `aria-live` and no `role`. Its only element in the Tab order SHALL be Dismiss. WHEN a tick's storage problem or the clock notice was said in the same tick, THE live region SHALL keep that message, and the toast SHALL be shown without being said. WHEN focus is inside the toast as it goes, focus SHALL move to `<main>` (the App's existing focus target after the tour).
+6. WHILE the tab is hidden (`document.visibilityState` is `"hidden"`), each reported change SHALL add one to a count, and THE tab title SHALL be `(<n>) Study Dungeon`, with `(9+)` above 9. WHEN `visibilitychange` makes the tab visible, THE count SHALL be 0 and THE original title SHALL be restored exactly. WHILE the tab is visible nothing SHALL be counted.
+7. WHILE the count is above 0, THE favicon SHALL carry a badge from an SVG data URL (no network request), with a shape as well as a colour (`design-tokens.md`): a `--pumpkin` triangle when facts only weakened, a `--blood` cross when any died. The tab title SHALL be its text alternative, and the link's `title` SHALL hold the same words. At 0 the page's favicon SHALL be restored exactly (Study Dungeon's `index.html` has no favicon link, so the added link is removed).
+8. AT 320 px and 390 px the toast SHALL fit, cause no horizontal scroll, keep at least 8 px from everything around it, and SHALL never be hidden at any width.
+9. THE change detection SHALL run only on a tick and only when not previewing. It SHALL never report on the first tick at mount, on the first tick after "Back to today", or for a change caused by the user's own write (add, edit, fight, challenge, remove, import, sample load: the baseline is read again after every write).
+10. THE App SHALL rely on `clock-guard.ts` (`heldClock`) for the tick time: it never runs behind the newest saved event, so `engine.tick` never throws `TIME_WENT_BACKWARD`, every tick reaches the handler and the before and after views are never out of order with the saved history. `clock-guard.ts` (Claude Code's) SHALL not be edited.
+11. THE change SHALL not touch `packages/` (engine, shell, insight), `policy.ts`, `autopsy-sentences.ts`, `clock-guard.ts`, `creatures.ts` or `animations.css`, SHALL store nothing and SHALL make no network request.
+12. A property test SHALL prove that, for any two lists of ids and states, `diffStates` returns exactly the items present in both whose state differs, once each, in the order of the second list, and that a list compared with itself gives no change. Its generator SHALL reach all three states and all six transitions (fixed-seed coverage check).
+
+### Requirement 24: Notifications While the Tab Is Open (task L5)
+
+**User Story:** As a learner with the dungeon open in a background tab, I want an opt-in browser notification when a fact weakens or dies, so that I notice it without watching the tab, and I want the app to tell me plainly that it cannot reach me when the tab is closed.
+
+L5 starts after the L3 build is checked. It is one more consumer of L3's tick result (Requirement 23): the same `diffStates` and `liveNotice`, so a change that is notified is the same change that is toasted, in the same words. Ghosted has the same feature in its own words (Ghosted Requirement 39).
+
+Terms: **the setting** is stored under `study-dungeon:notify` (`"on"` or `"off"`) in the App's `storage`, like the sound setting (`study-dungeon:sound`); missing, unreadable or any other value means off. **The permission** is `Notification.permission`. **Supported** means the browser has a `Notification` API.
+
+#### Acceptance Criteria
+
+1. THE setting SHALL be off by default. It SHALL sit in the settings row with "Answer by" and the sound switch (inside `ResetData`, after the sound switch), labelled "Notify me about changes while this tab is open", as a native checkbox with `role="switch"` and a `<label>`, as the sound switch is. It SHALL be in the Tab order and never disabled.
+2. THE permission request SHALL happen only inside the change that turns the setting on, and only WHEN the permission is `"default"`. It SHALL never happen at load, on a tick, when turning the setting off, or WHEN the permission is already `"granted"` or `"denied"`. A second change while a request is pending SHALL not start a second request.
+3. THE setting SHALL show exactly these states and sentences (design "Notifications While the Tab Is Open", Wording): **unsupported** (no switch; one sentence); **off**; **on** (one sentence on what happens); **denied** (off, permission `"denied"`: one sentence on how to allow it in the browser; the switch never asks again and the change only says that sentence once more through the live region); **blocked** (on, permission not `"granted"`: one sentence, and the switch turns it off). WHEN supported, THE setting SHALL always show the honest limit, "There is no server, so nothing can notify you when this tab is closed or the computer is asleep.", and the privacy sentence, "A notification shows only what is already on this page, and nothing is sent anywhere."
+4. THE setting SHALL survive a reload. WHEN reading it throws, it SHALL be off. WHEN saving it throws, THE switch SHALL still work until the page is closed, and one sentence SHALL say the choice cannot be saved.
+5. A notification SHALL be shown only WHEN all of these hold, decided by one pure function `shouldNotify` (`src/notify.ts`): the setting is on; the permission is `"granted"`; `document.visibilityState` is `"hidden"`; the tick is not in a preview; it is not the first tick at mount (nor the first after "Back to today"); and the tick has a notice. WHEN the tab is visible, only the toast SHALL show.
+6. EACH tick SHALL show at most one notification: title "Study Dungeon" (`headerText.title`), body the notice's `text` (the toast's words), tag `study-dungeon-live`, `silent: true`, no `vibrate`, and the tab signal's data-URL icon (`badgeIcon(notice.worst)`).
+7. WHEN the user clicks a notification, THE app SHALL call `window.focus()` and close it, and SHALL change no data.
+8. THE words SHALL come from `wording.ts` (`notifyText`), SHALL contain no guilt words ("you forgot", "overdue", "late"), and SHALL be checked exactly by `theme.test.ts`.
+9. THE feature SHALL make no network request and SHALL add no live region (the denied sentence after a change goes through `#sd-announcer`). Nothing SHALL take focus.
+10. WHERE the `Notification` constructor throws, THE tick SHALL carry on; the toast and the tab signal are unaffected.
+11. AT 320 px and 390 px the setting SHALL fit with no horizontal scroll and at least 8 px from its neighbours; no rule SHALL hide it at any width.
+12. THE setting is a preference: it SHALL work while previewing, as the sound switch does, and "Reset all data" SHALL treat it as it treats the sound setting.
+13. THE change SHALL not touch `packages/`, `policy.ts`, `autopsy-sentences.ts`, `clock-guard.ts`, `sound.ts` or the other files `authorship.md` lists as Claude Code's.
+
+### Requirement 25: The First Ten Seconds (task L6)
+
+**User Story:** As a first-time visitor, I want to watch the dungeon age by itself right after I load the sample facts, so that I understand what Study Dungeon does within ten seconds, without reading anything.
+
+L6 starts after the L5 build is checked. Ghosted has the same feature in its own words (Ghosted Requirement 40).
+
+Terms: **the first look** is one run of the existing preview, from today to +30 days and back, driven by the App, with nothing saved. **The flag** is `study-dungeon:first-look` (`"1"`) in the App's `storage`, beside the first-run and tour flags; it is not in `RESET_KEYS`. **The plan** is the pure function that gives the offset for each moment (design "The First Ten Seconds").
+
+#### Acceptance Criteria
+
+1. WHEN "Load sample data" saves the 12 sample facts AND the flag is not set, THE first look SHALL be due. It SHALL not be due on a page load with facts, after "Back to today", after "Start empty", an add, an import or a restore, or WHEN the flag is set.
+2. A due first look SHALL start only WHEN the tour is finished or skipped (or not shown), no dialog is open and the App is not previewing. WHEN it starts, THE flag SHALL be set first, so a reload never plays it again. WHEN the flag cannot be read, THE first look SHALL be treated as seen; WHEN it cannot be saved, THE first look SHALL not play. Either way the app SHALL keep working.
+3. WHILE the user prefers reduced motion, THE first look SHALL not play at all, and the flag SHALL still be set at the moment it would have started.
+4. THE plan SHALL move the offset from 0 to exactly +30 days in the first 4 000 ms with an ease-in-out (cubic) curve, rounded to whole hours, hold at +30 days until 5 000 ms, and then return to 0 at once. The whole first look SHALL last 5 000 ms (`TIME_MACHINE_PLAY_MS`).
+5. THE first look SHALL move the offset step by step on the dock's own Play (the shell `TimeMachine`'s frames, `frameScheduler` and `frameClock` in tests), with no new timer or `requestAnimationFrame` in `src/`. Every write SHALL stay blocked while it plays, so it saves nothing; the engine's save count SHALL not change.
+6. WHILE it plays, THE existing preview banner ("Preview, nothing is saved", with "Back to today") SHALL show at the top of the page, and the room SHALL age as it does for the slider.
+7. WHILE it plays, THE dock SHALL show one quiet button, "Skip the preview": a native `<button>` in the Tab order, named by its text, at least 44 × 44 px, with a visible focus outline. It SHALL sit at the top of the dock's own box (where the live-change toast sits), so it covers neither the dock's controls nor the hero, and it SHALL fit at 320 and 390 px wide with at least 8 px from its neighbours and no horizontal scroll. It SHALL disappear WHEN the first look ends.
+8. Skip, Escape, "Back to today", any user change of the slider, a jump, a marker, Play, or a dialog opening SHALL stop the first look at once and return the offset to 0. The touch that stops it SHALL not move the offset itself. WHEN focus was on Skip, it SHALL go to `<main>` (the focus target after the tour).
+9. WHEN it starts, THE App SHALL say once, through the existing polite live region (`#sd-announcer`), "Showing the next 30 days. Nothing is saved." It SHALL say nothing else while it plays, add no live region, and move no focus.
+10. THE words SHALL come from `wording.ts` (`firstLookText`).
+11. THE first look SHALL be off unless the App is given `firstLook` (main.tsx gives it), so existing tests that load the sample see no change.
+12. THE change SHALL not touch `packages/`, `policy.ts`, `autopsy-sentences.ts`, `clock-guard.ts`, `sample-data.ts` or the other files `authorship.md` lists as Claude Code's, except the optional `firstLook` prop of `TimeDock.tsx`; it SHALL make no network request and leave every existing test unchanged.
+

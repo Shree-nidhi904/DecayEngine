@@ -463,11 +463,124 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - The tests in the design 13.8 "Changed existing tests" table: `GhostedTriage.test.tsx`, `App.test.tsx` (budget field and the `version` case), `App.preview.test.tsx`, `App.accessibility.test.tsx` (no `aria-live`, not in the Tab order), `layout-css.test.ts`. Change tests to match; never loosen an assertion, skip a test or change an expected value to make it pass (`no-fake-tests.md`)
     - _Requirements: 36.1, 36.6, 36.7, 36.8, 36.9, 36.10_
     - **Status (Session 59):** 10.1 to 10.5 written with file reads and edits only; nothing was run (no tests, typecheck or check scripts), so 10.6 runs them first. The search was done with the workspace search tool (the same pattern over `apps/ghosted/src` and `packages/shell/src` test files), not a shell `grep`. No matching test compares the whole Triage panel's text, so no existing assertion was changed; only new cases were added (and `DAY_MS` to one import). The coverage thresholds of the property test (5% each) were not measured: if one fails, change the generator mix, never the threshold or `numRuns`
-  - [ ] 10.6 Check
+  - [x] 10.6 Check
     - `bash scripts/check.sh` passes (at least engine 701, shell 152, Study Dungeon 542, Ghosted 753, plus the new tests); `scripts/check-engine-unchanged.sh` passes with the new shell test file
     - A browser look at 1280×800 and 390×844 on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server, with the sample street and the moon clock at +15 days: at 30 minutes the line reads the 13.7 sentence under the picks; at 15 minutes there is none. Measure the gap from the last pick's bottom to the line and from the line to "Start reaching out" (at least 8 px each), and check the line is fully visible and not clipped at both widths. Today, with no preview, there is no line at any budget (13.7)
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 36.10, 36.11, 36.12, 29.4_
+
+- [ ] 11. Group K: Rescue Point in the autopsy (task R1, design section 14)
+  - R1 starts only after the insight build (E1) is checked: insight task 11 (install, typecheck, tests, `scripts/check.sh`, `scripts/check-engine-unchanged.sh`) passes and is ticked in `.kiro/specs/insight/tasks.md`.
+  - [x] 11.1 The dependency
+    - `package.json`: `"@decay-engine/insight": "workspace:*"` in `dependencies`. The line was added in the spec session (Session 65); the developer runs `pnpm install` in WSL and commits `pnpm-lock.yaml` with it (Netlify installs with a frozen lockfile)
+    - No `netlify.toml` change (design 14.1)
+    - _Requirements: 37.13_
+  - [x] 11.2 The module
+    - New `src/rescue-sentence.ts` exactly as design 14.3: `RESCUE_EVENT` (a call), `RescuePoint`, `RescueSentenceOptions`, `rescuePoint` with its seven rules in order, `rescueSentence`, `generateRescueSentence`, `withRescue`
+    - Only `whatIf` and `DEATH_TIME_PRECISION_MS` from `@decay-engine/insight`, `DAY_MS` from `time.ts`; no policy formula, no second time; no clock reads; no "die", "dead", "late", "later" or "should" in its words
+    - Do not edit `autopsy-sentences.ts` (Claude Code's) or `policy.ts`. If the module seems to need a change there, stop and report it
+    - _Requirements: 37.1, 37.2, 37.3, 37.4, 37.5, 37.6, 37.7, 37.9, 37.11, 37.12_
+  - [x] 11.3 Unit tests
+    - New `src/rescue-sentence.test.ts`: every row of the table in design 14.10 (exact words, singular, the year boundary, a 1-day rhythm, Ines, texts after the flicker, lit again, started dark, added flickering, the two rhythm-edit cases, `whatIf` failing, the replay guard at P + 1 and at exactly P, a preview darkening, order, no clock, the sample)
+    - If an expected value fails, stop and report it; never change it to match
+    - _Requirements: 37.1, 37.3, 37.5, 37.6, 37.8, 37.9, 37.10, 37.11_
+  - [x] 11.4 Property 16
+    - New `src/rescue-sentence.property.test.ts`, `{ numRuns: 100 }`, with `deadPerson()` from `test/generators.ts` (unchanged), plus its fixed-seed coverage check (30% with a line, 5% with a text after `wentWeakAt`, 5% lit again, 5% with no `wentWeakAt`). Never lower `numRuns` or a threshold
+    - _Requirements: 37.7, 37.14_
+  - [x] 11.5 The autopsy shows the line
+    - `components/PersonAutopsy.tsx`: in the existing `useMemo`, `generateRescueSentence(person, history, report, { timeZone })` and `withRescue(causes, rescue)` passed as `causeSentences`. `App.tsx` and `packages/shell/` do not change; `scripts/check-engine-unchanged.sh` is not edited
+    - First run `grep -rn "shell-autopsy-sentence\|generateCauseSentences\|causeSentences" apps/ghosted/src --include=*.test.*`, or ask the developer to run it, and read every match
+    - Update the tests in the design 14.10 "Changed existing tests" table (`PersonAutopsy.test.tsx`; the new `describe` in `wording.test.ts` over the sample's rescue sentences, with `BANNED` unchanged; `App.accessibility.test.tsx`). Change tests to match; never loosen an assertion, skip a test or change an expected value to make it pass (`no-fake-tests.md`)
+    - _Requirements: 37.1, 37.7, 37.8, 37.10, 37.11_
+    - **Status (Session 66):** 11.1 to 11.5 written with file reads and edits only; nothing was run, so 11.6 runs the suite first. Built with the developer's decisions (design 14, "Decisions after the spec"): N adds P, the end date is `diesAt`, "started to flicker", dates with the year from the cause sentences' formatter options, the template in `wording.ts`. So the year-boundary rows of 14.10 were not written. The `grep` was **not** done (no shell and no search tool in this session). Test files read: `components/PersonAutopsy.test.tsx`, `wording.test.ts`, `App.accessibility.test.tsx`, `config.test.ts`, `app-boundary.test.ts`, `test/fixtures.ts`, `test/generators.ts`, `test/source-files.ts`. Not tested, because `ghostedPolicy` cannot produce them: a `null` death time and N < 1 (the gain is always 1.2 × rhythm ≥ 1.2 days); the rules are in the code
+  - [x] 11.6 Check
+    - `bash scripts/check.sh` passes (the Session 63 counts plus the new tests); `scripts/check-engine-unchanged.sh` passes with its allow-list unchanged
+    - A browser look at 1280×800 and 390×844, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server, with the sample street: open Ayesha Khan's autopsy from Empty windows. The rescue line is the second paragraph, right after the cause, with N = 16, fully visible and not clipped at both widths, in the same type and colour as the other sentences; focus opens on the title; Tomas Novak's autopsy has no rescue line; the page text has no "die" or "dead"
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 37.1, 37.3, 37.7, 37.8, 37.13_
+
+- [ ] 12. Group L: Live state changes (task L3, design section 15)
+  - L3 starts after the R1 build is checked.
+  - [x] 12.1 The pure diff
+    - New `src/state-changes.ts`: `LifeState`, `StateOf`, `StateChange`, `snapshotStates`, `diffStates` exactly as design 15.2 (the same logic as Study Dungeon's file, no import between apps)
+    - New `src/state-changes.test.ts` (every transition, no change, several items, ordering, added and removed items, inputs unchanged) and `src/state-changes.property.test.ts` (Property 17, `{ numRuns: 200 }`, with its fixed-seed coverage check)
+    - _Requirements: 38.1_
+  - [x] 12.2 The sentences
+    - `wording.ts`: `liveText` (`one`, `two`, `many`, `dismiss`, `title`) with the sentences of design 15.4
+    - New `src/live-changes.ts`: `liveKind`, `liveNotice` with the order of design 15.3
+    - New `src/live-changes.test.ts`: every sentence exactly, the order, the dropped kinds, `worst`, no "die" or "dead"
+    - `wording.test.ts`: `SAMPLE_CALLS` for the four functions and a new `describe` (exact words, no "die", "dead" or blame). `BANNED` unchanged
+    - _Requirements: 38.3_
+  - [x] 12.3 Tab title and favicon
+    - New `src/tab-signal.ts`: `badgeIcon`, `titleWithCount`, `useTabSignal` (design 15.6)
+    - New `src/tab-signal.test.tsx`: the title for 0, 1, 2, 9, 10 and more; the data URL; triangle and cross; counting only while hidden; reset on `visibilitychange`; restore on unmount
+    - _Requirements: 38.6, 38.7_
+  - [x] 12.4 The toast, the card reaction and the App
+    - New `components/LiveToast.tsx` and `styles/toast.css`; `MoonDock.tsx`: the optional `notice` prop, first in `.gh-dock`
+    - `PersonCard.tsx` and `ThreeLists.tsx`: the optional `justChanged` and `onReacted` props; `motion.css`: `gh-flicker-out` and `gh-toast-life` inside the block
+    - `App.tsx`: the baseline, the effects on `previewing` and `version`, the tick handler of design 15.1, the toast flag on the announcement, the props above. `clock-guard.ts` is not edited
+    - _Requirements: 38.2, 38.4, 38.5, 38.8, 38.9, 38.10, 38.11_
+  - [x] 12.5 App tests
+    - New `src/App.live.test.tsx` and `src/live-css.test.ts` (design 15.8)
+    - Existing tests that read the live region were read first (design 15.8); none needed a change. No assertion loosened, no test skipped, no expected value changed
+    - _Requirements: 38.1-38.9_
+    - **Status (Session 69):** 12.1 to 12.5 written with file reads and edits only; nothing was run, so 12.6 runs the suite first. No shell and no search tool were used: the test files read are listed in design 15.8 and in the session log
+  - [x] 12.6 Check
+    - `bash scripts/check.sh` passes (the Session 63 counts plus the R1 and L3 tests); `scripts/check-engine-unchanged.sh` passes with its allow-list unchanged
+    - A browser look at 1280×800, 390×844 and 320×640, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server: with a person a minute before the flicker (or the device clock moved), the toast appears at the top of the dock, wraps at 390 and 320 with no sideways scroll and at least 8 px around it, covers nothing, and Dismiss works with the keyboard; the card's window flickers out once; with reduced motion nothing moves; with the tab hidden the title reads "(1) Ghosted" and the favicon shows the triangle, and both come back when the tab is shown
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 38.4, 38.6, 38.7, 38.8_
+
+- [ ] 13. Group M: Notifications while the tab is open (task L5, design section 16)
+  - L5 starts after the L3 build is checked.
+  - [x] 13.1 The pure decision and the browser helpers
+    - New `src/notify.ts` exactly as design 16.2: `shouldNotify`, `notifySettingState`, `notificationFor` (text from `LiveNotice`, icon from `badgeIcon`), `showNotification`, `readNotifyEnabled`, `saveNotifyEnabled`, `browserNotificationApi`, `NOTIFY_SETTING_KEY`, `NOTIFY_TAG`. No new change detection, no sentence written out
+    - New `src/notify.test.ts` (design 16.5), with a fake Notification class and a fake permission
+    - _Requirements: 39.2, 39.4, 39.5, 39.6, 39.7, 39.10_
+  - [x] 13.2 The words
+    - `wording.ts`: `notifyText` with the sentences of design 16.4
+    - `wording.test.ts`: a new `describe` with the exact words, no "die"/"dead", no guilt words. `BANNED` and `SAMPLE_CALLS` unchanged
+    - _Requirements: 39.3, 39.8_
+  - [x] 13.3 The setting
+    - New `components/NotifySetting.tsx` and `styles/notify.css` (design 16.3); new `components/NotifySetting.test.tsx` and `notify-css.test.ts`
+    - _Requirements: 39.1, 39.2, 39.3, 39.4, 39.9, 39.11_
+  - [x] 13.4 The App
+    - `App.tsx`: the optional `notifications` and `focusWindow` props; `notifyOn`, its ref and `notifySaved`; the `shouldNotify` call in `handleTick` (design 16.1); the setting after the toolbar. `clock-guard.ts` and the Claude Code blocks are not edited
+    - _Requirements: 39.5, 39.6, 39.7, 39.9, 39.12, 39.13_
+  - [x] 13.5 App tests
+    - New `src/App.notify.test.tsx` (design 16.5). The existing tests listed in design 16.5 were read first; none needs a change. No assertion loosened, no test skipped, no expected value changed
+    - _Requirements: 39.1-39.10_
+    - **Status (Session 70):** 13.1 to 13.5 written with file reads and edits only; nothing was run (no tests, typecheck or build), so 13.6 runs the suite first. New test helper `test/fake-notification.ts`. No search tool was used: the test files read and not read are listed in design 16.5 and in the log
+  - [x] 13.6 Check
+    - `bash scripts/check.sh` passes (the L3 counts plus the L5 tests); `scripts/check-engine-unchanged.sh` passes with its allow-list unchanged
+    - A browser look at 1280×800, 390×844 and 320×640, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server: the setting under the toolbar fits with no sideways scroll and at least 8 px around it. With the permission **granted**: turn it on (the browser asks once, only on the click), hide the tab, move a person past a threshold (or the device clock): one notification "Ghosted" with the toast's sentence; a second change replaces it; clicking it brings the tab forward. With the permission **denied**: the denied sentence shows, a click does not ask again, no notification appears
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 39.1, 39.3, 39.6, 39.7, 39.11_
+
+- [ ] 14. Group N: The first ten seconds (task L6, design section 17)
+  - L6 starts after the L5 build is checked.
+  - [x] 14.1 The plan and the flag
+    - New `src/first-look.ts` exactly as design 17.2; new `src/first-look.test.ts` (design 17.6)
+    - _Requirements: 40.1, 40.2, 40.4_
+  - [x] 14.2 The words
+    - `wording.ts`: `firstLookText` (`skip`, `announce`) with the words of design 17.5
+    - _Requirements: 40.7, 40.9, 40.10_
+  - [x] 14.3 The dock
+    - New `src/first-look-dock.ts` (`useFirstLookDock`, design 17.3); `components/MoonDock.tsx`: the optional `firstLook` prop, `change` for the `TimeMachine` and the markers, the handlers on the root, `interrupt` before "Back to today"
+    - New `components/FirstLookSkip.tsx` and `styles/first-look.css`
+    - _Requirements: 40.5, 40.7, 40.8_
+  - [x] 14.4 The App
+    - `App.tsx`: the optional `firstLook` prop, the phase, the start effect, Escape, the end, Skip in the dock's `notice` slot; `main.tsx` passes `firstLook` through `Root`'s `appProps`. `clock-guard.ts` and the Claude Code CSS blocks are not edited
+    - _Requirements: 40.1, 40.2, 40.3, 40.6, 40.8, 40.9, 40.11_
+  - [x] 14.5 App tests
+    - New `src/App.first-look.test.tsx` and `src/first-look-css.test.ts` (design 17.6). Existing tests read first are listed in design 17.6; none is changed
+    - _Requirements: 40.1-40.11_
+    - **Status (Session 73):** 14.1 to 14.5 written with file reads and edits only; nothing was run, so 14.6 runs the suite first. The "waits for an open dialog" case closes the Import dialog with its Cancel or Close button, found by text (the dialog was not read)
+  - [ ] 14.6 Check
+    - `bash scripts/check.sh` passes (the L5 counts plus the L6 tests); `scripts/check-engine-unchanged.sh` passes with its allow-list unchanged
+    - A browser look at 1280×800, 390×844 and 320×640, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server, in a fresh browser profile: after "Walk in" and "Load sample street" the street ages to +30 days and comes back once, with the banner and "Skip the preview" at the top of the dock (no sideways scroll, at least 8 px around it, covering nothing); Skip and Escape stop it; with reduced motion on it does not play; a reload does not replay it
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 40.3, 40.4, 40.7_
 
 ## Notes
 

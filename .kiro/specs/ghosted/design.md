@@ -2088,6 +2088,483 @@ Not read in full: every file above except the matching lines, and `TriagePanel.t
 4. **Shown while previewing.** *Proposed:* the line follows the picks, which follow the previewed `now`, so it shows in a preview too. On the sample street it is the only way to see it, since nothing goes dark within 7 days today. The banner's "nothing is saved" is about storage, and "keeps … from going dark" does not use the word "save". If the line should hide during a preview like P4's, `GhostedTriage` passes no `picksNote` while `blocked` is the preview reason; one line. **Needs your decision.**
 5. **One engine per generated person.** `test/generators.ts` builds one person per engine, so the property test's triage has at most one candidate per engine. Several people in one result (and "counted once") are covered by the unit tests. FYI.
 
+## 14. Rescue Point (Requirement 37, task R1)
+
+The autopsy of a dark window gets one more sentence, a what-if with a consequence: "A call on 9 Oct, when the window first flickered, would have kept the light on until 16 Nov, 16 days longer." It asks `@decay-engine/insight` to replay the person's history with one call at the moment the window first flickered, and compares the replayed darkening with the real one. Study Dungeon gets the same line in its own words (its Requirement 22, design "Rescue Point").
+
+**Decisions after the spec (Session 66, the developer). They replace the text below where they differ:**
+
+1. `N = floor((diesAt − baselineDiesAt + P) / DAY_MS)`; P is added, not taken off. The end date is the date of `diesAt` itself (`RescuePoint.until = diesAt`). So whole-day gains read in full: Leo 72, Ines 36. Section 14.6's "one day fewer" no longer applies.
+2. Wording: "A call on 9 Oct 2026, when the window started to flicker, would have kept the light on until 16 Nov 2026, 16 days longer." ("first flickered" is dropped.) The template is `rescueText.sentence(on, until, n)` in `wording.ts`, with sample calls for 16 and 1 days in `wording.test.ts`; `rescue-sentence.ts` holds only the logic.
+3. Dates always include the year, formatted with the options of `dateFormatter` in `autopsy-sentences.ts` (day, short month, year, `en-GB` by default), copied into `rescueDateFormatter` because that file does not export them. A test checks both give the same text. The 365-day year rule in 14.3 is dropped.
+4. End dates after today are fine.
+
+**Why not "the latest time one call would have kept it lit".** With this policy a call at any time before the window goes dark moves the darkening later, so that answer is always "just before". The useful question is what a call at one fixed moment, the first flicker, would have given.
+
+**Authorship.** New `src/rescue-sentence.ts` and its tests, written by Kiro. `components/PersonAutopsy.tsx` (Kiro's) gets three lines. `autopsy-sentences.ts` (Claude Code's, `authorship.md`) and `policy.ts` are used unchanged. Nothing changes in `packages/engine/`, `packages/shell/` or `packages/insight/`.
+
+### 14.1 Dependency and build
+
+- `apps/ghosted/package.json`: `"@decay-engine/insight": "workspace:*"` in `dependencies` (added in the spec session; the developer runs `pnpm install` and commits `pnpm-lock.yaml`).
+- Insight is consumed from source, like the shell (`main`, `types` and `exports` point at `./src/index.ts`); Vite bundles it and `tsc --noEmit` type-checks what the app imports. No build step of its own.
+- **Netlify**: `netlify.toml` stays as it is. Base `apps/ghosted`, command `pnpm --filter @decay-engine/ghosted build`; pnpm installs the whole workspace (`packages/*`), so Insight is linked and built from source with the app, as the shell is. Netlify installs with a frozen lockfile, so the updated `pnpm-lock.yaml` must be committed.
+- `config.test.ts` checks the scripts and the four `@fontsource` dependencies only, so a new dependency does not affect it. `no-network.test.ts` and `app-boundary.test.ts` scan `src/` and are unaffected (Insight makes no network call and imports no app).
+
+### 14.2 The good event, and why
+
+`RESCUE_EVENT: ContactEvent = { kind: "call" }`. A call and a meet-up both set freshness to 100 and `lastContactAt = now` (Requirement 2.2), so they give the same what-if. A text adds only 40 (Requirement 2.1) and would describe a smaller rescue. The sentence names the call it assumes; "a call" is the smaller ask of the two full contacts. The same choice was made for the Triage line (13.4).
+
+### 14.3 New module: `src/rescue-sentence.ts` (pure)
+
+```typescript
+import type { AutopsyReport, HistoryEntry } from "@decay-engine/engine"
+import { whatIf, DEATH_TIME_PRECISION_MS } from "@decay-engine/insight"
+import { ghostedPolicy, type ContactEvent, type Person } from "./policy"
+import { DAY_MS } from "./time"
+
+export const RESCUE_EVENT: ContactEvent = { kind: "call" }
+
+export type RescuePoint = {
+  at: number         // the what-if's `at` (= report.wentWeakAt)
+  until: number      // diesAt − DEATH_TIME_PRECISION_MS
+  extraDays: number  // floor((diesAt − baselineDiesAt − DEATH_TIME_PRECISION_MS) / DAY_MS), at least 1
+}
+export type RescueSentenceOptions = { timeZone?: string; locale?: string }   // as CauseSentenceOptions
+
+export function rescuePoint(person: Person, history: readonly HistoryEntry[], report: AutopsyReport<ContactEvent>): RescuePoint | null
+export function rescueSentence(point: RescuePoint, options?: RescueSentenceOptions): string
+export function generateRescueSentence(
+  person: Person, history: readonly HistoryEntry[], report: AutopsyReport<ContactEvent>, options?: RescueSentenceOptions
+): string | null
+/** The cause sentences with the rescue sentence second. Returns `causes` itself when `rescue` is null. */
+export function withRescue(causes: readonly string[], rescue: string | null): readonly string[]
+```
+
+`rescuePoint`, in this order (the first rule that holds gives `null`):
+
+1. `report.wentWeakAt === null` → `null`. This covers a person added already dark (Requirement 19.6) and a person added already flickering: neither has an alive-to-weak crossing in the life.
+2. `w = whatIf(ghostedPolicy, person, history, { at: report.wentWeakAt, event: RESCUE_EVENT })`; `w.ok === false` → `null`. Errors thrown by the policy are not caught.
+3. `w.stoppedAt !== null` → `null` (37.9).
+4. `w.diesAt === null || w.baselineDiesAt === null` → `null` (the longest life is 2.7 × 365 = 985.5 days, inside Insight's 10-year horizon, so this is a type guard).
+5. `Math.abs(w.baselineDiesAt − report.diedAt) > DEATH_TIME_PRECISION_MS` → `null`. Insight replays the history with the **current** payload (its L1), and the old rhythm is not recorded (open issue 2.4). Freshness reads only `lastContactAt` and the current rhythm, so a rhythm edit with no text before it replays exactly. A text before the edit stored a `lastContactAt` worked out with the old rhythm, so the replay can differ: then `whatIf` either fails (rule 2, a recorded contact on a window the replay already shows dark) or gives another baseline, and this rule hides the line instead of comparing with a darkening that did not happen.
+6. `extraDays = Math.floor((w.diesAt − w.baselineDiesAt − DEATH_TIME_PRECISION_MS) / DAY_MS)`; `extraDays < 1` → `null`.
+7. Return `{ at: w.at, until: w.diesAt − DEATH_TIME_PRECISION_MS, extraDays }`.
+
+`rescueSentence(point, options)`:
+
+- Dates with `Intl.DateTimeFormat(options.locale ?? "en-GB", { day: "numeric", month: "short", timeZone })`, with `year: "numeric"` added to both WHEN `point.until − point.at >= 365 × DAY_MS`. With a 365-day rhythm the gain is 438 days, so the year rule is reached in real use.
+- `A call on ${on}, when the window first flickered, would have kept the light on until ${until}, ${n} ${n === 1 ? "day" : "days"} longer.`
+
+The words follow Requirement 31 and steering `ghosted.md`: the window "flickered", the light is "kept on", and nothing says "die", "dead", "late" or "should". The sentence does not say "you": it describes the light, not either person.
+
+### 14.4 The cases, decided
+
+| Case | What the line does | Why |
+|---|---|---|
+| `wentWeakAt` is `null` | No line | No moment to name (also every started-dark person, Tomas in the sample). |
+| `whatIf` returns `ok: false` | No line | The what-if cannot be stated. |
+| N < 1 (not at least one whole day later after P) | No line | Does not happen with this policy (14.5: the gain is 1.2 × rhythm ≥ 1.2 days); kept so the rule never depends on that. |
+| `baselineDiesAt` differs from `report.diedAt` by more than P | No line | The replay did not reproduce the real darkening (a rhythm edit). |
+| `stoppedAt` is not `null` | No line | Cannot happen for a dark window (below). |
+| Lit again, then dark again | The line, about the current life | The report's life starts at the last reconnect. `whatIf` replays the earlier lives (each reconnect through `engine.resurrect`, which always succeeds, Requirement 4.2); no reconnect is recorded after the darkening, so the life cut is never reached. |
+| Dark only in the preview | The line, at the previewed `now` | The report is settled in memory and nothing is stored. |
+
+### 14.5 Why the what-if is later (the property's basis)
+
+From Requirements 1 and 2, with `T = 3 × rhythm`: at `wentWeakAt` freshness is just under 60. The extra call sets it to 100, so from then on the what-if window is exactly 40 points brighter than the real one (both fall at `100 / T` per unit of time). Recorded contacts after `wentWeakAt` in that life can only be texts that left the window flickering (a call, a meet-up or a text that reaches 60 makes it lit again and resets `wentWeakAt`), so the real freshness before each such text is below 20. The text adds 40 to both: the real one to below 60, the what-if one to below 100, so it is never capped and the 40-point lead stays. The what-if window is therefore never dark before a recorded contact, and it goes dark exactly `0.4 × T = 1.2 × rhythm` days after the real one (plus the up-to-a-minute lateness of the recorded `wentWeakAt`). These numbers are expectations for the tests; the module computes none of them.
+
+### 14.6 Precision (`DEATH_TIME_PRECISION_MS`)
+
+As in Study Dungeon's design: `diesAt ∈ [c1, c1 + P)` and `baselineDiesAt ∈ [c0, c0 + P)` for the true times `c1` and `c0`, so N, the floor of `(diesAt − baselineDiesAt − P)` in days, is never more than the true gain, and `diesAt − P` is never after the true what-if darkening. **The cost is real here**: the gain is 1.2 × rhythm days, a whole number for every rhythm that is a multiple of 5. Such a gain is a whole number of days plus at most a minute, so the line usually says one day fewer (for example a 30-day rhythm: 36 days, read as "35 days longer"). Open point 14.10.2.
+
+### 14.7 Where the call is made
+
+`components/PersonAutopsy.tsx`, inside the existing `useMemo` on `[engine, personId, now, timeZone]`, which already has `person` from `engine.view(now)`, `report = engine.autopsy(personId, now)` and `history = engine.history(personId)`:
+
+```typescript
+const causes = generateCauseSentences(report, person.payload, { timeZone })            // unchanged
+const rescue = generateRescueSentence(person, history, report, { timeZone })
+return { chart: buildAutopsyChart(history, person.payload, report), sentences: withRescue(causes, rescue) }
+```
+
+`App.tsx` does not change: it already renders `PersonAutopsy` with `engine` and `now` (today, or the previewed time), and the `engine` prop's `Pick` already has `history`. **The clock rule**: `PersonAutopsy` passes its `now` prop only to `engine.view` and `engine.autopsy`; `rescue-sentence.ts` gets time only through the report and the what-if result; Insight never reads the clock. The cost is one replay of one person's history in two throwaway engines, each time the memo runs.
+
+### 14.8 Shell: no change
+
+`AutopsyDialog` renders each entry of `causeSentences`, in order, as `<p className="shell-autopsy-sentence">` inside the cause `<section>`, with no live region and nothing focusable, and `focusContentOnOpen` still moves focus to the title. A second entry is therefore a plain paragraph with no shell change, and `scripts/check-engine-unchanged.sh` (Requirement 29, the allow-list) needs no change.
+
+### 14.9 Worked example: the sample street (section 6)
+
+`loadSampleData` at `now = 1 Dec 2026 12:00 UTC`, dates in UTC, days from `now` (`L` and the crossings from section 6.2; a crossing is dated up to a minute late, which moves no date here).
+
+| Dark person | r | First flicker of the last life (`wentWeakAt`) | Went dark | What-if dark | Gain | N | Sentence |
+|---|---|---|---|---|---|---|---|
+| Ayesha Khan | 14 | −70 + 16.8 = −53.2 (9 Oct, 07:12) | −32.2 | −53.2 + 37.8 = −15.4 (16 Nov, 02:24) | 16.8 | 16 | "A call on 9 Oct, when the window first flickered, would have kept the light on until 16 Nov, 16 days longer." |
+| Harun Aziz | 21 | −154.8 + 25.2 = −129.6 (24 Jul) | −98.1 | −72.9 (19 Sept) | 25.2 | 25 | "A call on 24 Jul, … until 19 Sept, 25 days longer." |
+| Leo Marchetti | 60 | −258 + 72 = −186 (29 May) | −96 | −24 (7 Nov) | 72 (+ up to a minute) | 71 or 72 | "A call on 29 May, … until 7 Nov, 71 days longer." (14.6) |
+| Tomas Novak | 120 | none (started dark) | −30 | | | | No line |
+
+Harun's and Leo's earlier weak spells ended with a text or a call that lit the window again, so `wentWeakAt` is the flicker of the last stretch. The tests compare N and the sentence's shape, never a sample date (the time of day and the zone move dates near midnight, and `en-GB` writes September as "Sept").
+
+### 14.10 Tests
+
+All use `T0` plus offsets (`test/fixtures`), a real engine on `InMemoryAdapter`, `timeZone: "UTC"`, and never the real clock.
+
+New `src/rescue-sentence.test.ts`:
+
+| Case | Set-up | Expected |
+|---|---|---|
+| Exact words | `rescueSentence({ at: Date.UTC(2026, 9, 3, 12), until: Date.UTC(2026, 10, 20, 12), extraDays: 18 }, { timeZone: "UTC" })` | "A call on 3 Oct, when the window first flickered, would have kept the light on until 20 Nov, 18 days longer." |
+| Singular | the same with `extraDays: 1` | "…, 1 day longer." |
+| Year shown / not shown | `until = at + 365 × DAY_MS` / `− 1` | both dates with the year / none |
+| A 1-day rhythm | r 1, last contact T0, added at T0, autopsy at T0 + 5 d | N = 1 ("1 day longer"): gain 1.2 d |
+| Ines (as `PersonAutopsy.test.tsx`) | r 30, contacts on days 10 to 60, autopsy at day 150 | `at` within a minute after day 96 ("18 Feb"), end date "9 May", N = `floor((diesAt − baselineDiesAt − P) / DAY_MS)`, which is 35 or 36 |
+| Texts after the flicker | r 10 (flickers at 12 d), added at T0, texts at T0 + 25 d (freshness 16.7 → 56.7) | the line shows; `diesAt − report.diedAt` within 2 minutes of 12 d (0.4 × T) |
+| Lit again | r 10, dark at 27 d, reconnect by text at T0 + 30 d, dark again | the line names the flicker of the second life (T0 + 42 d) |
+| Started dark | r 30, last contact T0 − 100 d, added at T0, autopsy at T0 | `null` (`wentWeakAt` is `null`) |
+| Added flickering | r 30, last contact T0 − 50 d (freshness 44.4), added at T0, autopsy at T0 + 40 d | `null` (no lit-to-flickering crossing) |
+| Rhythm edit after a text | r 30 contacted at T0; text at T0 + 40 d (55.6 → 95.6, `lastContactAt` T0 + 36 d); rhythm edited to 10 at T0 + 41 d; autopsy at T0 + 100 d (really dark at T0 + 63 d) | `null`: replayed with rhythm 10 throughout, the window is dark at T0 + 27 d, before the text, so `whatIf` returns `replay-failed`. The same person without the edit gets a line |
+| Rhythm edit with no contact before it | r 30 contacted at T0, rhythm edited to 10 at T0 + 5 d, autopsy at T0 + 40 d | the line shows: freshness reads only `lastContactAt` and the current rhythm, so the replay gives the real darkening (T0 + 27 d) |
+| `whatIf` fails | the history with its first entry removed | `null` |
+| Replay guard | the real report with `diedAt` moved by `P + 1` / by exactly P | `null` / the line |
+| A preview darkening | r 30 added at T0, autopsy at T0 + 90 d with nothing stored after the add | the line shows; the history is still only `created` |
+| Order | `withRescue(["a", "b", "c"], "r")` | `["a", "r", "b", "c"]` |
+| No clock | the source of `rescue-sentence.ts` | no clock "now" call and no argument-less `Date` (patterns from `app-boundary.test.ts`) |
+| Sample | `loadSampleData(engine, T0)` | Ayesha 16, Harun 25, Leo 71 or 72, Tomas no line; each line matches `/^A call on \d{1,2} \w+, when the window first flickered, would have kept the light on until \d{1,2} \w+, \d+ days? longer\.$/` |
+
+New `src/rescue-sentence.property.test.ts`, Property 16, `{ numRuns: 100 }`, with `deadPerson()` from `test/generators.ts` (unchanged; it never edits):
+
+- when `report.wentWeakAt` is not `null`: `whatIf` returns `ok: true`, `stoppedAt === null`, `|baselineDiesAt − report.diedAt| ≤ P`, `diesAt > report.diedAt`, and `diesAt − baselineDiesAt` is within `2 × P` of `0.4 × T` (14.5);
+- the line is shown, and the number in it equals `floor((diesAt − baselineDiesAt − P) / DAY_MS)` of a second `whatIf` call in the test;
+- when `report.wentWeakAt` is `null`, `generateRescueSentence` is `null`;
+- every line passes `BANNED` and matches none of `/\b(die|dies|died|dying|dead|late|later|should)\b/i`;
+- **coverage** (fixed seed, same file): of the dark people generated, at least 30% have a line, at least 5% have a text after `wentWeakAt`, at least 5% were lit again, and at least 5% have `wentWeakAt` `null`. If one is not reached, a new helper biases the mix; `generators.ts`, the thresholds and `numRuns` are not changed.
+
+Changed existing tests (changed to match, never loosened, `no-fake-tests.md`). **Files read** in the spec session: `components/PersonAutopsy.test.tsx`, `wording.test.ts`, `config.test.ts`, `app-boundary.test.ts`, `components/PersonAutopsy.tsx`. No other test file was searched (no commands were run).
+
+| Test | What it does today | Change |
+|---|---|---|
+| `components/PersonAutopsy.test.tsx`, "shows the cause-of-death sentences …, in order" | `expect(shown).toEqual(generateCauseSentences(…))`; `shown[0]` is the cause | `shown[0]` unchanged. The `toEqual` expects `withRescue(generateCauseSentences(…), generateRescueSentence(person, engine.history(id), report, { timeZone: "UTC" }))`, and a new assertion checks `shown[1]` against the Ines row above. |
+| `components/PersonAutopsy.test.tsx`, the started-dark case | `textContent` contains the started-dark sentence, never "0 days" | Unchanged; new assertion: no paragraph starts with "A call on". |
+| `wording.test.ts` | `BANNED` over wording, sample people and the sample's cause sentences | New `describe`: the rescue sentences of the sample's dark windows (built as `sampleSentences()` builds the cause sentences) contain no `BANNED` phrase and none of the words in 37.7; Tomas has none; the other three have one each. `BANNED`, `SAMPLE_CALLS` and every existing case unchanged (the module is not in `wording.ts`, so the coverage test is not affected). |
+| `App.accessibility.test.tsx` | dialogs focus their content and keep focus inside | New case: in the autopsy, the rescue sentence is a `<p class="shell-autopsy-sentence">`, not inside `[aria-live]`, not focusable; focus still opens on the title. |
+| Any other test that compares the autopsy's sentences | | The build task first runs `grep -rn "shell-autopsy-sentence\|generateCauseSentences\|causeSentences" apps/ghosted/src --include=*.test.*` and reads every match. A test comparing the whole list is changed to expect `withRescue(…)`, never loosened. |
+| `autopsy-sentences.test.ts`, `started-dark.test.ts` | call `generateCauseSentences` directly | Unchanged. |
+
+### 14.11 Open points
+
+1. **"When the window first flickered".** `wentWeakAt` is the last lit-to-flickering crossing of the life (an earlier flicker that a contact ended does not count). *Proposed:* keep the requested words; the alternative is "when the window started flickering". **Needs your decision.**
+2. **One day fewer on whole-day gains.** With rhythms that are multiples of 5 the gain is a whole number of days, and taking P off usually shows one day fewer (Leo: 71 for 72; Ines: 35 for 36). *Proposed:* keep it, never over-claim. The alternative, `floor((diesAt − baselineDiesAt) / DAY_MS)`, shows 72 most of the time but can claim a day more than the truth when a gain is within a minute below a whole day. **Needs your decision.**
+3. **A rhythm edit after a text hides the line.** The engine does not record the old rhythm (open issue 2.4), so when a text came before a rhythm edit the replay cannot reproduce the real darkening and the person gets no line (14.3, rule 5). *Proposed:* accept. **FYI.**
+4. **Placement.** Second, straight after the cause, inside the "cause" section; the closing line "The light shows how recently …" stays last. **FYI.**
+
+## 15. Live state changes (Requirement 38, task L3)
+
+While the tab is open, the minute tick moves people between lit, flickering and dark, and nothing on the screen reacts. L3 adds three reactions to a tick that moved someone: the card's window flickers out once, one short message (the toast) says what happened, and while the tab is hidden its title and favicon count the changes. Study Dungeon gets the same in its own words (its Requirement 23, design "Live State Changes"); `state-changes.ts` has the same logic in both apps, with no import between them.
+
+**Authorship.** Everything here is Kiro's. `clock-guard.ts` (Claude Code's) is used unchanged. Nothing changes in `packages/`, `policy.ts` or `autopsy-sentences.ts`.
+
+### 15.1 Where it runs
+
+All in `App.tsx`, in the existing tick handler `handleTick(at)` that `useSettleTicks` calls after each `engine.tick(at)`:
+
+```
+baseline: StateOf[] | null      (a ref; null at mount and while previewing)
+
+handleTick(at):
+  failed  = this tick's save failed (tickFailed, set by handleTickError just before)
+  ...existing problem and clock-notice handling (saidOther = the clock notice was said)
+  seen    = engine.view(at)
+  before  = baseline; baseline = snapshotStates(seen)
+  if before is null: stop                     ← the first tick at mount, the first after Back to today
+  notice  = liveNotice(diffStates(before, baseline), seen)
+  if notice is null: clear the toast and the card markers (the last message has had its minute)
+  else:
+    if not (failed or saidOther): announce(notice.text, toast)   ← said once, in #gh-announcer
+    show the toast (announced = not (failed or saidOther))
+    mark the cards (none under reduced motion)
+    tab signal: record(notice.changes.length, notice.worst)
+```
+
+- **Never while previewing.** `useSettleTicks` runs no tick while previewing. An effect sets `baseline` to `null` when `previewing` turns true, so the tick that "Back to today" runs straight away only records.
+- **Never the first tick at mount.** `baseline` starts as `null`. People who went dark while the tab was closed are not reported.
+- **Never the user's own change.** An effect on `version` (bumped after every write: add, edit, reach out, reconnect, remove, import, sample load) reads `baseline` again from `engine.view(clock())`, if it is not `null`. So an edit that makes a window flicker at once is part of the baseline before the next tick. *Cost:* a time-driven change in the same minute as a write is not reported (open point 15.9.2).
+- **The clock guard (Req 38.10).** `clock` is `heldClock(clockProp, engine)` (`clock-guard.ts`, unchanged). The tick time never runs behind the newest saved event, so `engine.tick` never throws `TIME_WENT_BACKWARD`, every tick reaches the handler, and `before` is always from an earlier or equal time than `after`. A held clock gives the same `at` again, so nothing changes and nothing is reported.
+
+### 15.2 New module: `src/state-changes.ts` (pure)
+
+```typescript
+export type LifeState = "alive" | "weak" | "dead"
+export type StateOf = { readonly id: string; readonly state: LifeState }
+export type StateChange = { readonly id: string; readonly from: LifeState; readonly to: LifeState }
+
+export function snapshotStates(items: Iterable<StateOf>): StateOf[]       // copies id and state
+export function diffStates(before: Iterable<StateOf>, after: Iterable<StateOf>): StateChange[]
+```
+
+`diffStates` returns every item in both lists whose state differs, in the order of `after`; an item in only one list is not a change; any transition is reported (`weak → alive` too), so L5 can decide for itself. No clock, no engine, no policy formula, nothing Ghosted-specific. Study Dungeon's file is the same.
+
+### 15.3 New module: `src/live-changes.ts` (pure)
+
+```typescript
+export type LiveNotice = { text: string; changes: readonly StateChange[]; worst: "weak" | "dead" }
+export function liveKind(change: StateChange): LiveKind | null   // "flicker" | "dark" | "darkFromLit"
+export function liveNotice(changes: readonly StateChange[], people: readonly Person[]): LiveNotice | null
+```
+
+- Only `alive → weak` ("flicker"), `weak → dead` ("dark") and `alive → dead` ("darkFromLit") are reported; anything else, or an id not in `people`, is dropped. No reported change gives `null`.
+- **Order** (who is named): importance 3 to 1, then going dark before starting to flicker, then name (`localeCompare`, `en`), then id.
+- `worst` is `"dead"` when any reported person went dark: the favicon badge's shape.
+
+### 15.4 Wording (`wording.ts`, `liveText`)
+
+| Case | Sentence |
+|---|---|
+| 1, lit → flickering | "Mira Castell's window started to flicker." |
+| 1, flickering → dark | "Mira Castell's window went dark." |
+| 1, lit → dark in one tick | "Mira Castell's window went from lit to dark." |
+| 2, both flicker | "Mira Castell's and Dan Okafor's windows started to flicker." |
+| 2, both dark (from flickering or from lit) | "Mira Castell's and Dan Okafor's windows went dark." |
+| 2, one of each | "Mira Castell's window went dark and Dan Okafor's started to flicker." (each with its own verb, "went from lit to dark" included) |
+| 3 or more, all flicker | "3 windows started to flicker, Mira Castell's among them." |
+| 3 or more, all dark | "3 windows went dark, Mira Castell's among them." |
+| 3 or more, mixed | "2 windows started to flicker and 1 went dark, Mira Castell's among them." |
+| Dismiss | "Dismiss" |
+| Title | "(2) Ghosted"; "(9+) Ghosted" above 9; "Ghosted" at 0 |
+
+The first name in each sentence is the most important person (15.3). The full name is used, because two people can share a first name. Nothing says "die" or "dead", and nothing says why or whose fault.
+
+### 15.5 The toast (`components/LiveToast.tsx`, `styles/toast.css`)
+
+- **Where.** `MoonDock` gets one optional prop, `notice?: ReactNode`, rendered as the first child of `.gh-dock`, before `.gh-dock-in`. The toast is inside the fixed dock's own box, so it covers nothing: the dock grows by its height, `useDockHeight` measures the new height into `--dock-h`, and the page's bottom room (`layout.css`) follows. It is `position: sticky; inset-block-start: 0`, so when the expanded dock scrolls inside its cap the toast stays in view. It is never in the page flow next to the Triage panel, so it can never sit over it.
+- **Look.** `--panel-hi` with a `--border` edge and `--bone` text, the hard `0 6px 0 #000` card shadow, 8 px radius, 16 px body type. `inline-size: fit-content; max-inline-size: 100%`, `flex-wrap: wrap`, `overflow-wrap: anywhere`: at 320 px it is at most 288 px wide (the dock's 16 px gutters), the button wraps under the text, and the page never scrolls sideways. 8 px below it to the bar (`margin-block: 0 8px`) and the dock's own 8 px padding above it. No rule hides it at any width.
+- **How long.** With motion: `gh-toast-life`, 6.5 s, fades in, stays, fades out (`motion.css`, inside the block); the end of the animation removes it. Without motion it does not move: it stays until Dismiss or the next tick (a minute at most), which clears it when nothing new happened. *Why not a timer:* `motion.test.ts` allows no timer in `src/` outside the settle tick and the backup's URL clean-up (open point 15.9.1).
+- **Accessibility.** No `aria-live`, no `role` (a `role="status"` would be a second live region, and `MoonDock.test.tsx` finds the preview banner by that role). The words are said once by `announce(text, false, true)`; the announcement carries `toast: true`, so the live region's `<p>` gets `gh-visually-hidden` (read, not shown twice) and the toast's own text gets `aria-hidden="true"`. When the words were not said (a storage problem or the clock notice this tick), the toast's text is not hidden. Dismiss is a quiet `gh-button` (44 × 44 px). Nothing calls `focus()` when the toast appears. If focus was inside the toast when it goes, it moves to the hero heading, as when a dialog's opener is gone (Req 24.3).
+- **Tab order** (section 9.5): the toast's Dismiss comes first in the dock, before the slider.
+
+### 15.6 Tab title and favicon (`src/tab-signal.ts`)
+
+- `useTabSignal()` returns `{ record(changes, worst) }`. `record` does nothing unless `document.visibilityState === "hidden"`. While hidden it adds `changes` to a count and keeps the worst kind.
+- **Title.** `liveText.title(n, original)`: `"(2) Ghosted"`, `"(9+) Ghosted"` above 9. The original is `document.title` when the App first renders.
+- **Favicon.** The existing `<link rel="icon">` in `index.html` (an SVG data URL). While the count is above 0 its `href` is `badgeIcon(worst)`: the same lit-window icon with a badge in the top-right corner on a `--bg` disc, a `--flick` triangle when windows only started to flicker, a `--rust` cross when any went dark (shape and colour, `design-tokens.md`). The link's `title` attribute holds the new tab title; the tab title itself is the text alternative. If there is no link (tests), one is added and removed again.
+- **Reset.** On `visibilitychange` to `"visible"` the count is 0, the title and the `href` are put back exactly as they were, and the link's `title` is removed. The same on unmount.
+- Data URL only, no network request; colours are token hexes (`tokens.test.ts` accepts token values in TS).
+
+### 15.7 The card reaction
+
+- The App keeps `justChanged: ReadonlySet<string>`, set from the notice's changes (empty under reduced motion), and passes it to `ThreeLists` (new optional props `justChanged`, `onReacted`), which passes `justChanged` and `onReacted` to each `PersonCard`.
+- `PersonCard` adds `gh-just-changed` to the `<article>` while marked, and a native `animationend` listener (it bubbles from the window's pane) that calls `onReacted(id)`, which removes the id. The next tick without a change clears the set anyway.
+- `motion.css`, inside the block: `.gh-card.gh-just-changed .gh-pane { animation: gh-flicker-out 1.2s 1 }`, a few brightness flashes that settle. One class more specific than the weak flicker, so it runs once, then the weak flicker (if flickering) resumes. A flickering card is in Fading and a dark one in Empty windows, so the card the user sees in its new list is the one that reacts. The Still lit rows never react (nothing moves into Still lit by time).
+
+### 15.8 Tests
+
+All use `T0` plus offsets, a real engine on `InMemoryAdapter`, and never the real clock.
+
+| File | What it proves |
+|---|---|
+| new `state-changes.test.ts` | every one of the six transitions, no change for each state, empty lists, several items, the order of `after` whatever the order of `before`, added and removed items, inputs unchanged, purity, `snapshotStates` copies |
+| new `state-changes.property.test.ts` | Property 17, `{ numRuns: 200 }`, plus a fixed-seed coverage check that the generator reaches all three states and all six transitions |
+| new `live-changes.test.ts` | every sentence of 15.4 exactly, the order that picks the name, dropped kinds, `worst`, no "die" or "dead" |
+| new `tab-signal.test.tsx` | the title for 0, 1, 2, 9, 10, 250; the data URL and its only URL (the SVG namespace); triangle and cross; counting only while hidden; the cross stays; reset on `visibilitychange`; restore on unmount; the added link removed |
+| new `App.live.test.tsx` | a real engine ticked across 60 and across 10 through the fake scheduler: the toast text, the live region's text, the card class and its removal on `animationend`, the toast's place in the dock; lit → dark in one tick; three people, one toast; no toast on the first tick at mount, in a preview, on the first tick after Back to today, or after an edit that makes a window flicker; reduced motion (no class, the toast until the next tick); title and favicon while hidden and their reset; one live region, no focus moved, only Dismiss focusable, Dismiss returns focus to the hero heading |
+| new `live-css.test.ts` | the two animations inside the block only; no motion in `toast.css`; the toast's place, margins and width; no rule hides it |
+| `wording.test.ts` | `SAMPLE_CALLS` for `liveText.one`, `two`, `many` and `title`; a new `describe` with the exact words and no "die", "dead" or blame. `BANNED` unchanged |
+
+**Existing tests that read the live region**, read before building: `App.storage-errors.test.tsx` (the tick case: a failed tick's problem stays, "nothing new is said" on the tick that saves), `clock-guard.test.tsx` (the clock notice is in the page text), `App.test.tsx` (the import's announcement; the P4 tick case, where nobody changes state). They need no change: a failed tick never announces the toast (Req 38.5), the baseline is updated on a failed tick too, so the tick that saves reports nothing new, and the announcement's text is the same with or without the visually hidden class. Not read: `App.accessibility.test.tsx`, `App.session.test.tsx`, `App.preview.test.tsx`, `App.preview.property.test.tsx`, `App.first-run.test.tsx`, `primary-buttons.test.tsx`, `contrast.test.ts`. None of them ticks across a threshold with the fake scheduler as far as their names and the task notes say, so none should see a toast; the check (task 12.6) confirms it.
+
+### 15.9 Open points
+
+1. **No timer for the toast.** *Decided (default):* CSS fade with `animationend` removal; under reduced motion it stays until Dismiss or the next tick (up to a minute), because `motion.test.ts` allows no new timer. The alternative is a named timer allowed in `motion.test.ts`, like the backup's. **Your call if a minute is too long.**
+2. **A change in the same minute as a write is not reported.** *Decided:* the baseline is read again after every write, so the user's own change is never reported; the cost is a time-driven change in the same minute. **FYI.**
+3. **Storage problem on the tick.** *Decided:* the problem message keeps the live region; the toast is shown, not said. **FYI.**
+4. **Only the cards react.** *Decided:* the Street window of the same person does not; the request names the card. **FYI.**
+
+## 16. Notifications while the tab is open (Requirement 39, task L5)
+
+L5 starts after the L3 build is checked. A tick that L3 reports (15.1) can also show one browser notification, when the user has turned the setting on, the browser allows it and the tab is hidden. No server exists, so nothing can reach the user once the tab is closed or the computer sleeps; the setting says so in one sentence. Study Dungeon gets the same (its Requirement 24, design "Notifications While the Tab Is Open"); `notify.ts` has the same logic in both apps, with no import between them.
+
+**Authorship.** Everything here is Kiro's. `clock-guard.ts` and the Claude Code blocks of `layout.css` and `dock.css` are not edited. Nothing changes in `packages/`.
+
+### 16.1 Where it runs
+
+In `App.tsx`'s `handleTick` (15.1), straight after the notice is built. The notice itself is unchanged:
+
+```
+notice = before is null ? null : liveNotice(diffStates(before, baseline), seen)
+if shouldNotify({ enabled: notifyOn (ref), permission: api?.permission ?? "unsupported",
+                  visibility: document.visibilityState, previewing: previewingRef.current,
+                  firstTick: before is null, hasChange: notice is not null }):
+  showNotification(api, notice, focusWindow)        ← one per tick, same text as the toast
+...the L3 branches as before (toast, announce, cards, tab signal)
+```
+
+- `api` is the App's new optional prop `notifications?: NotificationApi | null` (default: the browser's `Notification`, or `null` when there is none). Tests pass a fake class or `null`. `focusWindow?: () => void` defaults to `() => window.focus()`.
+- `previewing` is always false here in practice (no tick runs while previewing), and `firstTick` is the same `before === null` that already stops L3; both go into the decision anyway, so the rule is in one tested place.
+
+### 16.2 New module: `src/notify.ts` (pure, plus two thin browser helpers)
+
+```typescript
+export type NotifyPermission = "default" | "granted" | "denied"
+export interface NotificationLike { onclick: ((event: Event) => void) | null; close(): void }
+export interface NotificationApi {
+  readonly permission: NotifyPermission
+  requestPermission(): Promise<NotifyPermission> | void   // old Safari: callback form, returns nothing
+  new (title: string, options?: NotificationOptions): NotificationLike
+}
+export type NotifyInput = {
+  enabled: boolean; permission: NotifyPermission | "unsupported"; visibility: DocumentVisibilityState
+  previewing: boolean; firstTick: boolean; hasChange: boolean
+}
+export type NotifySettingState = "unsupported" | "off" | "on" | "denied" | "blocked"
+
+export const NOTIFY_SETTING_KEY = "ghosted:notify"
+export const NOTIFY_TAG = "ghosted-live"
+export function shouldNotify(input: NotifyInput): boolean          // all six conditions, nothing else
+export function notifySettingState(api: NotificationApi | null, enabled: boolean): NotifySettingState
+export function notificationFor(notice: LiveNotice): { title: string; options: NotificationOptions }
+export function showNotification(api: NotificationApi, notice: LiveNotice, focus: () => void): boolean
+export function readNotifyEnabled(storage: FlagStorage): boolean    // "on" only; a throw is off
+export function saveNotifyEnabled(storage: FlagStorage, on: boolean): boolean   // false when it threw
+export function browserNotificationApi(): NotificationApi | null
+```
+
+- `notifySettingState`: `null` → unsupported; enabled and `"granted"` → on; enabled otherwise → blocked; off and `"denied"` → denied; else off.
+- `notificationFor`: title `appText.name`, `{ body: notice.text, tag: NOTIFY_TAG, icon: badgeIcon(notice.worst), silent: true }`. No `vibrate`, no `requireInteraction`, no `renotify`.
+- `showNotification`: one `new api(title, options)`; `onclick` calls `focus()` then `close()`; a throwing constructor returns `false` (Req 39.10).
+
+### 16.3 The setting (`components/NotifySetting.tsx`, `styles/notify.css`)
+
+- **Where.** A new `<section class="gh-notify" aria-label="Notifications">` straight after `.gh-toolbar` and before the privacy line in `App.tsx`. Ghosted has no settings panel; the toolbar holds its other app-wide controls (backup, restore, reset), so the setting sits with them. It is outside the `people.length > 0` block, so it shows on an empty street too.
+- **Control.** `<button type="button" role="switch" aria-checked class="gh-button gh-notify-switch">` with the label in a `<span>` and the state word in `<span class="gh-notify-state" aria-hidden="true">` ("On" or "Off"). Its name is the label; `aria-describedby` points at the sentences below it.
+- **Click.** On: turn off and save. Off: `"granted"` → on; `"denied"` → say the denied sentence through `announce` (no request); `"default"` → one `requestPermission()` (a pending flag ignores further clicks), then `"granted"` → on, `"denied"` → the denied sentence, anything else (the prompt was closed) → stays off. An unmounted component ignores the answer.
+- **State.** The App owns `notifyOn` (and a ref for `handleTick`) and `notifySaved`. The component reads `api.permission` on every render; the App re-renders on every tick, so a permission changed in the browser shows within a minute.
+- **Look.** `notify.css`: a `--panel` box with a 1 px `--line` border and 8 px radius, 12 px gap, 16 px top margin; the switch full width with the label wrapping (`white-space: normal`), `--glow` border while on; the sentences in `--dim` at 15 px. No width in px, no animation, no `:hover` rule (the `.gh-button` pair already covers hover and focus).
+
+### 16.4 Wording (`wording.ts`, `notifyText`)
+
+| State | What shows |
+|---|---|
+| label | "Notify me about changes while this tab is open" (state word "On" / "Off") |
+| unsupported | "This browser cannot show notifications, so this setting is not available here." (no switch) |
+| on | "On: when a window changes while this tab is in the background, your browser shows a notification." |
+| denied | "Your browser blocks notifications for this page; to allow them, open the site settings by the address bar." |
+| blocked | "This is on, but your browser is blocking notifications for this page, so none are shown; allow them in the site settings by the address bar, or turn this off." |
+| not saved | "This choice cannot be saved in this browser, so it lasts until the page is closed." |
+| limit (always, when supported) | "There is no server, so nothing can notify you when this tab is closed or the computer is asleep." |
+| privacy (always, when supported) | "A notification shows only what is already on this page, and nothing is sent anywhere." |
+| notification | title "Ghosted"; body the L3 sentence of 15.4 |
+
+All plain strings, so `SAMPLE_CALLS` needs no entry; the banned-phrase walk reaches them.
+
+### 16.5 Tests
+
+| File | What it proves |
+|---|---|
+| new `notify.test.ts` | `shouldNotify` over all 128 combinations (2 settings × 4 permissions including "unsupported" × 2 visibilities × 2 previews × 2 first ticks × 2 change or none) is true for exactly one; each condition alone turns it off; `notifySettingState` for every input; `notificationFor` equals the toast's text for one, two and three windows, tag, silent, no `vibrate`, data-URL icon; `showNotification` makes one notification, click focuses and closes, a throwing constructor gives `false`; the setting read and saved with a fake storage, a throwing storage, and a reload (a new read of the same storage) |
+| new `components/NotifySetting.test.tsx` | each state and its exact sentence; a real `<button role="switch">` named by the label, `aria-checked`, no `tabindex`; `requestPermission` never at render and once per click from `"default"`; never from `"granted"`, `"denied"` or when turning off; a pending request ignores a second click; denied says its sentence through `announce` |
+| new `App.notify.test.tsx` | the real engine and fake scheduler of `App.live.test.tsx`: hidden + on + granted → one notification per tick, body equal to the toast's text, tag `ghosted-live`; three people in one tick → one; visible → toast only; setting off, permission denied or default → none; first tick at mount → none; Back to today's first tick → none; `requestPermission` never called at mount or on a tick; the setting survives a re-render with the same storage; a throwing storage still renders and the switch still works; clicking the notification focuses and changes nothing; one live region still; focus not moved by a tick; the switch passes the keyboard checks of `App.accessibility.test.tsx`; unsupported shows no switch |
+| new `notify-css.test.ts` | the box's gap and margin of at least 8 px, the switch's 44 px minimum, no width over 288 px, no rule hides it, no animation, token colours only |
+| `wording.test.ts` | a new `describe`: the exact words of `notifyText`, no "die"/"dead", no guilt words. `BANNED` and `SAMPLE_CALLS` unchanged |
+
+**Existing tests read before building** (no search tool was available, so these were chosen by name and the L3 notes): `App.accessibility.test.tsx` (every control native, focusable, no `disabled`; every `aria-disabled` control during a preview has the preview reason as its `title`), `primary-buttons.test.tsx` (no filled button in `.gh-toolbar` or `.gh-privacy`, and the count of filled buttons outside dialogs), `layout-css.test.ts`, `no-network.test.ts`, `wording.test.ts`, `App.live.test.tsx`. jsdom has no `Notification`, so in every existing test the setting renders as **unsupported**: one sentence, no switch, no `aria-disabled`, no filled button, so none of these needs a change. The switch is never `aria-disabled` (a preference works in a preview), so the preview test's `title` rule is untouched. Not read: `App.test.tsx`, `App.first-run.test.tsx`, `App.preview.test.tsx`, `App.preview.property.test.tsx`, `App.session.test.tsx`, `App.storage-errors.test.tsx`, `tokens.test.ts`, `motion.test.ts`, `contrast.test.ts`, `config.test.ts`.
+
+### 16.6 Open points
+
+1. **Where the setting sits.** *Decided (default):* its own small box under the toolbar, because Ghosted has no settings panel. **Your call if it should move.**
+2. **Unsupported shows a sentence, not a disabled switch.** *Decided:* so no `aria-disabled` control has a reason other than the preview's. **FYI.**
+3. **Denied keeps the switch.** *Decided:* the switch stays usable and in the Tab order, but a click only repeats the how-to sentence (no request, no loop). **FYI.**
+4. **Two sentences, not one.** The limit and the privacy note are two short sentences under the switch, rather than one long one. **Your call.**
+5. **Not cleared by "Reset all data".** *Decided:* the setting is a preference like the splash flag; `RESET_KEYS` (and its exact-keys test) stay as they are. **Your call.**
+6. **A permission changed in the browser** shows at the next render (a tick, at most a minute). The Permissions API's change event is not used. **FYI.**
+
+## 17. The first ten seconds (Requirement 40, task L6)
+
+L6 starts after the L5 build is checked. The first time a visitor loads the sample street, the time machine runs forward to +30 days by itself and comes back to today, so the windows can be seen fading and going dark. Study Dungeon gets the same (its Requirement 25, design "The First Ten Seconds").
+
+**Authorship.** Everything here is Kiro's. Nothing changes in `packages/`, `clock-guard.ts` or the Claude Code blocks of the CSS.
+
+### 17.1 Where the frames come from (why the dock's own Play)
+
+The request was to step the offset on the app's own frame scheduler. In tests that is the `frameScheduler` and `frameClock` props; in the browser the App gets neither (main.tsx passes none), and the shell's default `requestAnimationFrame` scheduler is not exported. `motion.test.ts` forbids `requestAnimationFrame` and new timers anywhere in `src/`. So an App-owned loop would need a shell export or a loosened test. Neither is needed: the first look **presses the dock's own Play** (a programmatic `click()` on the shell's Play button, which moves no focus) and reads each Play frame's offset as progress. The frames are then exactly the shell's: the fake scheduler in tests, `requestAnimationFrame` inside the shell in the browser.
+
+- Play runs from the offset it starts at (0) to the dock's end (365 days) in `TIME_MACHINE_PLAY_MS` (5 000 ms), calling `onChange` with whole-hour offsets each frame. `progress = offset / (365 × DAY_MS)` is elapsed time over 5 000 ms.
+- The App turns progress into the first look's offset with the plan (17.2), never the raw Play offset.
+- At progress 1 (Play's last frame, or a frame rounded up to the end) the dock presses the button again. At that moment it still reads Stop, so this only stops Play; the App returns to today.
+
+### 17.2 New module: `src/first-look.ts` (pure)
+
+```typescript
+export const FIRST_LOOK_FLAG = "ghosted:first-look"
+export const FIRST_LOOK_DAYS = 30
+export const FIRST_LOOK_TOTAL_MS = TIME_MACHINE_PLAY_MS        // 5 000
+export const FIRST_LOOK_OUT_MS = 4_000
+export const FIRST_LOOK_HOLD_MS = FIRST_LOOK_TOTAL_MS - FIRST_LOOK_OUT_MS   // 1 000
+export function easeInOutCubic(t: number): number              // 4t³, then 1 − (−2t + 2)³ / 2; clamped to [0, 1]
+export function firstLookOffsetAt(elapsedMs: number): number   // the plan
+export function firstLookOffsetForProgress(progress: number): number   // firstLookOffsetAt(progress × TOTAL)
+export function firstLookSeen(storage: FlagStorage): boolean   // a throw counts as seen
+export function markFirstLookSeen(storage: FlagStorage): boolean   // false when it threw
+```
+
+The plan: `elapsed ≤ 0`, `elapsed ≥ 5 000` or not a number → 0; `elapsed ≥ 4 000` → `30 × DAY_MS`; otherwise `round(ease(elapsed / 4 000) × 30 × DAY_MS / HOUR_MS) × HOUR_MS`. Examples: 1 000 ms → ease 0.0625 → 45 h; 2 000 ms → 15 days; 3 000 ms → ease 0.9375 → 675 h.
+
+**Why +30 days.** On the sample street (section 6), today is 4 lit, 4 flickering, 4 dark. At +30 days Sunita (12.9 days), Meera (21.7) and Dan (25.5) have gone dark, Sam (11.8) and Priya (24) flicker: 1 lit (Nia), 4 flickering (Grace, Joel, Sam, Priya), 7 dark. Grace goes dark up to a minute after +30 days, so +31 would add one window; 30 was kept because it matches the "+30 days" jump and the sentence "the next 30 days".
+
+### 17.3 The dock (`src/first-look-dock.ts`, `components/MoonDock.tsx`)
+
+`useFirstLookDock(rootRef, control, onChange, maxMs, ignoreSelector)` returns `{ change, interrupt, handlers }`:
+
+- `control?: { active: boolean; onFrame(progress): void; onTouch(): void }` is MoonDock's one new optional prop, `firstLook`. Omitted: `change` is `onChange` and nothing else happens.
+- `active` turns true → press Play. Turns false while Play is ours → press again (Stop).
+- `change` (given to the `TimeMachine` and the markers): while our Play runs, an offset is passed to `onFrame` as progress; otherwise to `onChange`.
+- `handlers` (capture and bubble on the dock's root): a user `click` or `change` inside `.shell-time-machine` (the slider, the jumps, Play, a marker), but not the "Coming up" toggle, while our Play runs, is a touch: Play is stopped (unless the touch is on Play itself, which stops it), `onTouch` is called, and the `onChange` that the same event then makes is dropped, so the offset goes back to today. The bubble handler clears the drop. The dock's own presses are ignored.
+- `interrupt()`: "Back to today" in the banner calls it first.
+
+### 17.4 The App
+
+```
+firstLookPhase: "idle" | "waiting" | "playing"
+loadSample saved and firstLook prop and !firstLookSeen(storage) → "waiting"
+effect: waiting, no splash, no dialog, not previewing →
+  saved = markFirstLookSeen(storage)
+  if !saved or prefersReducedMotion() → "idle"
+  else → "playing"; announce(firstLookText.announce)
+onFrame(p): p ≥ 1 → end; else setPreviewOffsetMs(firstLookOffsetForProgress(p))
+end (Skip, Escape, a touch, a dialog, Back to today, the last frame): "idle", offset 0; focus on Skip → hero heading
+```
+
+- Escape: a `keydown` listener on `document` only while playing.
+- Skip: `components/FirstLookSkip.tsx`, rendered in MoonDock's `notice` slot (before the toast, which cannot appear in a preview anyway). `styles/first-look.css`: `margin-block: 0 8px`, the button at least 44 × 44 px; no colour, width or motion of its own.
+- The splash is modal, so the button behind it cannot be clicked in a browser; the wait still covers it.
+
+### 17.5 Wording (`firstLookText`)
+
+| Key | Text |
+|---|---|
+| `skip` | "Skip the preview" |
+| `announce` | "Showing the next 30 days. Nothing is saved." |
+
+### 17.6 Tests
+
+| File | What it proves |
+|---|---|
+| new `first-look.test.ts` | the plan at 0, 1 000, 2 000, 3 000, 3 999, 4 000, 4 999, 5 000 ms and beyond; whole hours; never decreasing up to 4 000 ms; the ease at 0, 0.5, 1; the total of 5 000 ms; `firstLookOffsetForProgress`; the flag read and saved with a fake and a throwing storage, and after a reload |
+| new `App.first-look.test.tsx` | the real engine on `RecordingAdapter`, fake frames and clock: starts on the first sample load (Skip shown, the announcement, Play's frames move the offset by the plan, the banner, back to today at 5 000 ms, Skip gone); the flag at the start and on a reload; not with the flag set, nor with people, nor under reduced motion (flag set), nor while the splash or a dialog is open (starts once they close); Skip, Escape, the slider, Play, a jump and Back to today each stop it and return to today; no save during it; Skip is a native named button in the Tab order; focus not moved at the start; one live region; a throwing storage still loads the sample; without the `firstLook` prop nothing happens |
+| new `first-look-css.test.ts` | the Skip's 44 px minimum and 8 px margin, no width in px, no motion, no hiding rule |
+| `wording.test.ts` | unchanged: `firstLookText` holds plain strings, which the banned-phrase walk reaches |
+
+**Existing tests read before building:** `App.first-run.test.tsx` (to line 90), `motion.test.ts`. The first-run tests click "Load sample street" without the `firstLook` prop, so they are unchanged (Req 40.11). Not read: every other test file, including `App.accessibility.test.tsx`, `primary-buttons.test.tsx`, `MoonDock.test.tsx`, `layout-css.test.ts`, `tokens.test.ts` and `App.live.test.tsx`; the Skip only exists while a first look plays, which none of them starts.
+
+### 17.7 Open points
+
+1. **The dock's Play, not an App loop.** *Decided (default):* 17.1. The alternative is a shell export of its frame scheduler (a shell change). **Your call.**
+2. **4 s out, 1 s hold, inside Play's 5 s.** *Decided:* the first look is one Play run. 5 s out plus a hold would need a second run. **Your call.**
+3. **Back to today at once, not animated.** *Decided.* **FYI.**
+4. **A touch drops its own value.** *Decided:* as asked, the touch returns to today; a drag that goes on then moves the slider normally. **FYI.**
+5. **Opt-in prop.** *Decided:* `firstLook` on the App, set by main.tsx, so the tests that load the sample are unchanged. **FYI.**
+6. **Not cleared by "Reset all data".** *Decided:* "never twice in the same browser". **Your call.**
+7. **Unreadable or unsavable flag: no first look.** *Decided.* **FYI.**
+
 ## Correctness Properties
 
 Each property is a fast-check test with `{ numRuns: 100 }` or more, fixed timestamps and no real clock (section 7.3). The generators reach lit, flickering and boarded-up people, as the Generator Coverage Check proves (section 7.2).
@@ -2151,6 +2628,14 @@ For any person and `realNow`, the person counts as going dark exactly when the e
 ### Property 15: The saves line never over-claims
 For any generated people, `now` and budget, every pick the Triage line counts is dark at `now + 7 days` if left alone, and after a call at `now` through the real engine (and, separately, a meet-up) it is not dark at `now + 7 days`, so not at any time in the next 7 days. Every at-risk pick that is not counted is dark at `now + 7 days` even after a call. The count is never more than the number of picks. Test: `src/triage-saves.property.test.ts` (section 13.8).
 **Validates: Requirements 36.2, 36.3, 36.4, 36.13**
+
+### Property 16: The rescue line is a real gain
+For any generated dark person with a `wentWeakAt` and no rhythm edit, the what-if of one call at `wentWeakAt` returns `ok: true` with `stoppedAt` `null`, its `baselineDiesAt` is within P of the real `diedAt`, its `diesAt` is later than the real `diedAt`, and the line is shown with N equal to `floor((diesAt − baselineDiesAt + P) / DAY_MS)` (Session 66 decision). Without a `wentWeakAt`, no line is shown. Every line passes the banned-phrase tests. Test: `src/rescue-sentence.property.test.ts` (section 14.10).
+**Validates: Requirements 37.3, 37.4, 37.5, 37.7, 37.14**
+
+### Property 17: diffStates reports exactly the changes
+For any two lists of ids and states, `diffStates` returns exactly the items present in both whose state differs, once each, in the order of the second list; a list compared with itself gives none. Test: `src/state-changes.property.test.ts` (section 15.8).
+**Validates: Requirement 38.1**
 
 ---
 

@@ -445,31 +445,148 @@ The implementation follows the authorship rules: the policy functions (init, hea
 
 - [ ] 23. What this session saves (task P5, design "What This Session Saves")
   - P5 starts only after task 22.4 (the P4 check) is ticked, and after Ghosted task 10.1 (the shell's `picksNote` prop) is done.
-  - [ ] 23.1 Wording and the pure count
+  - [x] 23.1 Wording and the pure count
     - `wording.ts`: new `triageNoteText.saves(n)` with the sentences in the design's Wording table ("in the next 7 days", never "this week")
     - New `triage-saves.ts`: `SAVE_EVENT`, `savedPicks(picks, now)`, `triageSaves(picks, now)`, using `LOSS_FORECAST_DAYS` from `loss-forecast.ts` (no new number) and only `studyDungeonPolicy.applyEvent` and `healthAt` (no formula written out)
     - New `triage-saves.test.ts`: every case in the design's table (no picks, zero not at risk, zero at risk but not saved, one, many, both boundaries, missing `diesAt`, counted once, budget, sample at 20, 10 and 5 minutes and at +7 days)
     - `theme.test.ts`: the exact words for 1, 2 and 3, and no "this week"
     - _Requirements: 21.2, 21.3, 21.4, 21.5, 21.6_
-  - [ ] 23.2 The property test
+  - [x] 23.2 The property test
     - `package.json`: `fast-check` `^4.10.2` in `devDependencies`. The developer runs `pnpm install` in WSL
     - New `src/test/fact-generators.ts` with its coverage check (alive, weak and dead facts, each at least 10%, fixed seed)
     - New `triage-saves.property.test.ts`: the design's Property, `{ numRuns: 100 }`, right answers through the real engine, and the branch coverage (counted, at risk and not saved, not at risk, each at least 5% of picks). Never lower `numRuns` or a threshold to pass
     - _Requirements: 21.4, 21.13_
-  - [ ] 23.3 Triage shows the line
+  - [x] 23.3 Triage shows the line
     - `App.tsx`: the `triageNote` callback on `[now]`, passed to `TriagePanel` as `picksNote`
     - `styles/dock.css`: `.sd-world .shell-triage-note` in `--color-bone-dim`, body type, no margin, no media query
     - No change to `packages/shell/` (the prop comes from Ghosted task 10.1), `packages/engine/`, or any file `authorship.md` lists as Claude Code's (`policy.ts`, `timeline.ts`, `sample-data.ts`, `contrast.test.ts`)
     - _Requirements: 21.1, 21.7, 21.8, 21.9, 21.10, 21.11, 21.12_
-  - [ ] 23.4 Update the existing tests to match
+  - [x] 23.4 Update the existing tests to match
     - First run `grep -rn "shell-triage\|Fight these first\|Start the session" apps/study-dungeon/src --include=*.test.*`, or ask the developer to run it, and read every match
     - The tests in the design's "Changed existing tests" table: `App.test.tsx` (the budget field and the `version` case), the preview case, `App.accessibility.test.tsx` (no `aria-live`, not in the Tab order), `styles/layout-css.test.ts`. Change tests to match; never loosen an assertion, skip a test or change an expected value to make it pass (`no-fake-tests.md`)
     - _Requirements: 21.1, 21.6, 21.7, 21.8, 21.9, 21.10_
-  - [ ] 23.5 Check
+    - **Status (Session 61):** 23.1 to 23.4 written; nothing was run (no commands; `pnpm install` for `fast-check` is still needed). The search was done with the workspace search over `apps/study-dungeon/src` test files: only `App.test.tsx` (the preview Triage case, the worked example, the fight queue) and `theme.test.ts` (`startSession`) match, and none compares the whole panel's text, so no existing case was changed; new cases only. The branch thresholds in `triage-saves.property.test.ts` and the state thresholds in `fact-generators.coverage.test.ts` were not measured; if one fails, the generator changes, never the threshold or `numRuns`.
+  - [x] 23.5 Check
     - `bash scripts/check.sh` passes (the counts after Ghosted task 10.6, plus the new tests); `scripts/check-engine-unchanged.sh` passes
     - A browser look at 1280 and 390 px with the sample data, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server: at 20 minutes the line reads "Answering these right saves 1 fact that would die in the next 7 days." under "Fight these first"; at 10 minutes there is none. Measure the gap from the last pick's bottom to the line and from the line to "Start the session" (at least 8 px each), and check the line is fully visible and not clipped at both widths
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 21.1, 21.10_
+
+- [ ] 24. Rescue Point in the autopsy (task R1, design "Rescue Point")
+  - R1 starts only after the insight build (E1) is checked: insight task 11 (install, typecheck, tests, `scripts/check.sh`, `scripts/check-engine-unchanged.sh`) passes and is ticked in `.kiro/specs/insight/tasks.md`.
+  - [x] 24.1 The dependency
+    - `package.json`: `"@decay-engine/insight": "workspace:*"` in `dependencies`. The line was added in the spec session (Session 65); the developer runs `pnpm install` in WSL and commits `pnpm-lock.yaml` with it (Netlify installs with a frozen lockfile)
+    - No `netlify.toml` change (design "Dependency and build")
+    - _Requirements: 22.12_
+  - [x] 24.2 The module
+    - New `src/rescue-sentence.ts` exactly as the design: `RESCUE_EVENT`, `RescuePoint`, `RescueSentenceOptions`, `rescuePoint`, `rescueSentence`, `generateRescueSentence`, `withRescue`, with the seven rules of `rescuePoint` in order
+    - Only `whatIf` and `DEATH_TIME_PRECISION_MS` from `@decay-engine/insight`; no policy formula, no second death time; no clock reads
+    - Do not edit `autopsy-sentences.ts` or `policy.ts` (Claude Code's files). If the module seems to need a change there, stop and report it
+    - _Requirements: 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 22.8, 22.10, 22.11_
+  - [x] 24.3 Unit tests
+    - New `src/rescue-sentence.test.ts`: every row of the design's table (exact words, singular, the year boundary in and out, never reviewed with its exact sentence, weak by a wrong answer, a wrong answer after `wentWeakAt`, equal deaths, `wentWeakAt` null, `whatIf` failing, the replay guard at P + 1 and at exactly P, resurrected, a preview death, order, no clock, the sample's four N values)
+    - If an expected value fails, stop and report it; never change it to match
+    - _Requirements: 22.1, 22.3, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10_
+  - [x] 24.4 The property test
+    - New `src/rescue-sentence.property.test.ts`: never earlier, later, the number, no line without a weak time, each `{ numRuns: 100 }`, with `test/fact-generators.ts` unchanged, plus the fixed-seed coverage check (30% with a line, 5% with a wrong review after `wentWeakAt`, 5% resurrected). Never lower `numRuns` or a threshold
+    - _Requirements: 22.13_
+  - [x] 24.5 The autopsy shows the line
+    - `components/FactAutopsy.tsx`: in the existing `useMemo`, `generateRescueSentence(fact, history, report, { timeZone })` and `withRescue(causes, rescue)` passed as `causeSentences`. `App.tsx` and `packages/shell/` do not change
+    - First run `grep -rn "shell-autopsy-sentence\|generateCauseSentences\|causeSentences" apps/study-dungeon/src --include=*.test.*`, or ask the developer to run it, and read every match
+    - Update the tests in the design's "Changed existing tests" table (`App.hero-autopsy.test.tsx`: the `toEqual` with `withRescue` and the exact second sentence; the preview case; `App.accessibility.test.tsx`: plain `<p>`, no live region, same Tab stops). Change tests to match; never loosen an assertion, skip a test or change an expected value to make it pass (`no-fake-tests.md`)
+    - _Requirements: 22.1, 22.7, 22.9, 22.10_
+    - **Status (Session 67):** 24.1 to 24.5 were written with file reads and edits only. Nothing was run, so 24.6 runs the suite first.
+      - Built with the developer's decisions (design "Rescue Point", "Decisions after the spec"): N adds P, the end date is `diesAt`, "when it went weak", dates with the year from the cause sentences' formatter options, and the template in `wording.ts` with its exact words in `theme.test.ts`. The year-boundary rows were not written.
+      - The `grep` was **not** done: this session had no shell and no search tool.
+      - Test files read: `App.hero-autopsy.test.tsx`, `App.accessibility.test.tsx`, `theme.test.ts`, `styles/layout-css.test.ts` (first 30 lines), `test/fixtures.ts`, `test/fact-generators.ts`, `test/app-kit.tsx`.
+      - Not tested, because `studyDungeonPolicy` cannot produce it: a `null` death time (the longest life is about 598 days). The rule is in the code.
+  - [x] 24.6 Check
+    - `bash scripts/check.sh` passes (the Session 63 counts plus the new tests); `scripts/check-engine-unchanged.sh` passes unchanged (no shell change)
+    - A browser look at 1280 and 390 px, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server, with the sample data: open the Graveyard, then the autopsy of "Who painted the Sistine Chapel ceiling?". The rescue line is the second paragraph, right after the cause, with N = 8, fully visible and not clipped at both widths, in the same type and colour as the other sentences; Tab and Escape behave as before
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 22.1, 22.7, 22.12_
+
+- [ ] 25. Live state changes (task L3, design "Live State Changes")
+  - L3 starts after the R1 build is checked.
+  - [x] 25.1 The pure diff
+    - New `src/state-changes.ts`: `LifeState`, `StateOf`, `StateChange`, `snapshotStates`, `diffStates`, the same logic as Ghosted's file (no import between apps)
+    - New `src/state-changes.test.ts` (every transition, no change, several items, ordering, added and removed items, inputs unchanged) and `src/state-changes.property.test.ts` (the design's Property, `{ numRuns: 200 }`, with its fixed-seed coverage check)
+    - _Requirements: 23.1, 23.12_
+  - [x] 25.2 The sentences
+    - `wording.ts`: `liveText` (`one`, `two`, `many`, `dismiss`, `title`) with the sentences of the design's Wording table, list names from `studyDungeonWording.lists`
+    - New `src/live-changes.ts`: `liveKind`, `liveNotice` (the name passed in as `nameOf`), with the design's order
+    - New `src/live-changes.test.ts`: every sentence exactly, the order, the dropped kinds, `worst`
+    - `theme.test.ts`: a new `describe` with the exact words of `liveText`
+    - _Requirements: 23.3_
+  - [x] 25.3 Tab title and favicon
+    - New `src/tab-signal.ts`: `badgeIcon`, `titleWithCount`, `useTabSignal` (design "Tab title and favicon"), the candle icon in Study Dungeon token colours
+    - New `src/tab-signal.test.tsx`: the title for 0, 1, 2, 9, 10 and more; the data URL; triangle and cross; counting only while hidden; reset on `visibilitychange`; restore on unmount; the added link removed
+    - _Requirements: 23.6, 23.7_
+  - [x] 25.4 The toast, the card reaction and the App
+    - New `components/LiveToast.tsx` and `styles/live.css` (the toast, `.sd-visually-hidden`, and `sd-wake`, `sd-grave-drop` and `sd-toast-life` inside one no-preference block); `TimeDock.tsx` (Claude Code's, named here as `authorship.md` asks): the optional `notice` prop, first in `.sd-dock`
+    - `FactCard.tsx` (Claude Code's, named here) and `ThreeLists.tsx`: the optional `justChanged` and `onReacted` props, the native `animationend` listener
+    - `App.tsx`: the baseline, the effects on `previewing` and `version`, the tick handler of the design, the `toast` flag on the announcement, the props above. `clock-guard.ts`, `creatures.ts`, `animations.css` and `dock.css` are not edited
+    - _Requirements: 23.2, 23.4, 23.5, 23.8, 23.9, 23.10, 23.11_
+  - [x] 25.5 App tests
+    - New `src/App.live.test.tsx` and `src/styles/live-css.test.ts` (design "Tests")
+    - Existing tests that read the live region or fire ticks were read first (design "Tests"); none needed a change. No assertion loosened, no test skipped, no expected value changed
+    - _Requirements: 23.1-23.9_
+    - **Status (Session 69):** 25.1 to 25.5 written with file reads and edits only; nothing was run (no tests, typecheck or build), so 25.6 runs the suite first. The spec and 25.1 were written by a helper agent of the same session before it was cancelled; Kiro wrote 25.2 to 25.5 after it, with the developer's amended sentences (design "Wording"). No shell and no search tool were used: the test files read, and those not read, are listed in the design's "Tests" and in the log
+  - [x] 25.6 Check
+    - `bash scripts/check.sh` passes (the Session 63 counts plus the R1 and L3 tests); `scripts/check-engine-unchanged.sh` passes unchanged (no shell change)
+    - A browser look at 1280×800, 390×844 and 320×640, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server: with a fact a minute before it weakens (or the device clock moved), the toast appears at the top of the dock, wraps at 390 and 320 with no sideways scroll and at least 8 px around it, covers nothing, and Dismiss works with the keyboard; the creature on the Dungeon card wakes once; with reduced motion nothing moves; with the tab hidden the title reads "(1) Study Dungeon" and the favicon shows the triangle, and both go back when the tab is shown
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 23.4, 23.6, 23.7, 23.8_
+
+- [ ] 26. Notifications while the tab is open (task L5, design "Notifications While the Tab Is Open")
+  - L5 starts after the L3 build is checked.
+  - [x] 26.1 The pure decision and the browser helpers
+    - New `src/notify.ts` (the design's exports; the same logic as Ghosted's, no import between apps) and `src/notify.test.ts`
+    - _Requirements: 24.2, 24.4, 24.5, 24.6, 24.7, 24.10_
+  - [x] 26.2 The words
+    - `wording.ts`: `notifyText` with the design's sentences; `theme.test.ts`: a new `describe` with the exact words
+    - _Requirements: 24.3, 24.8_
+  - [x] 26.3 The setting
+    - New `components/NotifySetting.tsx`, `styles/notify.css`, `components/NotifySetting.test.tsx` and `styles/notify-css.test.ts`
+    - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.9, 24.11_
+  - [x] 26.4 The App
+    - `App.tsx`: the optional `notifications` and `focusWindow` props, the setting state, the `shouldNotify` call in `handleTick`, `NotifySetting` after `SoundToggle` in `ResetData`'s children. `sound.ts`, `SoundToggle.tsx` and `clock-guard.ts` are not edited
+    - _Requirements: 24.1, 24.5, 24.6, 24.12, 24.13_
+  - [x] 26.5 App tests
+    - New `src/App.notify.test.tsx`. Read first the existing tests that count settings controls or Tab stops; none may be loosened, skipped or given a new expected value
+    - _Requirements: 24.1-24.10_
+    - **Status (Session 70):** 26.1 to 26.5 written with file reads and edits only; nothing was run, so 26.6 runs the suite first. Also: `test/app-kit.tsx` got two optional options (`notifications`, default `null`, and `focusWindow`), so earlier tests are unchanged; new helper `test/fake-notification.ts`. Test files read: `App.sound.test.tsx`, `App.accessibility.test.tsx` (to line 320), `theme.test.ts` (first 30 lines and from line 300), `test/app-kit.tsx`. None needed a change: in jsdom there is no Notification API, so the setting renders only the unsupported sentence and adds no control. Not read: every other test file, including `App.test.tsx`, `App.live.test.tsx`, `App.extras.test.tsx`, `styles/layout-css.test.ts`, `contrast.test.ts`, `motion.test.ts`, the no-network check and `ResetData` tests
+  - [x] 26.6 Check
+    - **Status (Session 72):** every check passed except the switch's size (a 19.5 px-high row). Claude Code gave `.sd-notify-toggle` `min-block-size: 44px` and added a CSS test for it; not measured again in a browser.
+    - `bash scripts/check.sh` passes (the L3 counts plus the L5 tests); `scripts/check-engine-unchanged.sh` passes unchanged
+    - A browser look at 1280×800, 390×844 and 320×640, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server: the setting in the settings row fits with no sideways scroll and at least 8 px around it. With the permission **granted**: turn it on (asked once, only on the click), hide the tab, let a fact weaken (or move the device clock): one notification "Study Dungeon" with the toast's sentence; a second replaces it; clicking it brings the tab forward. With the permission **denied**: the denied sentence, no second prompt, no notification
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 24.1, 24.3, 24.6, 24.7, 24.11_
+
+- [ ] 27. The first ten seconds (task L6, design "The First Ten Seconds")
+  - L6 starts after the L5 build is checked.
+  - [x] 27.1 The plan and the flag
+    - New `src/first-look.ts` (the design's exports; the same logic as Ghosted's with the key `study-dungeon:first-look`, no import between apps) and `src/first-look.test.ts`
+    - _Requirements: 25.1, 25.2, 25.4_
+  - [x] 27.2 The words
+    - `wording.ts`: `firstLookText` (`skip`, `announce`); `theme.test.ts` is not edited (plain strings)
+    - _Requirements: 25.7, 25.9, 25.10_
+  - [x] 27.3 The dock
+    - New `src/first-look-dock.ts` (`useFirstLookDock`); `TimeDock.tsx` (Claude Code's, named here as `authorship.md` asks): the optional `firstLook` prop with a header line, its `onChange` wrapped by the hook, the handlers on the root
+    - New `components/FirstLookSkip.tsx` and `styles/first-look.css`
+    - _Requirements: 25.5, 25.7, 25.8_
+  - [x] 27.4 The App
+    - `App.tsx`: the optional `firstLook` prop, the phase, the start effect (after the tour and with no dialog), Escape, the end, "Back to today" in the top banner, Skip in the dock's `notice` slot; `main.tsx` passes `firstLook`. `clock-guard.ts` is not edited
+    - _Requirements: 25.1, 25.2, 25.3, 25.6, 25.8, 25.9, 25.11_
+  - [x] 27.5 App tests
+    - New `src/App.first-look.test.tsx` and `src/styles/first-look-css.test.ts`. Existing tests read first are listed in the design; none is changed
+    - _Requirements: 25.1-25.11_
+    - **Status (Session 73):** 27.1 to 27.5 written with file reads and edits only; nothing was run, so 27.6 runs the suite first. Not covered by a test: "waits for an open dialog" and "a dialog opening stops it", because in Study Dungeon every dialog that can open in a preview needs a dead fact's card, which was not read. The App test starts with `// @vitest-environment jsdom`, because Study Dungeon's tests run in node unless they say so (Session 69)
+  - [ ] 27.6 Check
+    - `bash scripts/check.sh` passes (the L5 counts plus the L6 tests); `scripts/check-engine-unchanged.sh` passes unchanged
+    - A browser look at 1280×800, 390×844 and 320×640, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server, in a fresh browser profile: after "Load sample data" and the tour, the dungeon ages to +30 days and comes back once, with the top banner and "Skip the preview" at the top of the dock (no sideways scroll, at least 8 px around it, covering nothing); Skip and Escape stop it; with reduced motion on it does not play; a reload does not replay it
+    - Log the session in `docs/KIRO_LOG.md`
+    - _Requirements: 25.3, 25.4, 25.7_
 
 ## Notes
 

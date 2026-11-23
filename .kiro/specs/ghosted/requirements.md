@@ -514,6 +514,119 @@ Terms: `now` is the time the Triage panel runs at (the `now` GhostedTriage alrea
 12. THE change SHALL not touch `packages/engine/`, SHALL store nothing (no new `localStorage` or `sessionStorage` key) and SHALL make no network request. `policy.ts` and `autopsy-sentences.ts` SHALL not be edited.
 13. A property test (Property 15) SHALL prove that every counted pick, after a call at `now` (and, separately, a meet-up), is not dark at any time in the next 7 days, and that every at-risk pick not counted is dark at `now + 7 days` even after a call.
 
+### Requirement 37: Rescue Point (task R1)
+
+**User Story:** As someone looking at a dark window, I want one calm line that says how much longer the light would have stayed on after a call when the window first flickered, so that I see what one call at that moment was worth, without being blamed.
+
+R1 depends on `@decay-engine/insight` (task E1, `.kiro/specs/insight/`). It uses only Insight's public API: `whatIf(policy, item, history, { at, event }, options?)` and `DEATH_TIME_PRECISION_MS`.
+
+Terms:
+
+- The **report** is `engine.autopsy(id, now)` for the dark person, at the dialog's `now` (the previewed time while previewing).
+- **The good event** is `RESCUE_EVENT = { kind: "call" }`.
+- **The what-if** is `whatIf(ghostedPolicy, person, engine.history(id), { at: report.wentWeakAt, event: RESCUE_EVENT })`, where `person` is the dark person from `engine.view(now)`.
+- **P** is `DEATH_TIME_PRECISION_MS` (60,000 ms), imported from Insight.
+- **The extra days** are `N = floor((diesAt − baselineDiesAt + P) / DAY_MS)`, from the what-if result (amended by the developer's decision, Session 66: P is added, not taken off).
+- **The end date** is the calendar date of `diesAt` itself in the viewer's time zone (amended, Session 66).
+
+#### Acceptance Criteria
+
+1. WHEN the autopsy dialog of a dark window opens and the rescue point exists (37.3), THE dialog SHALL show one sentence: "A call on <date of at>, when the window started to flicker, would have kept the light on until <end date>, <N> days longer." For N = 1 it SHALL say "1 day longer". (Amended, Session 66: "first flickered" became "started to flicker".) The template SHALL live in `wording.ts` (`rescueText.sentence`), with sample calls in `wording.test.ts`.
+2. THE good event SHALL be a call. A call lights the window fully (freshness 100, Requirement 2.2), as a meet-up does with the same `policyData`; a text adds only 40 (Requirement 2.1). A call is named because it is the smaller of the two full contacts.
+3. THE sentence SHALL not be shown, and nothing SHALL take its place, WHEN any of these holds: `report.wentWeakAt` is `null` (including a person added already flickering or already dark, Requirement 19.6); the what-if returns `ok: false`; its `stoppedAt` is not `null`; its `diesAt` or `baselineDiesAt` is `null`; `baselineDiesAt` differs from `report.diedAt` by more than P (the replay does not reproduce the real darkening, for example after a rhythm edit); or N is less than 1.
+4. THE date of `at`, the end date and N SHALL come only from the what-if result (`at`, `diesAt`, `baselineDiesAt`) and P. No policy formula SHALL be written in the new code, and no second time SHALL be worked out.
+5. THE precision rule (amended, Session 66): N adds P to the difference, so a gain that is a whole number of days (any rhythm that is a multiple of 5) reads as that number, and the end date is the date of `diesAt`. Both come only from the what-if result.
+6. DATES SHALL be formatted as the cause sentences of `autopsy-sentences.ts` format them, day, short month and year ("3 Oct 2026", locale `en-GB` by default), in the given time zone, the viewer's own when none is given (amended, Session 66). The options are copied into `rescue-sentence.ts`, because that file's formatter is not exported, and a test SHALL check that both give the same text for the same time.
+7. THE words SHALL be neutral. They SHALL never contain "die", "dies", "died", "dying", "dead", "late", "later" or "should", SHALL never say the light measures how much anyone matters, and SHALL pass the banned-phrase tests of Requirement 31.2. `wording.test.ts` SHALL check the sentences of the sample's dark windows against `BANNED` and these words. No existing check is removed or loosened.
+8. THE sentence SHALL be the second entry of the dialog's cause sentences, straight after the cause sentence from `autopsy-sentences.ts`, so the shell renders it as a plain `<p class="shell-autopsy-sentence">`. It SHALL not be in a live region, SHALL not be focusable and SHALL add no colour or animation. Focus SHALL still open on the dialog's title (Requirement 28.5).
+9. FOR a window that was lit again, THE sentence SHALL describe the current life only (the life in the report). A dark window has no later reconnect, so the what-if's life cut never applies; WHEN `stoppedAt` is not `null` anyway, 37.3 applies.
+10. WHILE previewing, THE sentence SHALL follow the same rules at the previewed `now`. It is read-only: it stores nothing, and Reconnect stays disabled with its reason (Requirement 19.5).
+11. THE new code SHALL never read the clock. Time reaches it only through the report and the what-if result.
+12. THE sentence SHALL be built in a new file `apps/ghosted/src/rescue-sentence.ts`, written by Kiro. `autopsy-sentences.ts` (Claude Code's) and `policy.ts` SHALL not be edited. `packages/engine/`, `packages/shell/` and `packages/insight/` SHALL not change, so the Requirement 29 check passes with its allow-list unchanged.
+13. `apps/ghosted/package.json` SHALL list `"@decay-engine/insight": "workspace:*"` in `dependencies`. `netlify.toml` SHALL not change (pnpm installs the whole workspace, so Insight is built from source with the app, as the shell is). The `pnpm-lock.yaml` written by `pnpm install` SHALL be committed with it.
+14. A property test (Property 16) SHALL prove, through the real engine and `ghostedPolicy`: the what-if darkening is later than the real one; the sentence's N equals `floor((diesAt − baselineDiesAt + P) / DAY_MS)` of the same what-if; and no sentence is shown WHEN `wentWeakAt` is `null`.
+
+### Requirement 38: Live state changes (task L3)
+
+**User Story:** As someone with the street open in a tab, I want to see when a window starts to flicker or goes dark on its own, so that the page feels alive and I notice the change even when the tab is in the background.
+
+L3 starts after the R1 build is checked. Today the minute tick (`useSettleTicks`) moves people between lit, flickering and dark while the tab is open, and nothing on the screen reacts until the user looks.
+
+Terms:
+
+- **A tick** is one call of the App's tick handler by `useSettleTicks` (the settle tick every minute while not previewing, and the tick it runs on mount and after "Back to today").
+- **The baseline** is each person's id and state as the last tick saw them.
+- **A reported change** is lit → flickering, flickering → dark, or lit → dark in one tick (the three changes time can cause).
+
+#### Acceptance Criteria
+
+1. A NEW pure function `diffStates(before, after)` in a new file `src/state-changes.ts` SHALL return one `{ id, from, to }` for each item present in both lists whose state differs, in the order of `after`. It SHALL read only ids and states, read no clock, call no engine and repeat no policy formula. Items present in only one list SHALL not be changes. It SHALL change neither input. Its shape SHALL not depend on Ghosted, so task L5 (browser notifications) can reuse it.
+2. WHEN a tick finds reported changes, THE card of each changed person SHALL react once: its window flickers out, by a CSS animation inside `@media (prefers-reduced-motion: no-preference)` only. The card SHALL carry the marker class `gh-just-changed` only until that animation ends, and the class SHALL then be removed. WHILE the user prefers reduced motion, THE class SHALL not be added.
+3. WHEN a tick finds reported changes, THE App SHALL show ONE message (a toast) for the whole tick, with the sentences in design section 15.4: one window, two windows (the more important first), and three or more (counted, naming the most important person). Its words SHALL come from `wording.ts` (`liveText`). They SHALL say "started to flicker", "went dark" or "went from lit to dark", SHALL never contain "die", "dies", "died", "dying" or "dead", SHALL judge and blame nobody, and SHALL pass the banned-phrase tests of Requirement 31.2.
+4. THE toast SHALL never cover the moon dock (`--dock-h`), the Triage panel or other content; SHALL stay a few seconds (about 6) with motion, and until Dismiss or the next tick without motion; SHALL have one quiet Dismiss button; and SHALL never take focus.
+5. THE toast's words SHALL be said once through the App's existing polite live region (`#gh-announcer`, `announce`). No second live region SHALL be added: the toast has no `aria-live` and no `role`. Its only element in the Tab order SHALL be Dismiss. WHEN a tick's storage problem or the clock notice was said in the same tick, THE live region SHALL keep that message, and the toast SHALL be shown without being said.
+6. WHILE the tab is hidden (`document.visibilityState` is `"hidden"`), each reported change SHALL add one to a count, and THE tab title SHALL be `(<n>) <title>`, with `(9+)` above 9. WHEN `visibilitychange` makes the tab visible, THE count SHALL be 0 and THE original title SHALL be restored exactly. WHILE the tab is visible nothing SHALL be counted.
+7. WHILE the count is above 0, THE favicon SHALL carry a badge from an SVG data URL (no network request), with a shape as well as a colour (`design-tokens.md`): a triangle when windows only started to flicker, a cross when any went dark. The tab title SHALL be its text alternative, and the link's `title` SHALL hold the same words. At 0 the original favicon SHALL be restored exactly.
+8. AT 320 px and 390 px the toast SHALL fit, cause no horizontal scroll, keep at least 8 px from everything around it, and SHALL never be hidden at any width.
+9. THE change detection SHALL run only on a tick and only when not previewing. It SHALL never report on the first tick at mount, on the first tick after "Back to today", or for a change caused by the user's own write (the baseline is read again after every write).
+10. THE App SHALL rely on `clock-guard.ts` (`heldClock`) for the tick time: it never runs behind the newest saved event, so every tick reaches the handler and the before and after views are never out of order. `clock-guard.ts` (Claude Code's) SHALL not be edited.
+11. THE change SHALL not touch `packages/` (engine, shell, insight), `policy.ts` or `autopsy-sentences.ts`, SHALL store nothing and SHALL make no network request.
+
+### Requirement 39: Notifications while the tab is open (task L5)
+
+**User Story:** As someone with the street open in a background tab, I want an opt-in browser notification when a window starts to flicker or goes dark, so that I notice it without watching the tab, and I want the app to tell me plainly that it cannot reach me when the tab is closed.
+
+L5 starts after the L3 build is checked. It adds one more consumer of L3's tick result (Requirement 38): the same `diffStates` and `liveNotice`, so a change that is notified is the same change that is toasted, in the same words.
+
+Terms:
+
+- **The setting** is the user's choice, stored under `ghosted:notify` (`"on"` or `"off"`) in the App's `storage` (the same `FlagStorage` the first-run flags use). Missing, unreadable or any other value means off.
+- **The permission** is the browser's `Notification.permission` (`"default"`, `"granted"` or `"denied"`). **Supported** means the browser has a `Notification` API.
+- **A tick's notice** is the `LiveNotice` that L3's tick handler builds (`liveNotice(diffStates(before, after), seen)`), or none.
+
+#### Acceptance Criteria
+
+1. THE setting SHALL be off by default. It SHALL be one switch below the toolbar ("Add a person", "Import people", "Back up", "Restore", "Reset all data") and above the privacy line, on every screen where the toolbar shows, labelled "Notify me about changes while this tab is open". It SHALL be a native `<button>` with `role="switch"` and `aria-checked`, quiet (never filled), at least 44 × 44 px, in the Tab order, with its visible state as a word ("On" or "Off") as well as the border colour.
+2. THE permission request SHALL happen only inside the click that turns the setting on, and only WHEN the permission is `"default"`. It SHALL never happen at load, on a tick, when turning the setting off, or WHEN the permission is already `"granted"` or `"denied"`. A second click while a request is pending SHALL not start a second request.
+3. THE setting area SHALL show exactly these states and sentences (design 16.4): **unsupported** (no switch; one sentence that the browser cannot show notifications); **off** (the switch, "Off"); **on** (the switch, "On", and one sentence on what happens); **denied** (the setting is off and the permission is `"denied"`: the switch stays, and one sentence says how to allow notifications in the browser; a click never asks again and only says that sentence once more through the live region); **blocked** (the setting is on but the permission is not `"granted"`: one sentence that the browser is blocking them, and the switch turns the setting off). WHEN the setting is supported, THE area SHALL also always show the honest limit, "There is no server, so nothing can notify you when this tab is closed or the computer is asleep.", and the privacy sentence, "A notification shows only what is already on this page, and nothing is sent anywhere."
+4. THE setting SHALL be stored through the App's `storage` and SHALL survive a reload. WHEN reading it throws, it SHALL be off. WHEN saving it throws, THE switch SHALL still work until the page is closed, and one sentence SHALL say the choice cannot be saved. Nothing else in the app SHALL be affected.
+5. A notification SHALL be shown only WHEN all of these hold, decided by one pure function `shouldNotify` (`src/notify.ts`): the setting is on; the permission is `"granted"`; `document.visibilityState` is `"hidden"`; the tick is not in a preview; it is not the first tick at mount (nor the first after "Back to today"); and the tick has a notice. WHEN the tab is visible, only the toast SHALL show.
+6. EACH tick SHALL show at most one notification. Its title SHALL be "Ghosted" (`appText.name`) and its body SHALL be the notice's `text`, the same string the toast shows and the live region says. It SHALL carry the tag `ghosted-live`, so a later one replaces the earlier one. It SHALL be `silent: true`, with no `vibrate`, and its `icon` SHALL be the tab signal's data URL (`badgeIcon(notice.worst)`), so nothing is fetched.
+7. WHEN the user clicks a notification, THE app SHALL call `window.focus()` and close that notification. It SHALL change no data and open no dialog.
+8. THE words SHALL come from `wording.ts` (`notifyText`). They SHALL never say "die" or "dead" for a person, SHALL contain no guilt words ("forgot", "overdue", "late", "should"), and SHALL pass the banned-phrase tests of Requirement 31.2.
+9. THE feature SHALL make no network request (the `no-network.test.ts` check passes unchanged) and SHALL add no live region: the switch's state is read from `aria-checked`, and the denied sentence after a click goes through the existing `#gh-announcer`. Nothing SHALL take focus when the state changes or a notification is shown.
+10. WHERE the `Notification` constructor throws (some mobile browsers allow notifications only from a service worker), THE tick SHALL carry on as if no notification were due; the toast and the tab signal are unaffected.
+11. AT 320 px and 390 px the setting SHALL fit with no horizontal scroll and at least 8 px from its neighbours; no rule SHALL hide it at any width.
+12. THE setting is a preference, not data: it SHALL work while previewing (as Study Dungeon's sound switch does), and "Reset all data" SHALL leave it, as it leaves the splash flag (`RESET_KEYS` unchanged).
+13. THE change SHALL not touch `packages/`, `policy.ts`, `autopsy-sentences.ts` or `clock-guard.ts`.
+
+### Requirement 40: The First Ten Seconds (task L6)
+
+**User Story:** As a first-time visitor, I want to see the street age by itself right after I load the sample street, so that I understand what Ghosted does within ten seconds, without reading anything.
+
+L6 starts after the L5 build is checked. Study Dungeon gets the same (its Requirement 25), in its own words and with its own dock.
+
+Terms:
+
+- **The first look** is one run of the existing preview: the preview offset moves from today to +30 days and back to today, driven by the App, with nothing saved (Req 12.5).
+- **The flag** is `ghosted:first-look` (`"1"`) in the App's `storage` (the same `FlagStorage` the first-run flags use). It is not in `RESET_KEYS`.
+- **The plan** is the pure function that gives the offset for each moment of the first look (design 17.2).
+
+#### Acceptance Criteria
+
+1. WHEN "Load sample street" saves the sample AND the flag is not set, THE first look SHALL be due. It SHALL not be due on a page load with people, after "Back to today", after "Start empty", an add, an import or a restore, or WHEN the flag is set.
+2. A due first look SHALL start only WHEN the splash is not shown, no dialog is open and the App is not previewing. WHEN it starts, THE flag SHALL be set first, so a reload never plays it again. WHEN the flag cannot be read, THE first look SHALL be treated as seen; WHEN it cannot be saved, THE first look SHALL not play. Either way the app SHALL keep working.
+3. WHILE the user prefers reduced motion, THE first look SHALL not play at all, and the flag SHALL still be set at the moment it would have started.
+4. THE plan SHALL move the offset from 0 to exactly +30 days in the first 4 000 ms with an ease-in-out (cubic) curve, rounded to whole hours as the shell's Play rounds, hold at +30 days until 5 000 ms, and then return to 0 (today) at once. The whole first look SHALL last 5 000 ms, the shell's Play time (`TIME_MACHINE_PLAY_MS`).
+5. THE first look SHALL move the offset step by step on the dock's own Play (the shell `TimeMachine`'s frames, `frameScheduler` and `frameClock` in tests), with no `setTimeout`, `setInterval` or `requestAnimationFrame` in `src/`. Every write SHALL stay blocked while it plays (Req 12.5), so it saves nothing; the engine's save count SHALL not change.
+6. WHILE it plays, THE dock's preview banner SHALL show, as for any preview, and the street SHALL age as it does for the slider (Req 12.2).
+7. WHILE it plays, THE dock SHALL show one quiet button, "Skip the preview": a native `<button>` in the Tab order, named by its text, at least 44 × 44 px, with the shared focus outline. It SHALL sit at the top of the dock's own box (where the live-change toast sits, Req 38.4), so it covers neither the dock's controls nor the hero, and it SHALL fit at 320 and 390 px wide with at least 8 px from its neighbours and no horizontal scroll. It SHALL disappear WHEN the first look ends.
+8. Skip, Escape, "Back to today", any user change of the slider, a jump, a marker, Play, or a dialog opening SHALL stop the first look at once and return the offset to 0. The touch that stops it SHALL not move the offset itself. WHEN focus was on Skip, it SHALL go to the hero heading (Req 24.3).
+9. WHEN it starts, THE App SHALL say once, through the existing polite live region (`#gh-announcer`), "Showing the next 30 days. Nothing is saved." It SHALL say nothing else while it plays, add no live region, and move no focus.
+10. THE words SHALL come from `wording.ts` (`firstLookText`) and pass the banned-phrase tests of Requirement 31.2.
+11. THE first look SHALL be off unless the App is given `firstLook` (main.tsx gives it), so existing tests that load the sample see no change.
+12. THE change SHALL not touch `packages/`, `policy.ts`, `autopsy-sentences.ts`, `clock-guard.ts` or the Claude Code blocks of `dock.css` and `layout.css`, SHALL make no network request, and SHALL leave every existing test unchanged.
+
 ## Correctness Properties
 
 Each property is a fast-check test with `{ numRuns: 100 }` or more, fixed timestamps and no real clock. The generators SHALL reach alive, weak and dead people, proved by a generator coverage check (each state at least 10% of generated people, fixed seed).
@@ -533,6 +646,8 @@ Each property is a fast-check test with `{ numRuns: 100 }` or more, fixed timest
 13. **Started dark**: for any rhythm and any last contact more than `9 × T / 10` before the add time, the person is dead at creation with "created" and "died" at the same timestamp, and the autopsy sentences name the whole-day gap from `payload.lastContactAt` to `diedAt` (at least 1 day) and never contain "0 days".
 14. **Loss line matches the engine's states** (Requirement 35): for any person and `realNow`, the person counts as going dark exactly when the engine shows them not dark at `realNow` and dark at `realNow + 7 days`. A person counted as starting to flicker is lit at `realNow`, not dark at `realNow + 7 days`, and no longer lit (flickering, or dark) one minute after `realNow + 7 days`. A lit person who is not counted at all is still lit at `realNow + 7 days`.
 15. **The saves line never over-claims** (Requirement 36): for any generated people, `now` and budget, every pick counted by the line is dark at `now + 7 days` if left alone, and after a call at `now` through the real engine (and, in a separate run, a meet-up) it is not dark at `now + 7 days`, so not at any time in the next 7 days. Every at-risk pick that is not counted is dark at `now + 7 days` even after a call. The count is never more than the number of picks.
+16. **The rescue line is a real gain** (Requirement 37): for any generated dark person with a `wentWeakAt` and no rhythm edit, the what-if of one call at `wentWeakAt` returns `ok: true` with `stoppedAt` `null`, its `baselineDiesAt` is within P of the real `diedAt`, its `diesAt` is later than the real `diedAt`, and the sentence is shown with N equal to `floor((diesAt − baselineDiesAt + P) / DAY_MS)`. For any dark person whose `wentWeakAt` is `null`, no sentence is shown.
+17. **diffStates reports exactly the changes** (Requirement 38): for any two lists of ids and states, `diffStates` returns exactly the items present in both whose state differs, once each, in the order of the second list, and a list compared with itself gives no change.
 
 ## Authorship
 

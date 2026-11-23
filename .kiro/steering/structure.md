@@ -4,6 +4,7 @@
 packages/engine/       engine and policy test kit
 packages/shell/        shared frame: hero, counters, item card, history, 
                        autopsy, Triage panel, time machine
+packages/insight/      replay and what-if, on the engine's public API (task E1)
 apps/study-dungeon/
 apps/ghosted/
 site/                  landing page: static HTML and CSS, one page, links both apps (task P3)

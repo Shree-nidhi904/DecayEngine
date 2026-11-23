@@ -1185,3 +1185,441 @@ For any generated facts, `now` and budget, every pick the Triage line counts is 
 4. **The default budget shows no line on the sample.** At 10 minutes the knapsack prefers the mitochondrion to helicase, so the line first appears at 20 minutes. FYI for the demo.
 5. **fast-check in the app.** This design said "fast-check (engine tests only, not app tests)"; Requirement 21.13 needs it in the app, so the dependency is added (see Dependencies and Property-Based Tests, amended).
 6. **Build order.** The shell prop is Ghosted task 10.1, so this group starts after it as well as after task 22.4.
+
+## Rescue Point (Requirement 22, task R1)
+
+The autopsy of a grave gets one more sentence, a what-if with a consequence: "A review on 2 Oct, when it first went weak, would have kept it alive until 15 Oct, 8 days longer." It asks `@decay-engine/insight` to replay the fact's history with one right review at the moment it went weak, and compares the replayed death with the real one. Ghosted gets the same line in its own words (Ghosted Requirement 37, design section 14).
+
+**Decisions after the spec (Session 67, the developer). They replace the text below where they differ:**
+
+1. `N = floor((diesAt − baselineDiesAt + P) / DAY_MS)`; P is added, not taken off. The end date is the date of `diesAt` itself (`RescuePoint.until = diesAt`). The "Precision" subsection's "one day fewer" no longer applies.
+2. Wording: "A review on 23 Oct 2026, when it went weak, would have kept it alive until 6 Nov 2026, 8 days longer." ("first" is dropped.) The template is `rescueText.sentence(on, until, n)` in `wording.ts`, and `theme.test.ts` checks its exact words for 8 days and 1 day; `rescue-sentence.ts` holds only the logic.
+3. Dates always include the year. They are formatted with the options of `dateFormatter` in `autopsy-sentences.ts`, copied into `rescueDateFormatter` because that file does not export them, and a test checks that both give the same text. The 365-day year rule is dropped.
+4. End dates after today are fine (open point 3).
+5. Built on the pattern of Ghosted's R1 (Ghosted design section 14).
+
+**Why not "the latest time one good event would have saved it".** That question is empty: with this policy a right review at any time before the death moves the death later, so the answer is always "just before it died". The useful question is what a review at one fixed, meaningful moment (the first sign of weakness) would have bought.
+
+**Authorship.** New file `src/rescue-sentence.ts` and its tests, written by Kiro. `components/FactAutopsy.tsx` (Kiro's) gets three lines. `autopsy-sentences.ts` and `policy.ts` were written by Claude Code (`authorship.md`) and are used unchanged. Nothing changes in `packages/engine/`, `packages/shell/` or `packages/insight/`.
+
+### Dependency and build
+
+- `apps/study-dungeon/package.json`: `"@decay-engine/insight": "workspace:*"` in `dependencies` (added in the spec session; the developer runs `pnpm install` and commits `pnpm-lock.yaml`).
+- Insight is consumed from source exactly as the shell is: its `package.json` points `main`, `types` and `exports` at `./src/index.ts`, so Vite bundles it and `tsc --noEmit` type-checks the files it imports. It has no build step of its own.
+- **Netlify**: `netlify.toml` stays as it is. Its base is `apps/study-dungeon` and its command is `pnpm --filter @decay-engine/study-dungeon build`; pnpm installs the whole workspace (`pnpm-workspace.yaml` has `packages/*`), so `packages/insight` is linked and built from source with the app, as `packages/shell` already is (the comment in `netlify.toml` says so). pnpm on Netlify installs with a frozen lockfile, so the build fails until the updated `pnpm-lock.yaml` is committed.
+- Insight's only runtime dependency is `@decay-engine/engine`, which the app already has. Insight imports nothing from React, the shell or any app (its `boundary.test.ts`).
+
+### The good event, and why
+
+`RESCUE_EVENT = { kind: "review", correct: true }`. A right review is the only event that helps: it sets health to 100 and doubles the half-life (1-180 days). A wrong review sets health to 45 and halves the half-life, so it shortens a life. The sentence names the review it assumes ("A review on …") and the dialog's own cause sentences already say whether the real reviews were right or wrong.
+
+### New module: `src/rescue-sentence.ts` (pure)
+
+```typescript
+import type { AutopsyReport, HistoryEntry } from "@decay-engine/engine"
+import { whatIf, DEATH_TIME_PRECISION_MS } from "@decay-engine/insight"
+import { DAY_MS, studyDungeonPolicy, type Fact, type ReviewEvent } from "./policy"
+
+/** The review the line assumes (Requirement 22.2). */
+export const RESCUE_EVENT: ReviewEvent = { kind: "review", correct: true }
+
+/** What the line says, in times and whole days. */
+export type RescuePoint = {
+  at: number         // the what-if's `at` (= report.wentWeakAt)
+  until: number      // diesAt − DEATH_TIME_PRECISION_MS
+  extraDays: number  // floor((diesAt − baselineDiesAt − DEATH_TIME_PRECISION_MS) / DAY_MS), at least 1
+}
+
+export type RescueSentenceOptions = { timeZone?: string; locale?: string }   // as CauseSentenceOptions
+
+/** The rescue point of a dead fact, or null for no line (Requirement 22.3). */
+export function rescuePoint(fact: Fact, history: readonly HistoryEntry[], report: AutopsyReport<ReviewEvent>): RescuePoint | null
+
+/** The sentence for a rescue point (Requirement 22.1, 22.6). */
+export function rescueSentence(point: RescuePoint, options?: RescueSentenceOptions): string
+
+/** rescuePoint, then rescueSentence; null for no line. */
+export function generateRescueSentence(
+  fact: Fact, history: readonly HistoryEntry[], report: AutopsyReport<ReviewEvent>, options?: RescueSentenceOptions
+): string | null
+
+/** The cause sentences with the rescue sentence second (Requirement 22.7). Returns `causes` itself when `rescue` is null. */
+export function withRescue(causes: readonly string[], rescue: string | null): readonly string[]
+```
+
+`rescuePoint`, in this order (the first rule that holds gives `null`):
+
+1. `report.wentWeakAt === null` → `null`. The fact never went weak in this life, or it recovered and died without a new alive-to-weak crossing (the engine's autopsy resets it).
+2. `w = whatIf(studyDungeonPolicy, fact, history, { at: report.wentWeakAt, event: RESCUE_EVENT })`. `w.ok === false` → `null`. The reason is not shown or logged; every reason means "no honest line" (for example `replay-failed` when the history cannot be replayed). Errors that the policy itself throws are not caught (Insight passes them through, and a policy bug must not be hidden).
+3. `w.stoppedAt !== null` → `null` (22.8).
+4. `w.diesAt === null || w.baselineDiesAt === null` → `null` (no death within Insight's 10-year horizon; the longest life here is 180 × log2(10) ≈ 598 days, so this does not happen with this policy, but the type allows it).
+5. `Math.abs(w.baselineDiesAt − report.diedAt) > DEATH_TIME_PRECISION_MS` → `null`. The baseline replay must reproduce the real death. Both are engine death times for the same crossing, so they agree within P (Insight design section 6) unless the replay differs from what happened (Insight's L1: the current payload is replayed; Study Dungeon never changes `knowledge` after the add, so this is a guard, not an expected case).
+6. `extraDays = Math.floor((w.diesAt − w.baselineDiesAt − DEATH_TIME_PRECISION_MS) / DAY_MS)`; `extraDays < 1` → `null`.
+7. Return `{ at: w.at, until: w.diesAt − DEATH_TIME_PRECISION_MS, extraDays }`.
+
+`rescueSentence(point, options)`:
+
+- Dates with `Intl.DateTimeFormat(options.locale ?? "en-GB", { day: "numeric", month: "short", timeZone })`, or with `year: "numeric"` added for both dates WHEN `point.until − point.at >= 365 × DAY_MS` (so "14 Nov" can never be read as the wrong year: a gap under a year puts the end date at the first such date after `at`).
+- `A review on ${on}, when it first went weak, would have kept it alive until ${until}, ${n} ${n === 1 ? "day" : "days"} longer.`
+
+No `Math.pow`, `Math.log2` or half-life appears in the module: the only numbers are P and `DAY_MS`, and the only maths is the subtraction and the floor above.
+
+### The cases, decided
+
+| Case | What the line does | Why |
+|---|---|---|
+| `wentWeakAt` is `null` | No line | There is no moment to name. |
+| `whatIf` returns `ok: false` | No line | Any reason (`invalid-at`, `at-item-dead`, `replay-failed`, …) means the what-if cannot be stated. |
+| The what-if death is not at least one whole day later after P is taken off (N < 1), including earlier or equal | No line | A sentence such as "would not have helped" would be a claim about later reviews the user gave; the cause sentences already describe them. This happens only when wrong reviews after `wentWeakAt` bring both lives to the same half-life (both clamped at 1 day, or both at 180 then halved). |
+| `baselineDiesAt` differs from `report.diedAt` by more than P | No line | The replay did not reproduce the real death, so "longer" would compare with the wrong death. |
+| `stoppedAt` is not `null` | No line | It cannot happen for a dead fact (below), so it is treated as "the what-if does not describe this life". |
+| A resurrected fact | The line, about the current life | The report's life is the last one, from the last resurrection to the death. `whatIf` replays the earlier lives (each recorded `resurrected` entry through `engine.resurrect`) before `at`, and there is no recorded resurrection after the death, so the life cut is never reached. The sentence does not mention earlier lives. |
+| `resurrect-failed` entries after the death | Ignored | Insight skips them (`skipped`); they do not change the life. |
+| A death that is only in the preview | The line, at the previewed `now` | The report is settled in memory; `wentWeakAt` may be later than every stored entry, which `whatIf` handles (it replays everything, then tends at `at`). Nothing is stored. |
+
+### Why the what-if death is later (the property's basis)
+
+At `wentWeakAt` the fact has half-life `h` and health just under 60 (a crossing by decay) or 45 with half-life `g = max(1, h/2)` (a wrong review at that moment; the recorded entries at `at` are replayed before the extra review). The extra right review gives health 100 and half-life `min(180, 2h)` (or `min(180, 2g)`).
+
+- **No recorded tend after `wentWeakAt` in that life**: the real fact dies `h × log2(6)` (or `g × log2(4.5)`) after `at`; the what-if one `min(180, 2h) × log2(10)` (or the same with `g`) after `at`. The gain is at least 4.05 days (smallest at `h = 1`: 6.64 − 2.58), so the line always shows, with N ≥ 4.
+- **Recorded tends after `wentWeakAt`** can only be wrong reviews: a right one gives health 100, which makes the fact alive again and resets `wentWeakAt`. After each wrong review both lives are at 45, and the what-if half-life is never shorter than the real one, so the what-if fact is never dead before a recorded review (no `died-before-entry`) and never dies earlier. When both half-lives have reached the same value (clamped at 1, or 180 halved to the same value), the deaths are equal and there is no line.
+
+These are expectations for the property test, worked from the policy rules in Requirements 1-4; the module itself contains none of this maths.
+
+### Precision (`DEATH_TIME_PRECISION_MS`)
+
+The engine dates a death up to one minute after the true crossing. For the true what-if death `c1` and the true real death `c0`, `diesAt ∈ [c1, c1 + P)` and `baselineDiesAt ∈ [c0, c0 + P)`. So:
+
+- `diesAt − baselineDiesAt − P < c1 − c0`: N, the floor of the left side in days, is never more than the true gain.
+- `diesAt − P < c1`: the end date is never after the true what-if death's date.
+
+The cost: when the true gain is within a minute above a whole number of days, the line says one day fewer. For example, a true gain of exactly 30 days can read "29 days longer". That errs towards saying less, never more (as the Triage line does, Requirement 21.4).
+
+### Where the call is made
+
+`components/FactAutopsy.tsx`, inside its existing `useMemo` on `[engine, factId, now, timeZone]`, which already has the dead `fact` from `engine.view(now)` and `report = engine.autopsy(factId, now)`:
+
+```typescript
+const history = engine.history(factId)
+const causes = generateCauseSentences(report, fact.payload, { halfLifeAtDeath: …, timeZone })   // unchanged
+const rescue = generateRescueSentence(fact, history, report, timeZone === undefined ? {} : { timeZone })
+return { fact, chart: buildAutopsyChart(history, fact.payload, report), sentences: withRescue(causes, rescue) }
+```
+
+The `engine` prop's `Pick` already includes `history`, so `App.tsx` does not change: it already renders `FactAutopsy` with `engine` and `now` (the App's `now = realNow + previewOffsetMs`). **The clock rule**: `FactAutopsy` gets `now` as a prop and passes it only to `engine.view` and `engine.autopsy`; `rescue-sentence.ts` gets time only through the report and the what-if result; Insight never reads the clock (its boundary test). No `Date.now()` or argument-less `new Date()` is added anywhere (`new Date(ms)` is used only to format a given time).
+
+**Cost**: `whatIf` builds two throwaway engines on `InMemoryAdapter` and replays one fact's history (at most a few hundred entries), plus two forecast bisections. It runs once each time the dialog's memo runs (on open and when `now` changes), never on a tick of the list.
+
+### Shell: no change
+
+`AutopsyDialog` takes `causeSentences: readonly string[]` and renders each one, in order, as `<p className="shell-autopsy-sentence">` inside the "cause" `<section>`, with no live region and nothing focusable. A second entry therefore gives a plain paragraph with no shell change. The shell has no Study Dungeon allow-list (`scripts/check-engine-unchanged.sh` checks the shell against Ghosted's list only), and nothing is added to it.
+
+### Worked example: the sample facts
+
+`loadSampleData` at `now = 1 Dec 2026 12:00 UTC`, dates in UTC. Times in days from `now`; "weak at" is `report.wentWeakAt` (the engine dates a decay crossing up to a minute late, which moves no date below).
+
+| Dead fact | Life at `wentWeakAt` | Weak at | Real death | What-if death | N | Sentence |
+|---|---|---|---|---|---|---|
+| Who painted the Sistine Chapel ceiling? | new, half-life 2, never reviewed | −38.53 (23 Oct, 23:22) | −33.36 | −25.24 (6 Nov, 06:17) | 8 (8.12) | "A review on 23 Oct, when it first went weak, would have kept it alive until 6 Nov, 8 days longer." |
+| Speed of light in a vacuum? | half-life 4 after the right answer on −28 | −25.05 | −14.71 | +1.52 | 16 (16.24) | "A review on 6 Nov, … until 3 Dec, 16 days longer." |
+| Chemical symbol for gold? | half-life 10 after the right answer on −40 | −32.63 | −6.78 | +33.81 | 40 (40.59) | "A review on 29 Oct, … until 4 Jan, 40 days longer." |
+| Who wrote Frankenstein? | went weak by the wrong answer on −26 (45, half-life 10) | −26 | −4.30 | +40.44 | 44 (44.74) | "A review on 5 Nov, … until 10 Jan, 44 days longer." |
+
+The Sistine Chapel line is the one for the browser check. The other three what-if deaths are after `now`, so their end dates are in the future (open point 3). The time of day decides the dates near midnight (the Sistine Chapel's 23:22 is 24 Oct in a zone east of UTC), so the tests never compare a sample date; they compare N and the sentence's shape.
+
+### Tests
+
+All use fixed times (`test/fixtures`, `T0 = 1 Oct 2026 00:00 UTC`), a real engine on `InMemoryAdapter`, `timeZone: "UTC"`, and never the real clock.
+
+New `src/rescue-sentence.test.ts`:
+
+| Case | Set-up | Expected |
+|---|---|---|
+| Exact words | `rescueSentence({ at: Date.UTC(2026, 10, 14, 12), until: Date.UTC(2027, 0, 9, 12), extraDays: 56 }, { timeZone: "UTC" })` | "A review on 14 Nov, when it first went weak, would have kept it alive until 9 Jan, 56 days longer." |
+| Singular | the same with `extraDays: 1` | "…, 1 day longer." |
+| Year shown | `until` exactly `at + 365 × DAY_MS` | both dates with the year ("14 Nov 2026", "14 Nov 2027") |
+| Year not shown | `until` = `at + 365 × DAY_MS − 1` | no year |
+| Never reviewed | `add("d1", "new", day(0))`, autopsy at `day(10)` | "A review on 2 Oct, when it first went weak, would have kept it alive until 15 Oct, 8 days longer." (weak at 1.474 d, 2 Oct 11:22; what-if death 13.29 d later, 15 Oct 18:17; gain 8.12 d) |
+| Weak by a wrong answer | solid at `day(0)`, right at `day(2)` (half-life 20), wrong at `day(4)` (45, half-life 10) | `at === day(4)`; N = 44 (gain 20 × log2(10) − 10 × log2(4.5) = 44.74 d) |
+| A wrong answer after `wentWeakAt` | new at `day(0)` (weak at 1.47 d), wrong at `day(2)` (45, half-life 1) | the line shows; `whatIf`'s `diesAt` is later than `report.diedAt` (half-life 2 against 1 after the wrong answer) |
+| Equal deaths, no line | new at `day(0)`, wrong at `day(1)` (alive at 70.7, so weak from here: 45, half-life 1), wrong at `day(2)` (half-life 1 in both lives) | `rescuePoint` is `null`: both lives end at 45 with half-life 1 after `day(2)` |
+| `wentWeakAt` null | a report with `wentWeakAt: null` (from the real report, that field replaced) | `null`, and `withRescue(causes, null)` returns `causes` itself |
+| `whatIf` fails | the real history with its first entry removed | `null` |
+| Replay does not match | the real report with `diedAt` moved by `P + 1` | `null` |
+| Exactly P | `diedAt` moved by exactly P | the line shows |
+| Resurrected | new at `day(0)`, dead at 6.64 d, challenge right at `day(10)`, dead again | the line names the weak time of the second life (after `day(10)`) |
+| A preview death | solid at `day(10)`, nothing stored after the add, autopsy at `day(44)` | the line shows; `engine.history(id)` is still only `created` |
+| Order | `withRescue(["a", "b", "c"], "r")` | `["a", "r", "b", "c"]` |
+| No clock | the source of `rescue-sentence.ts` | no `Date.now` and no argument-less `new Date()` (pattern built from pieces, as Ghosted's `app-boundary.test.ts` does) |
+| Sample | `loadSampleData(engine, T0)`, each dead fact's line | Sistine Chapel 8, Speed of light 16, Chemical symbol for gold 40, Frankenstein 44 days; each matches `/^A review on \d{1,2} \w+, when it first went weak, would have kept it alive until \d{1,2} \w+, \d+ days? longer\.$/` |
+
+New `src/rescue-sentence.property.test.ts` (`{ numRuns: 100 }` each), with the existing `test/fact-generators.ts` (`factsScenario`, `buildFacts`, `factAt`), unchanged. For every fact that is dead at the scenario's `now`, with `report = engine.autopsy(id, now)`:
+
+- **Never earlier**: when `wentWeakAt` is not `null`, `whatIf` returns `ok: true` with `stoppedAt === null`, `|baselineDiesAt − report.diedAt| ≤ P`, and `diesAt > report.diedAt − P`.
+- **Later**: when, in addition, no `tended` entry of the fact's history lies after `wentWeakAt` and before `report.diedAt`, `diesAt − report.diedAt > DAY_MS`, and the line is shown.
+- **The number**: when the line is shown, the number in it (parsed from "N day(s) longer") equals `floor((diesAt − baselineDiesAt − P) / DAY_MS)` of a second, independent `whatIf` call in the test, and is at least 1.
+- **No line without a weak time**: when `wentWeakAt` is `null`, `generateRescueSentence` is `null`.
+- **Coverage** (fixed seed, same file): of the dead facts generated, at least 30% have a line, at least 5% have a wrong review after `wentWeakAt`, and at least 5% were resurrected. If one is not reached, the generator mix changes in a new helper; `fact-generators.ts`, the thresholds and `numRuns` are not lowered or weakened.
+
+Changed existing tests (changed to match, never loosened, `no-fake-tests.md`). **Files read** in the spec session: `App.hero-autopsy.test.tsx`, `test/fixtures.ts`, `test/fact-generators.ts`, `components/FactAutopsy.tsx`. `components/FactAutopsy.test.tsx` does not exist. No other test file was searched (no commands were run).
+
+| Test | What it does today | Change |
+|---|---|---|
+| `App.hero-autopsy.test.tsx`, "a grave's Autopsy shows the epitaph, …" | `expect(shown).toEqual(generateCauseSentences(…))` and `shown[0]` | `shown[0]` unchanged. The `toEqual` becomes `withRescue(generateCauseSentences(…), generateRescueSentence(fact, kit.engine.history("d1"), report, { timeZone: "UTC" }))`, and a new assertion: `shown[1]` is exactly the "2 Oct … 15 Oct, 8 days longer." sentence. |
+| `App.hero-autopsy.test.tsx`, the preview case | checks the chart's label and Challenge | Unchanged. New assertion: a rescue line is shown while previewing, and `history("p1")` is still only `created`. |
+| `App.accessibility.test.tsx` | | New case: the rescue sentence is a `<p class="shell-autopsy-sentence">`, not inside `[aria-live]`, not focusable, and Tab stops in the dialog are the same as before. |
+| Any other test that compares the autopsy's sentences | | The build task first runs `grep -rn "shell-autopsy-sentence\|generateCauseSentences\|causeSentences" apps/study-dungeon/src --include=*.test.*` and reads every match. A test that compares the whole list is changed to expect `withRescue(…)`, never loosened. |
+| `autopsy-sentences.test.ts` | calls `generateCauseSentences` directly | Unchanged (the function is unchanged). |
+
+### Property (Requirement 22.13)
+
+For any generated facts dead at `now` with a weak time, the what-if death of one right review at `wentWeakAt` is never earlier than the real death by more than P, and is more than a day later when no recorded review follows `wentWeakAt`. The line's N equals `floor((diesAt − baselineDiesAt + P) / DAY_MS)` (Session 67 decision), and no line is shown without a weak time. Test: `src/rescue-sentence.property.test.ts`.
+
+### Open points
+
+1. **"When it first went weak".** The report's `wentWeakAt` is the last alive-to-weak crossing of the life. If the fact went weak, came back with a right review and went weak again, "first" refers to the last weak spell. *Proposed:* keep the requested words; the alternative is "when it went weak". **Needs your decision.**
+2. **One day fewer on exact days.** Taking P off can turn a true 30-day gain into "29 days longer" (Precision above). *Proposed:* keep it (never over-claim). The alternative, `floor((diesAt − baselineDiesAt) / DAY_MS)`, can claim one day more than the truth when the gain is within a minute below a whole day. **Needs your decision.**
+3. **End dates in the future.** Three of the four sample deaths would have come after today ("until 3 Dec" when today is 1 Dec). The sentence is still a true what-if (one review, then nothing). *Proposed:* keep the same words. **FYI.**
+4. **Weak by a wrong answer.** When `wentWeakAt` is the time of a wrong review, the line suggests a right review at that same moment, after the wrong one. Insight replays the recorded entries at `at` first, so the numbers are right; the words may read as "review it again that day". *Proposed:* keep. **FYI.**
+5. **The year rule.** Years are shown only when the end is a year or more after `at`. The cause sentences above always show the year ("Went weak on 2 Oct 2026."). *Proposed:* keep the requested short form. **FYI.**
+6. **Placement.** Second, straight after the cause, inside the "cause" section. The shell has no other place for app text in this dialog without a new prop. **FYI.**
+
+## Live State Changes (Requirement 23, task L3)
+
+While the tab is open, the minute tick moves facts between the Crypt, the Dungeon and the Graveyard, and nothing on the screen reacts. L3 adds three reactions to a tick that moved a fact: the card reacts once (the creature wakes, or the tombstone drops into place), one short message (the toast) says what happened, and while the tab is hidden its title and favicon count the changes. Ghosted has the same feature in its own words (Ghosted Requirement 38, design section 15), and it is the model for this one: `state-changes.ts` has the same logic in both apps, with no import between them.
+
+**Authorship.** New files, all Kiro's: `src/state-changes.ts`, `src/live-changes.ts`, `src/tab-signal.ts`, `src/components/LiveToast.tsx`, `src/styles/live.css` and their tests. Kiro also adds lines to `App.tsx`, `wording.ts`, `components/ThreeLists.tsx`, and to two files Claude Code wrote and Kiro has changed before through named tasks (`authorship.md`): `components/FactCard.tsx` (the marker class and the `animationend` listener) and `components/TimeDock.tsx` (the optional `notice` prop). `clock-guard.ts`, `creatures.ts`, `animations.css`, `dock.css`, `policy.ts` and `autopsy-sentences.ts` are used unchanged. Nothing changes in `packages/`.
+
+### Where it runs
+
+All in `App.tsx`, in the existing tick handler `handleTick(at)` that `useSettleTicks` calls after each `engine.tick(at)`:
+
+```
+baseline: StateOf[] | null      (a ref; null at mount and while previewing)
+
+handleTick(at):
+  failed  = this tick's save failed (tickFailed, set by handleTickError just before)
+  ...existing problem and clock-notice handling (saidOther = the clock notice was said)
+  seen    = engine.view(at)
+  before  = baseline; baseline = snapshotStates(seen)
+  if before is null: stop                     ← the first tick at mount, the first after Back to today
+  notice  = liveNotice(diffStates(before, baseline), seen, id => creatureOf(id).name)
+  if notice is null: clear the toast and the card markers (the last message has had its minute)
+  else:
+    if not (failed or saidOther): announce(notice.text, false, true)   ← said once, in #sd-announcer
+    show the toast (announced = not (failed or saidOther))
+    mark the cards (none under reduced motion)
+    tab signal: record(notice.changes.length, notice.worst)
+```
+
+- **Never while previewing.** `useSettleTicks` runs no tick while previewing. An effect sets `baseline` to `null` when `previewing` turns true, so the tick that "Back to today" runs straight away only records.
+- **Never the first tick at mount.** `baseline` starts as `null`. Facts that died while the tab was closed are not reported.
+- **Never the user's own change.** An effect on `version` (bumped after every write: add, edit, fight, challenge, remove, import, sample load) reads `baseline` again from `engine.view(clock())`, if it is not `null`. So an edit or a wrong answer that moves a fact at once is part of the baseline before the next tick. *Cost:* a time-driven change in the same minute as a write is not reported (open point 2).
+- **The clock guard (Req 23.10).** `clock` is `heldClock(clockProp, engine)` (`clock-guard.ts`, unchanged). The tick time never runs behind the newest saved event, so `engine.tick` never throws `TIME_WENT_BACKWARD`, every tick reaches the handler, and the before and after views are never out of order with the saved history. A held clock gives the same `at` again, so nothing changes and nothing is reported. (The guard follows the real clock when it moves back without passing a saved event; then a fact can only look healthier, `weak → alive`, which `liveKind` drops, so nothing is reported either.)
+- **The names.** The App already calls `nameCreatures(engine.view(realNow))` before its children render, so `creatureOf(id).name` is the name on the card. `live-changes.ts` takes the name as a function argument, so it stays pure and reads no module state itself.
+
+### New module: `src/state-changes.ts` (pure)
+
+```typescript
+export type LifeState = "alive" | "weak" | "dead"
+export type StateOf = { readonly id: string; readonly state: LifeState }
+export type StateChange = { readonly id: string; readonly from: LifeState; readonly to: LifeState }
+
+export function snapshotStates(items: Iterable<StateOf>): StateOf[]       // copies id and state
+export function diffStates(before: Iterable<StateOf>, after: Iterable<StateOf>): StateChange[]
+```
+
+The same logic as Ghosted's file, line for line; only the header comment differs. `diffStates` returns every item in both lists whose state differs, in the order of `after`; an item in only one list is not a change; any transition is reported (`weak → alive` too), so task L5 can decide for itself.
+
+### New module: `src/live-changes.ts` (pure)
+
+```typescript
+export type LiveNotice = { text: string; changes: readonly StateChange[]; worst: "weak" | "dead" }
+export function liveKind(change: StateChange): LiveKind | null   // "wake" | "die" | "dieAsleep"
+export function liveNotice(changes: readonly StateChange[], facts: readonly Fact[], nameOf: (id: string) => string): LiveNotice | null
+```
+
+- Only `alive → weak` ("wake"), `weak → dead` ("die") and `alive → dead` ("dieAsleep") are reported; anything else, or an id not in `facts`, is dropped. No reported change gives `null`.
+- **Order** (who is named): importance 3 to 1, then a death before a weakening, then name (`localeCompare`, `en`), then id. The same rule as Ghosted's.
+- `worst` is `"dead"` when any reported fact died: the favicon badge's shape.
+
+### Wording (`wording.ts`, `liveText`)
+
+The list names come from `studyDungeonWording.lists`, so "Graveyard" is written once.
+
+**Amended by the developer (Session 69):** the creature wakes = alive → weak, "Gaze just weakened", "3 facts weakened, Gaze's among them", and the Graveyard for deaths. The table below replaces the first draft.
+
+| Case | Sentence |
+|---|---|
+| 1, Crypt → Dungeon (the creature wakes) | "Gaze just weakened." |
+| 1, Dungeon → Graveyard | "Gaze just died and went to the Graveyard." |
+| 1, Crypt → Graveyard in one tick | "Gaze just died in its sleep and went to the Graveyard." |
+| 2, both weakened | "Gaze and Wisp just weakened." |
+| 2, both died (from the Dungeon or in their sleep) | "Gaze and Wisp just died and went to the Graveyard." |
+| 2, one of each | "Gaze just weakened and Wisp went to the Graveyard." ("Gaze just went to the Graveyard in its sleep and Wisp weakened." for a death in its sleep first) |
+| 3 or more, all weakened | "3 facts weakened, Gaze's among them." |
+| 3 or more, all died | "3 facts went to the Graveyard, Gaze's among them." |
+| 3 or more, mixed | "2 facts weakened and 1 went to the Graveyard, Gaze's among them." ("1 fact weakened and 2 went to the Graveyard, …" with one weakening) |
+| Dismiss | "Dismiss" |
+| Title | "(2) Study Dungeon"; "(9+) Study Dungeon" above 9; "Study Dungeon" at 0 |
+
+The first name in each sentence is the most important fact (the order above). The creature's name is used because it is the biggest name on a Dungeon card and appears on every Crypt and Graveyard card; `nameCreatures` makes every name unique. The many-case counts facts ("3 facts weakened", as in the hero's "1 fact is weakening") and names one creature's fact.
+
+### The toast (`components/LiveToast.tsx`, `styles/live.css`)
+
+- **Where.** `TimeDock` gets one optional prop, `notice?: ReactNode`, rendered as the first child of `.sd-dock`, before `.sd-dock-in`. The toast is inside the fixed dock's own box, so it covers nothing: the dock grows by its height, `useDockHeight` (which observes `.sd-dock`) measures the new height into `--dock-h`, and the page's bottom room and scroll padding (`world.css`) follow. Study Dungeon's dock scrolls inside `.sd-dock-in` (expanded, up to 520 px wide), not inside `.sd-dock`, so the toast sits above that scrolling box and needs no `position: sticky` (Ghosted's dock scrolls as a whole, which is why its toast is sticky). It is never in the page flow next to the Triage panel, so it can never sit over it. With no `notice` the dock renders exactly as before, so `TimeDock.test.tsx` (its exact control order and its "only Play is filled" check) is unaffected.
+- **Look.** `--color-stone-hi` with a `--color-line` edge and `--color-bone` text, the hard `0 6px 0 #000` card shadow, 8 px radius, body type 16 px. `.sd-dock` has `pointer-events: none`, so the toast sets `pointer-events: auto`. `inline-size: fit-content; max-inline-size: 100%` (the dock's content box), centred with `margin-inline: auto`, `flex-wrap: wrap`, `overflow-wrap: anywhere`: at 320 px it is at most 288 px wide (the dock's 16 px gutters), the button wraps under the text, and the page never scrolls sideways. 8 px below it to the bar (`margin-block: 0 8px`); above it the dock's own top padding (26 px, 12 px up to 520 px). No rule hides it at any width.
+- **How long.** With motion: `sd-toast-life`, 6.5 s, fades in, stays, fades out (`live.css`, inside its no-preference block); the end of the animation removes it. Without motion it does not move: it stays until Dismiss or the next tick (a minute at most), which clears it when nothing new happened. *Why not a timer:* Study Dungeon's `motion.test.ts` bans only `setInterval` outside the settle tick, so a `setTimeout` would pass it; the CSS fade is kept anyway so both apps behave the same, and no timer is added (open point 1).
+- **Accessibility.** No `aria-live`, no `role` (a `role="status"` would be a second live region). The words are said once by `announce(text, false, true)`; the announcement carries `toast: true`, so the live region's `<p>` gets `sd-visually-hidden` (read, not shown twice: `.sd-visually-hidden` is new in `live.css`, the usual clip pattern) and the toast's own text gets `aria-hidden="true"`. When the words were not said (a storage problem or the clock notice this tick), the toast's text is not hidden. Dismiss is a quiet `sd-button sd-button-quiet` at least 44 × 44 px. Nothing calls `focus()` when the toast appears. If focus was inside the toast when it goes, it moves to `<main>` (`mainRef`, `tabIndex={-1}`, the focus target after the tour); Study Dungeon's hero heading has no ref.
+- **Tab order.** The dock is last in the DOM; the toast's Dismiss comes first in the dock, before the slider.
+
+### Tab title and favicon (`src/tab-signal.ts`)
+
+- `useTabSignal()` returns `{ record(changes, worst) }`, Ghosted's hook with Study Dungeon's icon. `record` does nothing unless `document.visibilityState === "hidden"`. While hidden it adds `changes` to a count and keeps the worst kind.
+- **Title.** `liveText.title(n, original)`: `"(2) Study Dungeon"`, `"(9+) Study Dungeon"` above 9. The original is `document.title` when the App first renders (`index.html` says "Study Dungeon").
+- **Favicon.** `index.html` has no `<link rel="icon">` (open point 3), so while the count is above 0 the hook adds one with `href = badgeIcon(worst)`, and removes it again at 0. The icon is a candle (`--color-bone` wax, `--color-pumpkin` flame) on a `--color-stone` tile, with a badge in the top-right corner on a `--color-bg` disc: a `--color-pumpkin` triangle when facts only weakened, a `--color-blood` cross when any died (shape and colour, `design-tokens.md`). The link's `title` attribute holds the new tab title; the tab title itself is the text alternative. If the page does have a link, its `href` is swapped and put back exactly.
+- **Reset.** On `visibilitychange` to `"visible"` the count is 0, the title and the favicon are put back exactly as they were, and the link's `title` is removed. The same on unmount.
+- Data URL only, no network request; the colours are the Study Dungeon token hexes (`theme.test.ts` checks the palette in `theme.ts` only, and no test scans hexes in TS files).
+
+### The card reaction
+
+- The App keeps `justChanged: ReadonlySet<string>`, set from the notice's changes (empty under reduced motion), and passes it to `ThreeLists` (new optional props `justChanged`, `onReacted`), which passes `justChanged` and `onReacted` to each `FactCard`.
+- `FactCard` adds `sd-just-changed` to the `<article>` while marked, and a native `animationend` listener on the article (not React's `onAnimationEnd`, which jsdom may not deliver), which calls `onReacted(id)`; the App removes the id. The listener ignores an event whose `animationName` is set and is not one of L3's two (the grave's hover wiggle, `sd-wiggle`, ends inside the same card). The next tick without a change clears the set anyway.
+- `live.css`, inside its no-preference block: `.sd-card.sd-just-changed .sd-card-top > :first-child { animation: sd-wake 1.1s ease-out 1 }` (the creature's `<svg>`, the first child of a Dungeon card's top row), the creature jolts up, stretches and settles; `.sd-card.sd-grave.sd-just-changed > :first-child { animation: sd-grave-drop 0.9s ease-out 1 }` (the tombstone, a grave card's first child), the stone falls a little and settles. They animate the creature's `<svg>`, not its mood group (whose idle animation, `animations.css`, keeps running), so nothing in `animations.css` is overridden.
+- Only the weak and dead cards react: time never moves a fact into the Crypt. The lists are tabs; a marked card in a tab that is not open reacts when that tab is opened, unless a tick without a change has cleared the mark first.
+
+### Tests
+
+All use `T0` plus offsets (`test/fixtures`), a real engine on `InMemoryAdapter`, and never the real clock. Worked times: a solid fact (half-life 10) is alive until `T0 + 10 × log2(100/60)` = `T0 + 7.37 d`, weak until `T0 + 10 × log2(10)` = `T0 + 33.22 d`, then dead.
+
+| File | What it proves |
+|---|---|
+| new `state-changes.test.ts` | every one of the six transitions, no change for each state, empty lists, several items, the order of `after` whatever the order of `before`, added and removed items, inputs unchanged, purity, `snapshotStates` copies |
+| new `state-changes.property.test.ts` | the Property below, `{ numRuns: 200 }`, plus a fixed-seed coverage check that the generator reaches all three states and all six transitions |
+| new `live-changes.test.ts` | every sentence of the Wording table exactly, the order that picks the name, dropped kinds and unknown ids, `worst` |
+| new `tab-signal.test.tsx` | the title for 0, 1, 2, 9, 10, 250; the data URL and its only URL (the SVG namespace); the candle kept, triangle and cross in token colours; counting only while hidden; the cross stays; reset on `visibilitychange`; restore on unmount; the added link removed |
+| new `App.live.test.tsx` | a real engine ticked across 60 and across 10 through the fake scheduler: the toast text, the live region's text, the card class and its removal on `animationend` (and not on another animation's end), the toast's place in the dock; Crypt → Graveyard in one tick; three facts, one toast; no toast on the first tick at mount, in a preview, on the first tick after Back to today, or after the user's own edit or wrong answer that moves a fact at once; reduced motion (no class, the toast until the next tick); title and favicon while hidden and their reset; one live region, no focus moved, only Dismiss focusable, Dismiss moves focus to `<main>` |
+| new `styles/live-css.test.ts` | both animations and the fade inside the no-preference block only; the toast's margins, width and `pointer-events`; no rule hides it; no fixed width over 296 px; Dismiss at 44 px and never filled; `.sd-visually-hidden` clips |
+| `theme.test.ts` (the wording test) | a new `describe` with the exact words of `liveText` |
+
+Study Dungeon has no wording coverage map like Ghosted's `SAMPLE_CALLS`; `theme.test.ts` checks words case by case, so the new case is added there.
+
+**Existing tests that read the live region or fire ticks**, read before building: `App.storage-errors.test.tsx` (the tick cases: the problem is said once and the same `<p>` stays on the next failed tick; the fact is dead from the first tick at mount, so no later tick changes a state, and a fact added straight through the engine after mount is not in the baseline, so it is not a change), `clock-guard.test.tsx` (the clock notice is in the page text; no fact changes state), `test/app-kit.tsx`, `test/fixtures.ts`, `motion.test.ts`, `styles/animations-css.test.tsx`, `styles/layout-css.test.ts`, `styles/global-css.test.ts`, `theme.test.ts`, `contrast.test.ts` (first 60 lines). They need no change: a failed tick never announces the toast (Req 23.5), the baseline is updated on a failed tick too, `live.css` is a new file outside the lists those CSS tests read, and no new `setInterval`, `requestAnimationFrame` or `.animate(` is added. A read-only scan (by a helper agent, file reads only) of `App.test.tsx`, `App.extras.test.tsx`, `App.accessibility.test.tsx`, `App.visuals.test.tsx`, `App.hero-autopsy.test.tsx`, `App.answers.test.tsx`, `App.first-run.test.tsx`, `App.tour.test.tsx`, `App.sound.test.tsx`, `Root.test.tsx`, `ticking.test.ts`, `components/TimeDock.test.tsx`, `components/ThreeLists.test.tsx`, `test/round7-helpers.ts` and `test/dock.ts` found no assertion that would break: the only tick fired after a clock move (`App.test.tsx`, the P4 tick case) moves no fact across a threshold, and `TimeDock.test.tsx` renders the dock without a `notice`. Not read: the component tests of the dialogs (`FightDialog*.test.tsx`, `ChallengeDialog.test.tsx`, `AddEditFactDialog.test.tsx`, `dialog-sound.test.tsx`, `ErrorBoundary.test.tsx`), `art/art.test.tsx` and the pure-module tests; none renders the App or fires a tick.
+
+### Property (Requirement 23.12)
+
+For any two lists of ids and states, `diffStates` returns exactly the items present in both whose state differs, once each, in the order of the second list, and a list compared with itself gives no change. Test: `src/state-changes.property.test.ts`.
+
+### Open points
+
+1. **No timer for the toast.** *Decided (default, as Ghosted):* CSS fade with `animationend` removal; under reduced motion it stays until Dismiss or the next tick (up to a minute). Study Dungeon's `motion.test.ts` would allow a `setTimeout`, so a 6-second timer under reduced motion is possible here; it is not used, so the two apps behave the same. **Your call if a minute is too long.**
+2. **A change in the same minute as a write is not reported.** *Decided:* the baseline is read again after every write, so the user's own change is never reported; the cost is a time-driven change in the same minute. **FYI.**
+3. **No favicon in `index.html`.** The request names Study Dungeon's own favicon as the base, but `index.html` has none, so the browser shows its default icon. *Decided:* L3 adds a link only while the count is above 0 (a candle with the badge) and removes it after, so the page is exactly as before when the tab is shown. Adding a permanent favicon (the same candle without the badge) is a one-line `index.html` change outside L3. **Needs your decision.**
+4. **Storage problem on the tick.** *Decided:* the problem message keeps the live region; the toast is shown, not said. **FYI.**
+5. **A marked card in a closed tab.** *Decided:* the lists are tabs (the Dungeon is open by default), so a fact that died reacts only if the Graveyard is open or opened before the next tick. The toast always says it. **FYI.**
+6. **Focus after Dismiss.** *Decided:* `<main>`, because the hero heading has no ref and adding one would change `HeroSection.tsx` for this alone. **FYI.**
+
+## Notifications While the Tab Is Open (Requirement 24, task L5)
+
+L5 starts after the L3 build is checked. A tick that L3 reports can also show one browser notification, when the user turned the setting on, the browser allows it and the tab is hidden. With no server, nothing reaches the user once the tab is closed or the computer sleeps; the setting says so. Ghosted's design section 16 is the same feature; `notify.ts` has the same logic in both apps, with no import between them.
+
+**Authorship.** Everything here is Kiro's. `sound.ts`, `SoundToggle.tsx`, `clock-guard.ts` and the other Claude Code files are not edited; `ResetData.tsx` and `App.tsx` are Kiro's.
+
+### Where it runs
+
+In `App.tsx`'s `handleTick`, straight after the notice is built (L3, "Where it runs"):
+
+```
+notice = before is null ? null : liveNotice(diffStates(before, baseline), seen, id => creatureOf(id).name)
+if shouldNotify({ enabled: notifyOn (ref), permission: api?.permission ?? "unsupported",
+                  visibility: document.visibilityState, previewing: previewing (ref),
+                  firstTick: before is null, hasChange: notice is not null }):
+  showNotification(api, notice, focusWindow)
+...the L3 branches as before
+```
+
+New optional App props: `notifications?: NotificationApi | null` (default the browser's `Notification`, or `null`) and `focusWindow?: () => void` (default `window.focus()`).
+
+### New module: `src/notify.ts`
+
+The same exports as Ghosted's (design 16.2): `shouldNotify`, `notifySettingState`, `notificationFor`, `showNotification`, `readNotifyEnabled`, `saveNotifyEnabled`, `browserNotificationApi`, with `NOTIFY_SETTING_KEY = "study-dungeon:notify"`, `NOTIFY_TAG = "study-dungeon-live"`, the title `headerText.title` and the icon from Study Dungeon's `badgeIcon`. The storage helpers follow `sound.ts`'s pattern (`"on"`/`"off"`, every throw caught) and take the App's `storage`.
+
+### The setting (`components/NotifySetting.tsx`, `styles/notify.css`)
+
+- **Where.** In `ResetData`'s children, after `SoundToggle` and before `BackupControls`: the settings row that holds "Answer by" and the sound switch. It takes the row's full width (`flex: 1 1 100%`), because it has sentences under it; the row's 12 px gap stays around it.
+- **Control.** `<input type="checkbox" role="switch">` with a `<label>`, as `SoundToggle`; `aria-describedby` points at the sentences. The same click rules as Ghosted (16.3): one request only from `"default"`, a pending flag, the denied sentence through `announce`, an unmounted component ignores the answer. The checkbox shows `checked` from the setting, so a closed prompt leaves it unchecked.
+- **Look.** Body type in `--color-bone-dim` at 15 px, 8 px between the switch and the sentences, the checkbox sized and coloured as the sound switch. No px width, no animation.
+
+### Wording (`wording.ts`, `notifyText`)
+
+| State | What shows |
+|---|---|
+| label | "Notify me about changes while this tab is open" |
+| unsupported | "This browser cannot show notifications, so this setting is not available here." (no switch) |
+| on | "On: when a fact changes while this tab is in the background, your browser shows a notification." |
+| denied | "Your browser blocks notifications for this page; to allow them, open the site settings by the address bar." |
+| blocked | "This is on, but your browser is blocking notifications for this page, so none are shown; allow them in the site settings by the address bar, or turn this off." |
+| not saved | "This choice cannot be saved in this browser, so it lasts until the page is closed." |
+| limit | "There is no server, so nothing can notify you when this tab is closed or the computer is asleep." |
+| privacy | "A notification shows only what is already on this page, and nothing is sent anywhere." |
+| notification | title "Study Dungeon"; body the L3 sentence ("Gaze just weakened.") |
+
+### Tests
+
+| File | What it proves |
+|---|---|
+| new `notify.test.ts` | as Ghosted's (16.5): all 128 combinations of `shouldNotify`, `notifySettingState`, `notificationFor` equal to `liveNotice`'s text, tag, silent, icon; `showNotification` with a fake class; the setting with a fake and a throwing storage, and after a reload |
+| new `components/NotifySetting.test.tsx` | each state and sentence; a real checkbox switch with a label, in the Tab order; `requestPermission` only on the change from `"default"`, once; denied through `announce` |
+| new `App.notify.test.tsx` | the real engine and fake scheduler of `App.live.test.tsx`: hidden + on + granted → one notification per tick with the toast's text; visible, off, denied, first tick, Back to today → none; never a request at mount or on a tick; survives a re-render with the same storage; a throwing storage; click focuses; one live region; the switch sits in `.sd-settings` after the sound switch |
+| new `styles/notify-css.test.ts` | the gap, no width over 288 px, no rule hides it, no animation |
+| `theme.test.ts` | a new `describe` with the exact words of `notifyText`, no guilt words |
+
+**Existing tests read before building** are listed in the build session's log and in task 26.5. jsdom has no `Notification`, so every existing test sees the **unsupported** sentence and no new control.
+
+### Open points
+
+1. **The same choices as Ghosted** (design 16.6): unsupported shows a sentence, denied keeps the switch, two sentences for the limit and privacy. **FYI.**
+2. **Reset.** *Decided:* the setting is treated as the sound setting is by "Reset all data". **FYI.**
+
+## The First Ten Seconds (Requirement 25, task L6)
+
+L6 starts after the L5 build is checked. The first time a visitor loads the sample facts, after the tour, the time machine runs forward to +30 days by itself and comes back to today. The design is Ghosted's (Ghosted design section 17); only the differences are written out here.
+
+**Authorship.** Kiro's, except one optional prop in `TimeDock.tsx` (Claude Code's), named in task 27.3 with a header line, as L3 did. Nothing changes in `packages/`, `clock-guard.ts`, `sample-data.ts`, `dock.css` or `animations.css`.
+
+### Where the frames come from
+
+As in Ghosted 17.1: the App gets no frame scheduler in the browser, the shell's default is not exported, and `motion.test.ts` forbids new timers and `requestAnimationFrame` in `src/`. So the first look presses the dock's own Play and reads each Play frame as progress: `progress = offset / TIME_MACHINE_MAX_OFFSET_MS` (60 days over 5 000 ms).
+
+### Modules
+
+- `src/first-look.ts`: the same exports as Ghosted's, with `FIRST_LOOK_FLAG = "study-dungeon:first-look"`. The plan: 0 → +30 days in 4 000 ms (ease-in-out cubic, whole hours), hold to 5 000 ms, then 0. At 1 000 ms 45 h, 2 000 ms 15 days, 3 000 ms 675 h.
+- `src/first-look-dock.ts`: `useFirstLookDock`, as Ghosted's; the toggle it ignores is `.sd-dock-toggle`.
+- `TimeDock.tsx`: one optional prop, `firstLook?: FirstLookDockControl`. Its `onChange` prop is renamed inside the component and replaced by the hook's `change`, so the markers and the `TimeMachine` go through it with their own lines unchanged; the hook's handlers go on `.sd-dock`. Omitted: the dock behaves exactly as before.
+- `components/FirstLookSkip.tsx` and `styles/first-look.css`: a quiet `sd-button sd-button-quiet` in the dock's `notice` slot, at least 44 × 44 px, 8 px below it.
+
+### The App
+
+- `loadSample`, when the write succeeded, the `firstLook` prop is given and `firstLookSeen(storage)` is false: phase "waiting".
+- The start effect waits for `!firstRun && !touring && dialog === null && !previewing`, then sets the flag and plays (or not, under reduced motion or when the flag cannot be saved) and announces "Showing the next 30 days. Nothing is saved." The sample's own announcement ("… loaded") was said earlier, at the load.
+- "Back to today" in the top banner ends the first look, then sets the offset to 0. The end moves focus to `<main>` only when it was on Skip.
+
+**Why +30 days.** `sample-data.ts` (Claude Code's) gives half-lives of 2 to 20 days, so every weak fact and several alive ones are dead or weak within 30 days; at +60 days nearly the whole dungeon is a graveyard and the change is harder to follow. The exact counts at +30 days were not worked out here; the browser check (27.6) looks at them. 30 also matches Ghosted and the sentence.
+
+### Wording
+
+`firstLookText.skip` "Skip the preview", `firstLookText.announce` "Showing the next 30 days. Nothing is saved."
+
+### Tests
+
+| File | What it proves |
+|---|---|
+| new `first-look.test.ts` | as Ghosted's: the plan's offsets, ease, whole hours, total 5 000 ms; the flag with a fake and a throwing storage and after a reload |
+| new `App.first-look.test.tsx` | a real engine on a recording adapter, fake frames and clock, through `test/app-kit.tsx`'s pieces where they fit: starts after the tour is skipped; flag set at the start and on a reload; not with the flag set, nor under reduced motion (flag set), nor during the tour or with a dialog open; Skip, Escape, the slider, Play, a jump and Back to today each return to today; no save; Skip a named native button in the Tab order; one live region; no `firstLook` prop, nothing |
+| new `styles/first-look-css.test.ts` | the 44 px minimum, the 8 px margin, no width in px, no motion, no hiding rule |
+
+**Existing tests read before building** are listed in task 27.5 and the log.
+
+### Open points
+
+The same as Ghosted 17.7. **Your call** on the dock's Play (1), the 4 s + 1 s timing (2) and reset (6).

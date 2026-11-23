@@ -47,6 +47,15 @@ The rule above (Kiro never writes decay-rule code) was kept for the engine's Tri
 
 `apps/ghosted/src/autopsy-sentences.ts` was planned as hand-written, like Study Dungeon's. At the developer's request it was written by Claude Code (Sonnet 5.5) outside Kiro, from Requirements 19 and 31 and design section 2.3, with no Kiro credits. It was tested on real engine reports (a normal death, a death after a text, a person who was lit again, and a person added already dark), and its wording was checked against the Ghosted wording rules. Kiro writes its tests and never edits it.
 
+## What Claude Code (Sonnet 5.5) wrote after Nov 21 (outside Kiro)
+
+Written at the developer's request, each with a header comment saying so. Do not rewrite these files; edit only the lines a task names, and say so in the log.
+
+- **Clock guard** (both apps): `src/clock-guard.ts` and `src/clock-guard.test.tsx`, plus the lines in each `App.tsx` that use `heldClock` and show the one-time message.
+- **P6 fixes**: Study Dungeon's `explainTyped` note in `AnswerPanel.tsx`, `FightDialog.tsx`, `ChallengeDialog.tsx`, `wording.ts` and `dialogs.css`; Ghosted's `duplicateReasons` in `import-people.ts`, its use in `ImportDialog.tsx` and `wording.ts`, and their tests.
+- **Landing page**: everything in `site/`, and `scripts/check-site.sh`.
+- **CSS fixes that followed browser checks**: the blocks marked "Written by Claude Code" in `apps/ghosted/src/styles/dock.css` and `layout.css`, and the narrow-width and bottom-room rules in `apps/study-dungeon/src/styles/dock.css` and `world.css` (with the CSS test values they pin).
+
 ## What Kiro writes (generated)
 
 Kiro is used for:
