@@ -13,6 +13,9 @@ importers:
       '@decay-engine/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@decay-engine/insight':
+        specifier: workspace:*
+        version: link:../../packages/insight
       '@decay-engine/shell':
         specifier: workspace:*
         version: link:../../packages/shell
@@ -71,6 +74,9 @@ importers:
       '@decay-engine/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@decay-engine/insight':
+        specifier: workspace:*
+        version: link:../../packages/insight
       '@decay-engine/shell':
         specifier: workspace:*
         version: link:../../packages/shell
@@ -108,6 +114,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^6.3.0
         version: 6.3.0(vite@8.3.8(@types/node@22.20.5))
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
       jsdom:
         specifier: ^31.0.1
         version: 31.0.1
@@ -126,6 +135,25 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^5.1.0
         version: 5.1.0(vitest@5.1.0)
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@22.20.5)(@vitest/coverage-v8@5.1.0)(jsdom@31.0.1)(vite@8.3.8(@types/node@22.20.5))
+
+  packages/insight:
+    dependencies:
+      '@decay-engine/engine':
+        specifier: workspace:*
+        version: link:../engine
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.5
       fast-check:
         specifier: ^4.10.2
         version: 4.10.2

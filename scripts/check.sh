@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Runs every check the project has, in order, and prints a short summary:
 # install, the engine-unchanged check, typecheck (shell, app, Ghosted),
-# tests (engine, shell, app, Ghosted), the app and Ghosted builds, and the landing page (site/).
+# tests (engine, shell, app, Ghosted), the app and Ghosted builds, typecheck and tests of
+# @decay-engine/insight, and the landing page (site/).
 # "app" is Study Dungeon.
 # Run it from anywhere in WSL:  bash scripts/check.sh
 # Exit code is 0 only when every step passes.
 #
 # Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 # The three Ghosted steps were added by Kiro (Ghosted task 2.10, design section 8.3).
+# The two Insight steps were added by Kiro (task E1).
 
 set -u
 cd "$(dirname "$0")/.."
@@ -53,6 +55,8 @@ step "build app"          pnpm --filter @decay-engine/study-dungeon build
 step "typecheck ghosted"  pnpm --filter @decay-engine/ghosted typecheck
 step "test ghosted"       pnpm --filter @decay-engine/ghosted test
 step "build ghosted"      pnpm --filter @decay-engine/ghosted build
+step "typecheck insight"  pnpm --filter @decay-engine/insight typecheck
+step "test insight"       pnpm --filter @decay-engine/insight test
 step "landing page"       bash scripts/check-site.sh
 
 echo
