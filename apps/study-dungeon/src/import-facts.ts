@@ -48,16 +48,56 @@ function fieldsOf(line: string): string[] {
   return splitCsv(line)
 }
 
+const ENTITIES: Record<string, string> = { "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'" }
+
+/** Anki exports keep HTML in cells: line breaks become spaces, tags are dropped, common entities decoded. */
+function plain(field: string): string {
+  if (!/[<&]/.test(field)) return field
+  return field
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/?[a-z][^>]*>/gi, "")
+    .replace(/&(nbsp|amp|lt|gt|quot|#39);/g, (e) => ENTITIES[e] ?? e)
+    .replace(/\s+/g, " ")
+}
+
+const HEADER_QUESTION = new Set(["question", "front", "prompt", "q"])
+const HEADER_ANSWER = new Set(["answer", "back", "a"])
+
+/**
+ * The text as records: a line is one record, except a CSV line that opens a
+ * quote it does not close, which continues on the next lines (joined by spaces).
+ * Each record keeps the number of the line it starts on.
+ */
+function records(text: string): Array<{ line: number; text: string }> {
+  const out: Array<{ line: number; text: string }> = []
+  const lines = text.split(/\r?\n/)
+  for (let i = 0; i < lines.length; i++) {
+    let joined = lines[i]!
+    const start = i + 1
+    const csvLike = !joined.includes("|") && !joined.includes("\t") && !joined.trim().startsWith("#")
+    while (csvLike && (joined.match(/"/g)?.length ?? 0) % 2 === 1 && i + 1 < lines.length) {
+      i++
+      joined += " " + lines[i]!
+    }
+    out.push({ line: start, text: joined })
+  }
+  return out
+}
+
 /** Reads pasted text; every line is either a fact or a skipped line with its reason. */
 export function parseImport(text: string): ImportResult {
   const facts: ImportedFact[] = []
   const skipped: SkippedLine[] = []
   const seen = new Set<string>()
-  text.split(/\r?\n/).forEach((raw, index) => {
-    const line = index + 1
+  let firstRow = true
+  records(text).forEach(({ line, text: raw }) => {
     const trimmed = raw.trim()
     if (trimmed === "" || trimmed.startsWith("#")) return
-    const fields = fieldsOf(trimmed).map((f) => f.trim())
+    const fields = fieldsOf(trimmed).map((f) => plain(f).trim())
+    if (firstRow) {
+      firstRow = false
+      if (HEADER_QUESTION.has((fields[0] ?? "").toLowerCase()) && HEADER_ANSWER.has((fields[1] ?? "").toLowerCase())) return
+    }
     const [question = "", answer = "", ...rest] = fields
     const why = rest.join(", ").trim()
     if (question === "" || answer === "") {

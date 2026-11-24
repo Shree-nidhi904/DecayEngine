@@ -466,14 +466,14 @@ describe("the dock keeps clear of focus (Req 12.7)", () => {
     const dockCss = readText(join(SRC_DIR, "styles/dock.css"))
     const dockRule = /\.gh-dock\s*\{([^}]*)\}/.exec(dockCss)![1]!
     expect(dockRule).toMatch(/position:\s*fixed;/)
-    expect(dockRule).toMatch(/inset-block-end:\s*0;/)
+    expect(dockRule).toMatch(/inset-block-end:\s*var\(--badge-room, 0px\);/)
     expect(dockRule).toMatch(/max-block-size:\s*var\(--dock-max\);/)
     expect(dockRule).toMatch(/overflow-y:\s*auto;/)
 
     // Task L2: the room is the measured height (--dock-h), and --dock-max until it is measured.
     const layout = readText(join(SRC_DIR, "styles/layout.css"))
-    expect(layout).toMatch(/html\s*\{\s*scroll-padding-bottom:\s*calc\(var\(--dock-h, var\(--dock-max\)\) \+ 12px\);/)
-    expect(layout).toMatch(/\.gh-main\s*\{\s*padding-block-end:\s*calc\(var\(--dock-h, var\(--dock-max\)\) \+ 24px\);/)
+    expect(layout).toMatch(/html\s*\{\s*scroll-padding-bottom:\s*calc\(var\(--dock-h, var\(--dock-max\)\) \+ var\(--badge-room, 0px\) \+ 12px\);/)
+    expect(layout).toMatch(/\.gh-main\s*\{\s*padding-block-end:\s*calc\(var\(--dock-h, var\(--dock-max\)\) \+ var\(--badge-room, 0px\) \+ 24px\);/)
     expect(layout).toMatch(/:root\s*\{\s*--dock-max:\s*180px;/)
   })
 })

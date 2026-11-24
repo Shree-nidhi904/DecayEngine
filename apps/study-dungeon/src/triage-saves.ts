@@ -10,7 +10,8 @@
 
 import type { TriageCandidate } from "@decay-engine/engine"
 import { LOSS_FORECAST_DAYS } from "./loss-forecast"
-import { DAY_MS, studyDungeonPolicy, type Fact, type FactPayload, type FactPolicyData, type ReviewEvent } from "./policy"
+import { DAY_MS, type Fact, type FactPayload, type FactPolicyData, type ReviewEvent } from "./policy"
+import { activePolicy } from "./policy-select"
 
 /** A Triage pick, as the panel shows it. */
 type FactCandidate = TriageCandidate<FactPayload, FactPolicyData>
@@ -49,7 +50,7 @@ export function triageSaves(picks: readonly FactCandidate[], now: number): numbe
  * anywhere in (now, end].
  */
 function savedPast(item: Fact, end: number, now: number): boolean {
-  const result = studyDungeonPolicy.applyEvent(item, SAVE_EVENT, now)
+  const result = activePolicy().applyEvent(item, SAVE_EVENT, now)
   const after: Fact = { ...item, health: result.health, policyData: result.policyData, lastEventAt: now }
-  return studyDungeonPolicy.healthAt(after, end) >= studyDungeonPolicy.thresholds.dead
+  return activePolicy().healthAt(after, end) >= activePolicy().thresholds.dead
 }

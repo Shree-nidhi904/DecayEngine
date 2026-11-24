@@ -382,7 +382,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Log as Session 43 in `docs/KIRO_LOG.md`
     - _Requirements: 33.2, 33.6_
 
-- [ ] 8. Group H: A compact moon dock (task L2, design section 11)
+- [x] 8. Group H: A compact moon dock (task L2, design section 11)
   - [x] 8.1 Session flag and wording
     - New `dock-state.ts` (`readDockExpanded`, `writeDockExpanded`, key `ghosted.dock-expanded` on the `session` prop) and `dock-state.test.ts`
     - `wording.ts`: `dockText.toggle` ("Coming up"), `dockText.hint` ("Drag to look ahead"), `dockText.markerList`, `dockText.fadesIn`, `dockText.darkIn`. In `wording.test.ts`: arguments for the two functions, and a case for the exact toggle and hint words
@@ -409,7 +409,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 34.7, 33.2_
 
-- [ ] 9. Group I: The loss forecast line (task P4, design section 12)
+- [x] 9. Group I: The loss forecast line (task P4, design section 12)
   - [x] 9.1 Wording and the pure count
     - `wording.ts`: `heroText.lossForecast(fade, dark)` with the sentences of design section 12.3 ("in the next 7 days", never "this week")
     - New `loss-forecast.ts`: `LOSS_FORECAST_DAYS = 7`, `LossForecast`, `lossForecast(peopleToday, forecastToday, today)`, built on the existing `dockMarkers` (no policy formula repeated)
@@ -433,7 +433,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 35.12, 35.13, 33.2_
 
-- [ ] 10. Group J: What this session saves (task P5, design section 13)
+- [x] 10. Group J: What this session saves (task P5, design section 13)
   - P5 starts only after task 9.4 (the P4 check) is ticked.
   - [x] 10.1 Shell addition: the `picksNote` prop (shared with Study Dungeon task 23)
     - `packages/shell/src/components/TriagePanel.tsx`: the optional `picksNote` prop of design 13.2, rendered as `<p className="shell-triage-note">` straight after the picks `<ol>` and before the start button's wrapper, only while there are picks and the text is not empty. No `aria-live`, `role` or `tabindex`
@@ -469,7 +469,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 36.10, 36.11, 36.12, 29.4_
 
-- [ ] 11. Group K: Rescue Point in the autopsy (task R1, design section 14)
+- [x] 11. Group K: Rescue Point in the autopsy (task R1, design section 14)
   - R1 starts only after the insight build (E1) is checked: insight task 11 (install, typecheck, tests, `scripts/check.sh`, `scripts/check-engine-unchanged.sh`) passes and is ticked in `.kiro/specs/insight/tasks.md`.
   - [x] 11.1 The dependency
     - `package.json`: `"@decay-engine/insight": "workspace:*"` in `dependencies`. The line was added in the spec session (Session 65); the developer runs `pnpm install` in WSL and commits `pnpm-lock.yaml` with it (Netlify installs with a frozen lockfile)
@@ -499,7 +499,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 37.1, 37.3, 37.7, 37.8, 37.13_
 
-- [ ] 12. Group L: Live state changes (task L3, design section 15)
+- [x] 12. Group L: Live state changes (task L3, design section 15)
   - L3 starts after the R1 build is checked.
   - [x] 12.1 The pure diff
     - New `src/state-changes.ts`: `LifeState`, `StateOf`, `StateChange`, `snapshotStates`, `diffStates` exactly as design 15.2 (the same logic as Study Dungeon's file, no import between apps)
@@ -531,7 +531,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 38.4, 38.6, 38.7, 38.8_
 
-- [ ] 13. Group M: Notifications while the tab is open (task L5, design section 16)
+- [x] 13. Group M: Notifications while the tab is open (task L5, design section 16)
   - L5 starts after the L3 build is checked.
   - [x] 13.1 The pure decision and the browser helpers
     - New `src/notify.ts` exactly as design 16.2: `shouldNotify`, `notifySettingState`, `notificationFor` (text from `LiveNotice`, icon from `badgeIcon`), `showNotification`, `readNotifyEnabled`, `saveNotifyEnabled`, `browserNotificationApi`, `NOTIFY_SETTING_KEY`, `NOTIFY_TAG`. No new change detection, no sentence written out
@@ -557,7 +557,7 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 39.1, 39.3, 39.6, 39.7, 39.11_
 
-- [ ] 14. Group N: The first ten seconds (task L6, design section 17)
+- [x] 14. Group N: The first ten seconds (task L6, design section 17)
   - L6 starts after the L5 build is checked.
   - [x] 14.1 The plan and the flag
     - New `src/first-look.ts` exactly as design 17.2; new `src/first-look.test.ts` (design 17.6)
@@ -576,7 +576,8 @@ The plan runs in seven groups. Each group ends with a checkpoint task that runs 
     - New `src/App.first-look.test.tsx` and `src/first-look-css.test.ts` (design 17.6). Existing tests read first are listed in design 17.6; none is changed
     - _Requirements: 40.1-40.11_
     - **Status (Session 73):** 14.1 to 14.5 written with file reads and edits only; nothing was run, so 14.6 runs the suite first. The "waits for an open dialog" case closes the Import dialog with its Cancel or Close button, found by text (the dialog was not read)
-  - [ ] 14.6 Check
+  - [x] 14.6 Check
+    - **Status (Session 74):** every check passed. Check 6 as worded (reload with only the flag cleared must replay) contradicts check 9 and Requirement 40.1, which make the first look due only after "Load sample", so clearing only the flag does not replay; it plays again once the flag and the data are both cleared. Ticked on that reading.
     - `bash scripts/check.sh` passes (the L5 counts plus the L6 tests); `scripts/check-engine-unchanged.sh` passes with its allow-list unchanged
     - A browser look at 1280×800, 390×844 and 320×640, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server, in a fresh browser profile: after "Walk in" and "Load sample street" the street ages to +30 days and comes back once, with the banner and "Skip the preview" at the top of the dock (no sideways scroll, at least 8 px around it, covering nothing); Skip and Escape stop it; with reduced motion on it does not play; a reload does not replay it
     - Log the session in `docs/KIRO_LOG.md`

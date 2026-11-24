@@ -9,10 +9,16 @@
   flex-wrap: wrap;
   margin-block: 0 8px;
   max-inline-size: 100%;
+  /* The dock lets clicks through (pointer-events: none, dock.css), and a child inherits that: without
+     this, a click or tap on Skip landed on the page behind it (found in the L6 browser check; the
+     unit tests dispatch events directly and could not see it). Same fix as the toast's Dismiss. */
+  pointer-events: auto;
 }
 
-.sd-first-look-skip {
+/* More specific than .sd-button (min-height: 40px), which also set the same property and won. */
+.sd-dock .sd-first-look .sd-first-look-skip {
   min-block-size: 44px;
+  min-height: 44px;
   min-inline-size: 44px;
   white-space: normal;
 }

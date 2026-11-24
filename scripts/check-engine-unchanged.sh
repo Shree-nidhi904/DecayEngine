@@ -120,7 +120,7 @@ fi
 # file is outside the list, so editing one fails here. Requirement 36.11 (task P5) adds
 # only the new test file TriagePanel.note.test.tsx; its source changes are in
 # TriagePanel.tsx and shell.css, already listed.
-allowed='^packages/shell/src/(index\.ts|types\.ts|shell\.css|components/(TimeMachine|TriagePanel|AutopsyDialog)\.tsx|components/(TimeMachine\.range|TriagePanel\.budgets|TriagePanel\.note|AutopsyDialog\.markers|AutopsyDialog\.focus)\.test\.tsx)$'
+allowed='^packages/shell/src/(index\.ts|types\.ts|shell\.css|components/(TimeMachine|TriagePanel|AutopsyDialog)\.tsx|components/(TimeMachine\.range|TimeMachine\.external|TriagePanel\.budgets|TriagePanel\.note|AutopsyDialog\.markers|AutopsyDialog\.focus)\.test\.tsx)$'
 changed="$( { git diff --name-only "$base" -- packages/shell; git ls-files --others --exclude-standard -- packages/shell; } | sort -u )"
 outside="$(printf '%s\n' "$changed" | grep -Ev "$allowed" | grep -v '^$' || true)"
 if [ -n "$outside" ]; then

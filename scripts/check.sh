@@ -55,6 +55,14 @@ step "build app"          pnpm --filter @decay-engine/study-dungeon build
 step "typecheck ghosted"  pnpm --filter @decay-engine/ghosted typecheck
 step "test ghosted"       pnpm --filter @decay-engine/ghosted test
 step "build ghosted"      pnpm --filter @decay-engine/ghosted build
+step "typecheck policy-lab" pnpm --filter @decay-engine/policy-lab typecheck
+step "test policy-lab"      pnpm --filter @decay-engine/policy-lab test
+step "build policy-lab"     pnpm --filter @decay-engine/policy-lab build
+step "typecheck life-triage" pnpm --filter @decay-engine/life-triage typecheck
+step "test life-triage"      pnpm --filter @decay-engine/life-triage test
+step "typecheck lt app"     pnpm --filter @decay-engine/life-triage-app typecheck
+step "test lt app"          pnpm --filter @decay-engine/life-triage-app test
+step "build lt app"         pnpm --filter @decay-engine/life-triage-app build
 step "typecheck insight"  pnpm --filter @decay-engine/insight typecheck
 step "test insight"       pnpm --filter @decay-engine/insight test
 step "landing page"       bash scripts/check-site.sh

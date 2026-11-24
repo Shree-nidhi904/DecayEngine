@@ -398,7 +398,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Verify no errors when sound disabled
     - _Requirements: 18_
 
-- [ ] 21. A compact time dock (task L2, design "Compact Time Dock")
+- [x] 21. A compact time dock (task L2, design "Compact Time Dock")
   - [x] 21.1 Session flag and wording
     - New `dock-state.ts` (key `study-dungeon.dock-expanded`) and `dock-state.test.ts`; the optional `session` prop on `App`, passed to `TimeDock`
     - `wording.ts`: `timelineText.toggle` ("Coming up") replaces `fold` and `unfold`; new `timelineText.hint` ("Drag to look ahead"); a wording test for both
@@ -421,7 +421,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 19.7_
 
-- [ ] 22. The loss forecast line (task P4, design "Loss Forecast Line")
+- [x] 22. The loss forecast line (task P4, design "Loss Forecast Line")
   - [x] 22.1 Wording and the pure count
     - `wording.ts`: `heroText.lossForecast(weaken, die)` with the sentences in the design's Wording table ("in the next 7 days", never "this week")
     - New `loss-forecast.ts`: `LOSS_FORECAST_DAYS = 7`, `LossForecast`, `lossForecast(factsToday, deaths, realNow)`, built on the existing `timelineEvents` (imported unchanged; no policy formula repeated)
@@ -443,7 +443,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 20.1, 20.12_
 
-- [ ] 23. What this session saves (task P5, design "What This Session Saves")
+- [x] 23. What this session saves (task P5, design "What This Session Saves")
   - P5 starts only after task 22.4 (the P4 check) is ticked, and after Ghosted task 10.1 (the shell's `picksNote` prop) is done.
   - [x] 23.1 Wording and the pure count
     - `wording.ts`: new `triageNoteText.saves(n)` with the sentences in the design's Wording table ("in the next 7 days", never "this week")
@@ -472,7 +472,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 21.1, 21.10_
 
-- [ ] 24. Rescue Point in the autopsy (task R1, design "Rescue Point")
+- [x] 24. Rescue Point in the autopsy (task R1, design "Rescue Point")
   - R1 starts only after the insight build (E1) is checked: insight task 11 (install, typecheck, tests, `scripts/check.sh`, `scripts/check-engine-unchanged.sh`) passes and is ticked in `.kiro/specs/insight/tasks.md`.
   - [x] 24.1 The dependency
     - `package.json`: `"@decay-engine/insight": "workspace:*"` in `dependencies`. The line was added in the spec session (Session 65); the developer runs `pnpm install` in WSL and commits `pnpm-lock.yaml` with it (Netlify installs with a frozen lockfile)
@@ -506,7 +506,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 22.1, 22.7, 22.12_
 
-- [ ] 25. Live state changes (task L3, design "Live State Changes")
+- [x] 25. Live state changes (task L3, design "Live State Changes")
   - L3 starts after the R1 build is checked.
   - [x] 25.1 The pure diff
     - New `src/state-changes.ts`: `LifeState`, `StateOf`, `StateChange`, `snapshotStates`, `diffStates`, the same logic as Ghosted's file (no import between apps)
@@ -538,7 +538,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 23.4, 23.6, 23.7, 23.8_
 
-- [ ] 26. Notifications while the tab is open (task L5, design "Notifications While the Tab Is Open")
+- [x] 26. Notifications while the tab is open (task L5, design "Notifications While the Tab Is Open")
   - L5 starts after the L3 build is checked.
   - [x] 26.1 The pure decision and the browser helpers
     - New `src/notify.ts` (the design's exports; the same logic as Ghosted's, no import between apps) and `src/notify.test.ts`
@@ -563,7 +563,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - Log the session in `docs/KIRO_LOG.md`
     - _Requirements: 24.1, 24.3, 24.6, 24.7, 24.11_
 
-- [ ] 27. The first ten seconds (task L6, design "The First Ten Seconds")
+- [x] 27. The first ten seconds (task L6, design "The First Ten Seconds")
   - L6 starts after the L5 build is checked.
   - [x] 27.1 The plan and the flag
     - New `src/first-look.ts` (the design's exports; the same logic as Ghosted's with the key `study-dungeon:first-look`, no import between apps) and `src/first-look.test.ts`
@@ -582,7 +582,7 @@ The implementation follows the authorship rules: the policy functions (init, hea
     - New `src/App.first-look.test.tsx` and `src/styles/first-look-css.test.ts`. Existing tests read first are listed in the design; none is changed
     - _Requirements: 25.1-25.11_
     - **Status (Session 73):** 27.1 to 27.5 written with file reads and edits only; nothing was run, so 27.6 runs the suite first. Not covered by a test: "waits for an open dialog" and "a dialog opening stops it", because in Study Dungeon every dialog that can open in a preview needs a dead fact's card, which was not read. The App test starts with `// @vitest-environment jsdom`, because Study Dungeon's tests run in node unless they say so (Session 69)
-  - [ ] 27.6 Check
+  - [x] 27.6 Check
     - `bash scripts/check.sh` passes (the L5 counts plus the L6 tests); `scripts/check-engine-unchanged.sh` passes unchanged
     - A browser look at 1280×800, 390×844 and 320×640, on a draft deploy (`netlify deploy --build`, no `--prod`) or a developer-started server, in a fresh browser profile: after "Load sample data" and the tour, the dungeon ages to +30 days and comes back once, with the top banner and "Skip the preview" at the top of the dock (no sideways scroll, at least 8 px around it, covering nothing); Skip and Escape stop it; with reduced motion on it does not play; a reload does not replay it
     - Log the session in `docs/KIRO_LOG.md`

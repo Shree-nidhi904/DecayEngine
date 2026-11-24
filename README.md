@@ -4,6 +4,7 @@
 
 - [Study Dungeon](https://decay-engine-study-dungeon.netlify.app): facts you study fade into monsters, so review them before they die.
 - [Ghosted](https://decay-engine-ghosted.netlify.app): a street of windows, one per person, where each light shows how recently you were in touch.
+- [Policy Lab](https://decay-engine-lab.netlify.app) and [Life Triage](https://decay-engine-life-triage-app.netlify.app): two small tools on the same engine. Write your own decay rules and watch them run, or plan one time budget across your facts and your friends. See [Beyond the two apps](#beyond-the-two-apps).
 
 **A hospital for the things in your life: one engine for things that fade, die, and can be brought back.**
 
@@ -130,6 +131,10 @@ The same idea gives the **forecast** (what dies within a horizon you choose) alm
 
 A fact you keep getting right earns a longer half-life, so you see it less often. A fact you keep missing comes back sooner.
 
+**Two decay policies, one switch.** The table above is the default. Settings also has a **Memory model** switch, a second policy (`apps/study-dungeon/src/policy-memory.ts`) that adds two ideas from spaced-repetition research: a right answer helps more the later it comes (the spacing effect), and every fact has a difficulty that wrong answers raise and right answers lower, so hard facts gain less. It is inspired by FSRS but is not FSRS, and its constants are hand-picked, not fitted to anyone's data. Both policies keep the same saved data, so switching never loses a fact.
+
+**Bring your own facts.** Import takes pasted lines or a file: `question | answer`, tab-separated rows, CSV (quoted cells may run over several lines, and a `Front,Back` header row is skipped) and Anki text exports (their HTML is turned into plain text).
+
 The three lists are **the Crypt** (healthy facts, asleep), **the Dungeon** (weak facts, weakest first) and **the Graveyard** (forgotten for too long; challenge a grave to bring it back).
 
 ## App 2: Ghosted
@@ -182,9 +187,17 @@ The two apps decay in different ways, and the same engine runs both:
 | Coming back | A test of you | A reply from them |
 | Look | A dungeon lit by candles | A street of windows at night |
 
-The test of the reuse claim was Ghosted. It needed a new policy and a new skin, and `scripts/check-engine-unchanged.sh` shows `packages/engine` has no change from the Ghosted work. A third app, such as food and subscription expiry, would be the same job again: one policy and one skin.
+The test of the reuse claim was Ghosted. It needed a new policy and a new skin, and `scripts/check-engine-unchanged.sh` shows `packages/engine` has no change from the Ghosted work (the baseline is the `engine-complete` tag; both apps came after it). To add your own, see [docs/ADDING_A_POLICY.md](docs/ADDING_A_POLICY.md). A third app, such as food and subscription expiry, would be the same job again: one policy and one skin.
 
 ---
+
+## Beyond the two apps
+
+Two small tools show the engine on its own, and both are built on its public API only (the engine-unchanged check still passes).
+
+**Policy Lab** (`apps/policy-lab`): the reuse claim, made hands-on. Edit a decay policy as a short JavaScript object, with a sample item and event, and the real `DecayEngine` runs it over simulated days. A chart shows the item going from alive to weak to dead, and `checkPolicy` says whether the rules are sound. It ships with a milk carton (a straight line, like Ghosted), a fact (a half-life, like Study Dungeon) and a deliberately broken policy that `checkPolicy` rejects. The policy text is run in your own browser with `new Function`, so only paste code you trust. Guide to writing one: [docs/ADDING_A_POLICY.md](docs/ADDING_A_POLICY.md).
+
+**Life Triage** (`apps/life-triage`, on the new package `@decay-engine/life-triage`): one time budget for facts and friends together. Study Dungeon and Ghosted keep their data in separate browser storage, so you export a **Back up** file from each and load both. The package asks each engine for its weak items through `engine.triage`, then picks the best set across both with one exact knapsack under the same value rule both apps use. It also shows what an even split of your time between the two apps would have kept. Or use **Sample data** to try it. Nothing is uploaded; the files are read in the page.
 
 ## Architecture
 
@@ -193,9 +206,13 @@ decay-engine/
   packages/
     engine/              the core: states, policy contract, Triage, Autopsy, forecast, history
     shell/               the shared frame: counters, item card, history, Triage panel, time machine
+    insight/             replay and what-if on the engine's public API (Rescue Point)
+    life-triage/         one Triage budget across several engines, on the public API
   apps/
     study-dungeon/       app 1
     ghosted/             app 2, built on the unchanged engine
+    policy-lab/          write a policy in the browser and run it on the engine
+    life-triage/         plan one budget across Study Dungeon and Ghosted backups
   scripts/               check.sh and the engine-unchanged check
   docs/                  design notes, the wireframe and the Kiro log
   .kiro/                 Kiro specs, steering, hooks and a custom agent
@@ -247,20 +264,23 @@ The project is built with [Kiro](https://kiro.dev). The `.kiro/` folder is commi
 | Custom agent | `policy-reviewer`: a read-only reviewer that checks a policy against the contract, the steering and the spec |
 | Property-based testing | The engine rules listed above |
 
-The decay rules are set by me in the specs. **Not all of the code was written in Kiro.** Claude Code (Anthropic's CLI agent), run outside Kiro at my request, wrote the `DecayEngine` class (tasks 9–19), the Triage selection, the Autopsy analysis, the engine's property-based tests, Study Dungeon's policy and cause-of-death sentences, Ghosted's cause-of-death sentences, and a visual pass and extra features for Study Dungeon (the exact file list is in the authorship steering). For Ghosted's policy, Kiro wrote the code from the spec's formulas, and I checked it with the `policy-reviewer` agent and the tests. Kiro wrote the rest of the engine from the spec (types, errors, state derivation, settle, bisection, serialization, storage adapters, checkPolicy, forecast) and their tests, and most of the UI, the app glue and the app tests. Triage implements the locked value rule from the product steering; Autopsy reports facts only, and each app writes its own cause-of-death sentences. Each session is recorded in [docs/KIRO_LOG.md](docs/KIRO_LOG.md): what Kiro produced, what was changed by hand, and what went wrong. A full write-up comparing spec-driven work with free-form prompting will be added before submission.
+The decay rules are set by me in the specs. **Not all of the code was written in Kiro.** Claude Code (Anthropic's CLI agent), run outside Kiro at my request, wrote the `DecayEngine` class (tasks 9–19), the Triage selection, the Autopsy analysis, the engine's property-based tests, Study Dungeon's policy and cause-of-death sentences, Ghosted's cause-of-death sentences, and a visual pass and extra features for Study Dungeon (the exact file list is in the authorship steering). For Ghosted's policy, Kiro wrote the code from the spec's formulas, and I checked it with the `policy-reviewer` agent and the tests. Kiro wrote the rest of the engine from the spec (types, errors, state derivation, settle, bisection, serialization, storage adapters, checkPolicy, forecast) and their tests, and most of the UI, the app glue and the app tests. Triage implements the locked value rule from the product steering; Autopsy reports facts only, and each app writes its own cause-of-death sentences. Each session is recorded in [docs/KIRO_LOG.md](docs/KIRO_LOG.md): what Kiro produced, what was changed by hand, and what went wrong. The write-up, with the mistakes Kiro and review caught, is in [docs/KIRO_WRITEUP.md](docs/KIRO_WRITEUP.md).
 
 ## Build status
 
 - [x] Engine spec: requirements, design, tasks
 - [x] Steering, hooks and the `policy-reviewer` agent
 - [x] Engine and tests (701)
-- [x] Study Dungeon (742 app tests, 166 shell tests)
-- [x] Ghosted (665 tests), with the engine unchanged
+- [x] Study Dungeon (743 app tests, 166 shell tests)
+- [x] Ghosted (988 tests), with the engine unchanged
+- [x] `@decay-engine/insight`: replay and what-if (74 tests)
+- [x] Policy Lab (6 tests) and Life Triage (5 package tests, 3 app tests), added after the last full run below
+- [x] Study Dungeon memory model and CSV / Anki import
 - [x] Deployed sites
 - [ ] Demo video
-- [ ] Kiro write-up
+- [x] Kiro write-up: [docs/KIRO_WRITEUP.md](docs/KIRO_WRITEUP.md)
 
-`bash scripts/check.sh` runs all of it: install, typechecks, the engine-unchanged check, every test suite and both production builds.
+Last full run (Nov 24): 2,672 tests, engine 701, shell 166, Study Dungeon 743, Ghosted 988, insight 74. `bash scripts/check.sh` runs all of it: install, typechecks, the engine-unchanged check, every test suite and both production builds.
 
 ## Running it
 
@@ -285,6 +305,10 @@ pnpm --filter @decay-engine/ghosted preview
 
 # Ghosted's tests only
 pnpm --filter @decay-engine/ghosted test
+
+# Policy Lab and Life Triage, with hot reload
+pnpm --filter @decay-engine/policy-lab dev
+pnpm --filter @decay-engine/life-triage-app dev
 
 # Every check: install, typechecks, the engine unchanged, the engine, shell and app tests, and the builds
 bash scripts/check.sh

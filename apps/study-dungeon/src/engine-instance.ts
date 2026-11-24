@@ -11,11 +11,11 @@
 
 import { DecayEngine, LocalStorageAdapter, type IdGenerator } from "@decay-engine/engine"
 import {
-  studyDungeonPolicy,
   type FactPayload,
   type FactPolicyData,
   type ReviewEvent,
 } from "./policy"
+import { activePolicy } from "./policy-select"
 
 export type StudyDungeonEngine = DecayEngine<FactPayload, FactPolicyData, ReviewEvent>
 
@@ -27,7 +27,7 @@ export const STORAGE_NAMESPACE = "study-dungeon"
 /** Builds the engine on localStorage. Throws if the saved snapshot cannot be loaded. */
 export function createEngine(): StudyDungeonEngine {
   return new DecayEngine<FactPayload, FactPolicyData, ReviewEvent>(
-    studyDungeonPolicy,
+    activePolicy(),
     new LocalStorageAdapter(STORAGE_NAMESPACE),
     idGenerator
   )

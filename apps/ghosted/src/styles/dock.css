@@ -30,10 +30,15 @@
   opacity: calc(var(--age) * 0.4);
 }
 
+/* Netlify injects a fixed "Powered by Netlify" badge (194×64 px, bottom right) on the live site that takes clicks. The dock sits above it (found in the live P2 pass). */
+:root {
+  --badge-room: 72px;
+}
+
 .gh-dock {
   position: fixed;
   inset-inline: 0;
-  inset-block-end: 0;
+  inset-block-end: var(--badge-room, 0px);
   z-index: 6;
   max-block-size: var(--dock-max);
   overflow-y: auto;

@@ -107,8 +107,23 @@ export function TimeMachine({
   // Stop the animation when the component goes away.
   useEffect(() => cancelFrame, []);
 
+  // The offset the animation last asked for. An app may show a different
+  // offset than the one asked (an app's first look may map Play's progress to its
+  // own plan), so only one case counts as the app taking over: it sets today
+  // (0) while Play has moved past it ("Back to today"). Then stop, so the
+  // animation does not carry the date away again (found on the live site).
+  const lastAsked = useRef<number | null>(null);
+  useEffect(() => {
+    if (playing && offsetMs === 0 && lastAsked.current !== null && lastAsked.current > 0) {
+      cancelFrame();
+      lastAsked.current = null;
+      setPlaying(false);
+    }
+  }, [offsetMs]);
+
   function stop() {
     cancelFrame();
+    lastAsked.current = null;
     setPlaying(false);
   }
 
@@ -129,15 +144,19 @@ export function TimeMachine({
       const progress = Math.min(1, Math.max(0, (clock() - startedAt) / TIME_MACHINE_PLAY_MS));
       if (progress >= 1) {
         frameRef.current = null;
+        lastAsked.current = null;
         setPlaying(false);
         latest.current.onChange(maxMs);
         return;
       }
       const raw = from + (maxMs - from) * progress;
-      latest.current.onChange(clampOffset(Math.round(raw / TIME_MACHINE_STEP_MS) * TIME_MACHINE_STEP_MS, maxMs));
+      const asked = clampOffset(Math.round(raw / TIME_MACHINE_STEP_MS) * TIME_MACHINE_STEP_MS, maxMs);
+      lastAsked.current = asked;
+      latest.current.onChange(asked);
       frameRef.current = { handle: latest.current.frames.request(step) };
     };
     setPlaying(true);
+    lastAsked.current = from;
     if (from !== offsetMs) onChange(from);
     frameRef.current = { handle: frames.request(step) };
   }

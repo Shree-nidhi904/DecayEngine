@@ -5,7 +5,8 @@
 // Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { DecayEngine } from "@decay-engine/engine"
-import { studyDungeonPolicy, type FactPayload, type FactPolicyData, type ReviewEvent } from "./policy"
+import { type FactPayload, type FactPolicyData, type ReviewEvent } from "./policy"
+import { activePolicy } from "./policy-select"
 import { ENGINE_STORAGE_KEY, STARTED_FLAG, type FlagStorage } from "./first-run"
 
 export const BACKUP_APP = "study-dungeon"
@@ -40,7 +41,7 @@ export function checkBackup(text: string): RestoreCheck {
   }
   try {
     const engine = new DecayEngine<FactPayload, FactPolicyData, ReviewEvent>(
-      studyDungeonPolicy,
+      activePolicy(),
       { load: () => JSON.parse(JSON.stringify(backup.snapshot)), save: () => {} },
       () => "unused"
     )

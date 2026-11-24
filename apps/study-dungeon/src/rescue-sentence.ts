@@ -14,7 +14,8 @@
 
 import type { AutopsyReport, HistoryEntry } from "@decay-engine/engine"
 import { DEATH_TIME_PRECISION_MS, whatIf } from "@decay-engine/insight"
-import { DAY_MS, studyDungeonPolicy, type Fact, type ReviewEvent } from "./policy"
+import { DAY_MS, type Fact, type ReviewEvent } from "./policy"
+import { activePolicy } from "./policy-select"
 import { rescueText } from "./wording"
 
 /** The review the line assumes (Req 22.2): a right answer. */
@@ -56,7 +57,7 @@ export function rescuePoint(
   report: AutopsyReport<ReviewEvent>
 ): RescuePoint | null {
   if (report.wentWeakAt === null) return null
-  const w = whatIf(studyDungeonPolicy, fact, history, { at: report.wentWeakAt, event: RESCUE_EVENT })
+  const w = whatIf(activePolicy(), fact, history, { at: report.wentWeakAt, event: RESCUE_EVENT })
   if (!w.ok) return null
   if (w.stoppedAt !== null) return null
   if (w.diesAt === null || w.baselineDiesAt === null) return null

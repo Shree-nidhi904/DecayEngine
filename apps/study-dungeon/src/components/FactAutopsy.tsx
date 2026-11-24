@@ -13,7 +13,8 @@
 import { useMemo } from "react"
 import { AutopsyDialog } from "@decay-engine/shell"
 import type { StudyDungeonEngine } from "../engine-instance"
-import { studyDungeonPolicy, type Fact } from "../policy"
+import { type Fact } from "../policy"
+import { activePolicy } from "../policy-select"
 import { generateCauseSentences } from "../autopsy-sentences"
 import { buildAutopsyChart } from "../autopsy-chart"
 import { generateRescueSentence, withRescue } from "../rescue-sentence"
@@ -85,7 +86,7 @@ export function FactAutopsy({
       causeSentences={data.sentences}
       points={data.chart.points}
       tends={data.chart.tends}
-      thresholds={studyDungeonPolicy.thresholds}
+      thresholds={activePolicy().thresholds}
       formatDate={formatDate}
       onClose={onClose}
       onResurrect={() => {

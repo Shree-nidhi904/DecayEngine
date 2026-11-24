@@ -59,7 +59,7 @@ describe("the dock (Req 12.7, 24.4)", () => {
   it("is fixed at the bottom, never taller than --dock-max, and scrolls inside itself", () => {
     const dock = rule("dock.css", ".gh-dock")
     expect(dock.decls.get("position")).toBe("fixed")
-    expect(dock.decls.get("inset-block-end")).toBe("0")
+    expect(dock.decls.get("inset-block-end")).toBe("var(--badge-room, 0px)")
     expect(dock.decls.get("max-block-size")).toBe("var(--dock-max)")
     expect(dock.decls.get("overflow-y")).toBe("auto")
   })
@@ -88,8 +88,8 @@ describe("the dock (Req 12.7, 24.4)", () => {
     const narrow = rulesOf(narrowBlock(styleText("layout.css")), "layout.css")
     expect(narrow.find((r) => r.selectors.includes(":root"))?.decls.get("--dock-max")).toBe("128px")
     // Task L2 (Req 34.7, 34.12): the dock's measured height, --dock-h, with --dock-max until it is measured.
-    expect(rule("layout.css", "html").decls.get("scroll-padding-bottom")).toBe("calc(var(--dock-h, var(--dock-max)) + 12px)")
-    expect(rule("layout.css", ".gh-main").decls.get("padding-block-end")).toBe("calc(var(--dock-h, var(--dock-max)) + 24px)")
+    expect(rule("layout.css", "html").decls.get("scroll-padding-bottom")).toBe("calc(var(--dock-h, var(--dock-max)) + var(--badge-room, 0px) + 12px)")
+    expect(rule("layout.css", ".gh-main").decls.get("padding-block-end")).toBe("calc(var(--dock-h, var(--dock-max)) + var(--badge-room, 0px) + 24px)")
   })
 
   it("the screen-reader-only class hides its content from view without removing it (task L2, Req 34.6)", () => {

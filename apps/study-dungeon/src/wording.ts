@@ -260,6 +260,12 @@ export const landmarkText = {
 } as const
 
 /** The sound setting (task 20.1, Requirement 18.1). */
+/** The memory-model setting (MemoryModelToggle). */
+export const memoryModelText = {
+  toggle: "Memory model",
+  help: "Off: each right answer doubles a fact's half-life. On: a right answer helps more the later it comes, and hard facts gain less. Your facts are kept; the page reloads.",
+} as const
+
 export const soundText = {
   toggle: "Sound effects",
 } as const
@@ -421,8 +427,9 @@ export const dailyRaidText = {
 export const importText = {
   button: "Import facts",
   title: "Import facts",
-  help: "One fact per line: question | answer | why it matters (optional). Rows pasted from a spreadsheet work too.",
+  help: "One fact per line: question | answer | why it matters (optional). Rows pasted from a spreadsheet work too, and so do CSV and Anki exports (a Front,Back header is skipped).",
   label: "Your facts",
+  fileLabel: "Or choose a CSV, TSV or Anki text export",
   placeholder: "Capital of Peru? | Lima | Geography quiz\nPowerhouse of the cell? | Mitochondrion",
   ready: (n: number) => (n === 0 ? "No facts to add yet." : `${n} ${n === 1 ? "fact" : "facts"} ready to add.`),
   skipped: (line: number, reason: string) => `Line ${line} skipped: ${reason}.`,

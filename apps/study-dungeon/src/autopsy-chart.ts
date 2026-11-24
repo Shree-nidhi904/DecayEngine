@@ -5,8 +5,8 @@
 // The autopsy report alone is not enough: after a resurrection it does not
 // carry the half-life the current life started with. So the whole history is
 // replayed from creation:
-// - the first half-life comes from studyDungeonPolicy.init (the knowledge level)
-// - each "tended" entry goes through studyDungeonPolicy.applyEvent
+// - the first half-life comes from activePolicy().init (the knowledge level)
+// - each "tended" entry goes through activePolicy().applyEvent
 // - a "resurrected" entry keeps the half-life and sets health to 100
 //   (engine Requirement 8; the Study Dungeon policy returns no policyData)
 // That gives the exact health and half-life at the start of every stretch of
@@ -20,7 +20,8 @@
 // because nothing here needs the "died" entry: the report gives diedAt.
 
 import type { AutopsyReport, HistoryEntry } from "@decay-engine/engine"
-import { studyDungeonPolicy, type Fact, type FactPayload, type ReviewEvent } from "./policy"
+import { type Fact, type FactPayload, type ReviewEvent } from "./policy"
+import { activePolicy } from "./policy-select"
 
 /** One point of the line: health at a time. */
 export type ChartPoint = { at: number; health: number }
@@ -63,7 +64,7 @@ function factAt(stretch: Stretch, payload: FactPayload): Fact {
 }
 
 function healthIn(stretch: Stretch, payload: FactPayload, at: number): number {
-  return studyDungeonPolicy.healthAt(factAt(stretch, payload), at)
+  return activePolicy().healthAt(factAt(stretch, payload), at)
 }
 
 /**
@@ -79,7 +80,7 @@ export function replayStretches(history: readonly HistoryEntry[], payload: FactP
         kind: "created",
         at: entry.timestamp,
         health: entry.health,
-        halfLifeDays: studyDungeonPolicy.init(payload, entry.timestamp).halfLifeDays,
+        halfLifeDays: activePolicy().init(payload, entry.timestamp).halfLifeDays,
       })
       continue
     }
@@ -91,7 +92,7 @@ export function replayStretches(history: readonly HistoryEntry[], payload: FactP
     if (entry.type === "tended") {
       const event = entry.event as ReviewEvent
       const settled = { ...factAt(previous, payload), health: healthIn(previous, payload, entry.timestamp) }
-      const result = studyDungeonPolicy.applyEvent(settled, event, entry.timestamp)
+      const result = activePolicy().applyEvent(settled, event, entry.timestamp)
       stretches.push({
         kind: "tended",
         at: entry.timestamp,

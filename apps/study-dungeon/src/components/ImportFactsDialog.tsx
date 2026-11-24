@@ -75,6 +75,18 @@ export function ImportFactsDialog({ engine, now, onImported, onClose, onWriteErr
             onChange={(event) => setText(event.currentTarget.value)}
           />
         </div>
+        <div className="sd-field">
+          <label htmlFor={`${id}-file`}>{importText.fileLabel}</label>
+          <input
+            id={`${id}-file`}
+            type="file"
+            accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0]
+              if (file) void file.text().then(setText)
+            }}
+          />
+        </div>
         <fieldset className="sd-field sd-choices">
           <legend>{factFormText.knowledge}</legend>
           {KNOWLEDGE_LEVELS.map((level) => (

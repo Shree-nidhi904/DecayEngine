@@ -36,3 +36,5 @@ audit/
 
 # Playwright MCP page snapshots
 .playwright-mcp/
+
+docs/submission

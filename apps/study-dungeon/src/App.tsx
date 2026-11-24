@@ -11,6 +11,7 @@ import { useSettleTicks, type Scheduler } from "./ticking"
 import { CLOCK_BEHIND_NOTICE_MS, clockBehindText, heldClock } from "./clock-guard"
 import { browserSessionStorage, type SessionFlagStorage } from "./dock-state"
 import type { Fact, FactPayload, FactPolicyData } from "./policy"
+import { activePolicy } from "./policy-select"
 import { ThreeLists, type FactAction } from "./components/ThreeLists"
 import { AddEditFactDialog } from "./components/AddEditFactDialog"
 import { FightDialog, type FightResult } from "./components/FightDialog"
@@ -20,6 +21,8 @@ import { FirstRun } from "./components/FirstRun"
 import { HeroSection } from "./components/HeroSection"
 import { ResetData } from "./components/ResetData"
 import { SoundToggle } from "./components/SoundToggle"
+import { MemoryModelToggle } from "./components/MemoryModelToggle"
+import { readModel, saveModel } from "./policy-select"
 import { Tour } from "./components/Tour"
 import { TimeDock } from "./components/TimeDock"
 import { Creature } from "./components/art/Creature"
@@ -34,7 +37,6 @@ import { answerText, dailyRaidText, firstLookText, importText } from "./wording"
 import { FirstLookSkip } from "./components/FirstLookSkip"
 import { firstLookOffsetForProgress, firstLookSeen, markFirstLookSeen } from "./first-look"
 import type { FirstLookDockControl } from "./first-look-dock"
-import { studyDungeonPolicy } from "./policy"
 import { loadSampleData } from "./sample-data"
 import {
   hasStarted,
@@ -280,7 +282,7 @@ export function App({
       const at = writeNow()
       const fact = engine.view(at).find((f) => f.id === id)
       if (fact === undefined) return null
-      const wake = studyDungeonPolicy.nextDueAt(fact, at)
+      const wake = activePolicy().nextDueAt(fact, at)
       return wake === null ? null : answerText.sleepsUntil(formatDate(wake))
     },
     [engine, writeNow, formatDate]
@@ -890,6 +892,12 @@ export function App({
             <ResetData onConfirm={reset} disabledReason={previewing ? previewBlockedText : undefined}>
               <AnswerCheckSetting value={answerCheck} onChange={changeAnswerCheck} />
               <SoundToggle enabled={soundOn} onChange={changeSound} />
+              <MemoryModelToggle
+                enabled={readModel(storage) === "memory"}
+                onChange={(on) => {
+                  if (saveModel(storage, on ? "memory" : "doubling")) window.location.reload()
+                }}
+              />
               {/* Task L5: a preference beside the sound switch, so it works in a preview too. */}
               <NotifySetting
                 api={notifyApi}

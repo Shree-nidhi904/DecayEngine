@@ -1,0 +1,11 @@
+# Netlify config for life-triage (written with the netlify-deployment power's guide).
+# Netlify's base directory is apps/life-triage; pnpm installs the whole workspace,
+# so the engine and shell packages are built from source with the app.
+[build]
+  base = "apps/life-triage"
+  command = "pnpm --filter @decay-engine/life-triage-app build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  PNPM_VERSION = "12.21.0"

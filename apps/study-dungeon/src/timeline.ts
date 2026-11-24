@@ -4,7 +4,8 @@
 //
 // Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
-import { DAY_MS, studyDungeonPolicy, type Fact } from "./policy"
+import { DAY_MS, type Fact } from "./policy"
+import { activePolicy } from "./policy-select"
 import { creatureOf } from "./creatures"
 
 export type TimelineEvent = { day: number; id: string; name: string; kind: "weak" | "dead" }
@@ -24,7 +25,7 @@ export function timelineEvents(
   const dayOf = (ms: number) => Math.ceil((ms - realNow) / DAY_MS)
   for (const fact of today) {
     if (fact.state !== "alive") continue
-    const at = studyDungeonPolicy.nextDueAt(fact, realNow)
+    const at = activePolicy().nextDueAt(fact, realNow)
     if (at === null) continue
     const day = dayOf(at)
     if (day >= 1 && day <= maxDays) events.push({ day, id: fact.id, name: creatureOf(fact.id).name, kind: "weak" })

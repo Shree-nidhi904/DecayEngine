@@ -5,7 +5,8 @@
 // Pure: every function takes items from engine.view(now) and, where needed,
 // the same `now`. No clock reads. Inputs are never changed.
 
-import { studyDungeonPolicy, type Fact } from "./policy"
+import { type Fact } from "./policy"
+import { activePolicy } from "./policy-select"
 
 export type FactState = Fact["state"]
 
@@ -36,11 +37,11 @@ export function groupByState(items: readonly Fact[]): FactsByState {
 
 /**
  * Crypt order: soonest wake-up first, ties by id. The wake-up time is
- * studyDungeonPolicy.nextDueAt(fact, now); null (never) goes last.
+ * activePolicy().nextDueAt(fact, now); null (never) goes last.
  */
 export function sortCrypt(alive: readonly Fact[], now: number): CryptEntry[] {
   return alive
-    .map((fact) => ({ fact, wakeAt: studyDungeonPolicy.nextDueAt(fact, now) }))
+    .map((fact) => ({ fact, wakeAt: activePolicy().nextDueAt(fact, now) }))
     .sort((a, b) => {
       if (a.wakeAt !== b.wakeAt) {
         if (a.wakeAt === null) return 1

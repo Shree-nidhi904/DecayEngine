@@ -198,12 +198,12 @@ describe("the compact time dock (task 21, Req 19.1-19.3, 19.7, 19.8, 19.13)", ()
   })
 
   it("gives the page the dock's measured height as bottom room, with today's values as the fallbacks", () => {
-    expect(declarationsFor(world.top, ".sd-world")["padding-bottom"]).toBe("calc(var(--dock-h, 15rem) + 24px)")
-    expect(declarationsFor(narrowRules(world), ".sd-world")["padding-bottom"]).toBe("calc(var(--dock-h, 10rem) + 24px)")
+    expect(declarationsFor(world.top, ".sd-world")["padding-bottom"]).toBe("calc(var(--dock-h, 15rem) + var(--badge-room, 0px) + 24px)")
+    expect(declarationsFor(narrowRules(world), ".sd-world")["padding-bottom"]).toBe("calc(var(--dock-h, 10rem) + var(--badge-room, 0px) + 24px)")
     // 238 + 12 = 250px and 118 + 12 = 130px: today's scroll padding until the dock is measured.
-    expect(declarationsFor(world.top, "html")["scroll-padding-bottom"]).toBe("calc(var(--dock-h, 238px) + 12px)")
+    expect(declarationsFor(world.top, "html")["scroll-padding-bottom"]).toBe("calc(var(--dock-h, 238px) + var(--badge-room, 0px) + 12px)")
     expect(declarationsFor(narrowRules(world), "html")["scroll-padding-bottom"]).toBe(
-      "calc(var(--dock-h, 118px) + 12px)"
+      "calc(var(--dock-h, 118px) + var(--badge-room, 0px) + 12px)"
     )
   })
 })
@@ -348,5 +348,13 @@ describe("nothing is wider than a 320px screen", () => {
     expect(atNarrow(".sd-cards", "grid-template-columns", "repeat(auto-fill, minmax(16rem, 1fr))")).toBe(
       "minmax(0, 1fr)"
     )
+  })
+})
+
+describe("room for Netlify's badge (live P2 pass)", () => {
+  it("lifts the dock above the injected 64px badge, with a 72px room", () => {
+    const css = readFileSync(fileURLToPath(new URL("./dock.css", import.meta.url)), "utf8")
+    expect(css).toMatch(/:root\s*\{\s*--badge-room:\s*72px/)
+    expect(css).toMatch(/\.sd-dock\s*\{[^}]*bottom:\s*var\(--badge-room, 0px\)/)
   })
 })

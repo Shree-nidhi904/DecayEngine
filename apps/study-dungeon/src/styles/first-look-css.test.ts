@@ -17,10 +17,15 @@ function block(selector: string): string {
 }
 
 describe("first-look.css", () => {
-  it("makes Skip at least 44 × 44 px", () => {
-    const skip = block(".sd-first-look-skip")
+  it("makes Skip at least 44 × 44 px, with a selector that beats .sd-button's min-height: 40px", () => {
+    const skip = block(".sd-dock .sd-first-look .sd-first-look-skip")
     expect(skip).toMatch(/min-block-size:\s*44px/)
+    expect(skip).toMatch(/min-height:\s*44px/)
     expect(skip).toMatch(/min-inline-size:\s*44px/)
+  })
+
+  it("takes clicks: the dock has pointer-events: none and a child inherits it (found in the L6 browser check)", () => {
+    expect(block(".sd-first-look")).toMatch(/pointer-events:\s*auto/)
   })
 
   it("keeps 8 px between Skip and the bar under it, and wraps instead of overflowing", () => {

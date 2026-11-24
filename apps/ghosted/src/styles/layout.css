@@ -741,12 +741,12 @@
 
 /* A focused or scrolled-to element always stops above the dock. */
 html {
-  scroll-padding-bottom: calc(var(--dock-h, var(--dock-max)) + 12px);
+  scroll-padding-bottom: calc(var(--dock-h, var(--dock-max)) + var(--badge-room, 0px) + 12px);
 }
 
 /* The last content can scroll clear of the dock. */
 .gh-main {
-  padding-block-end: calc(var(--dock-h, var(--dock-max)) + 24px);
+  padding-block-end: calc(var(--dock-h, var(--dock-max)) + var(--badge-room, 0px) + 24px);
 }
 
 /* Read by screen readers, not shown (task L2: the dock's marker list, Req 34.6). */

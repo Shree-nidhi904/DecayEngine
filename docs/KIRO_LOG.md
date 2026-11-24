@@ -30,6 +30,12 @@ Some of the code in this project was written by **Claude Code** (Anthropic's cod
 
 ---
 
+## Credits summary
+
+Kiro's usage panel on Nov 24 showed **2,649.91 of the 4,000 hackathon credits used**. About 2,344.53 of that is itemised in the sessions below. The other **305.38** belongs to IDE sessions whose own figure was not kept: 19, 38, 42, 44, 46, 60 and the build part of 45. The panel gives only a running total, so that amount is not split between them.
+
+---
+
 ## Session 1: steering documents (Nov 16, 2026)
 
 - **Goal**: give Kiro the project rules before any spec or code exists.
@@ -882,7 +888,7 @@ Some of the code in this project was written by **Claude Code** (Anthropic's cod
 - **What went wrong or surprised me**:
   - Kiro's shell printed nothing for long chained commands. Saving the output to a file in one command and reading it in a second worked.
   - The hook cannot be triggered by Kiro itself. To see it fire, send a prompt such as "scaffold the expiry-reaper policy".
-- **Credits used**: (add from the usage panel)
+- **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
 - **Screenshot**: (add file names: the agent's report, the hook panel showing it enabled)
 
 ---
@@ -1292,7 +1298,7 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Hook retest**: Kiro added `// hook test` to the top of `apps/ghosted/src/policy.ts` and then removed it. **The hook fired both times.** Each time Kiro ran `pnpm --filter ./apps/ghosted exec vitest run src/policy.test.ts`: 44 of 44 passed, including `passes checkPolicy from @decay-engine/engine`. `git diff` shows `policy.ts` unchanged afterwards.
 - **What surprised me**: the hook event gave `file_path` as `apps/ghosted/src/policy.ts` with forward slashes, so the old matcher would also have matched. The slash change is probably not why it works now. Session 37's failure is still unexplained. Kiro's docs say file hooks fire on agent edits only, so the Session 37 guess ("only editor saves") was wrong.
 - **What went wrong**: Kiro's first write of the write-up went to a stray `home/shree/DecayEngine/docs/` folder inside the repo (an absolute WSL path written as if relative). Kiro found it in `git status`, moved the file into `docs/` and removed the folder. The shell tool still often returned empty output and needed a second call to read results from a file.
-- **Credits used**: (add from the usage panel)
+- **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
 ---
 
 ## Session 39: policy-reviewer from Kiro CLI on Ghosted's policy (Nov 21, 2026)
@@ -1389,7 +1395,7 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - The first attempt (Nov 21, cancelled) left `git diff` waiting in a pager, which blocked the IDE's shell and mixed later commands into the pager screen. To get out, **Kiro ran `git config --global core.pager cat` without asking**. It noticed straight away and ran `git config --global --unset core.pager`. If I had my own `core.pager` before, that value is gone. This run changed no git config and used `git --no-pager` or `GIT_PAGER=cat` per command.
   - The shell tool sometimes returned no output, or output cut off partway, so the verification results were saved to a log file and read from there. A script written to `\\wsl.localhost\Ubuntu\tmp` was not visible from the shell on the first try. It appeared a moment later.
   - The fresh-clone test (C3) started on Nov 21 had finished unread. It passed every step (701 / 152 / 465 / 665), using the old version of this script.
-- **Credits used**: not shown to Kiro inside the session; fill in from the usage panel.
+- **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
 ---
 
 ---
@@ -1462,7 +1468,7 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - Build order: Ghosted first, checked with screenshots at 1280×800, 390×844 and 320×640, then Study Dungeon. Ghosted may ship alone.
 - **What went wrong or surprised me**: nothing broke in this session. The shell rules come from the L1 runs, where several commands printed nothing and Kiro polled in loops instead of waiting on the process. Following them here, every command's output was readable: long output went to `/tmp` files and was read back.
 - **Not done**: L1 is still unverified (check, screenshots and its Session 43 entry). L2 is not built; Ghosted tasks 8.1 to 8.6 wait for my go-ahead.
-- **Credits used**: not recorded (the usage panel figure for this IDE session was not kept).
+- **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
 - **Screenshot file names**: none.
 ---
 ## Session 45: Ghosted L2 build, the compact moon dock (tasks 8.1 to 8.5) (Nov 22, 2026)
@@ -1509,7 +1515,7 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **One command did run.** Kiro made one shell call by mistake, a no-op `true` with no effect. It was against the "no commands" instruction, and Kiro reported it.
   - Without search, the tests that use the dock were found by reading every App-level test file.
 - **Not done**: task 8.6 (check, screenshots at 1280×800, 390×844 and 320×640, the L1 re-check), and every Study Dungeon task (21.x).
-- **Credits used**: the CLI's 8.6 verification turn was 7.60 (9 min 17 s; the CLI's running total was 21.93). The IDE build part was not recorded.
+- **Credits used**: the CLI's 8.6 verification turn was 7.60 (9 min 17 s; the CLI's running total was 21.93). The IDE build part is counted in the combined 305.38 shown in the Credits summary at the top of this log.
 - **Screenshot file names**: none.
 
 ---
@@ -1534,7 +1540,7 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - Study Dungeon has no wording test file and no `HeroSection.test.tsx`. Its hero is tested through `App.hero-autopsy.test.tsx`. Its existing `setupHero()` fixture works out by hand to the zero case.
   - No commands were run, so directories could not be listed. Test file names come from the specs and from reading files.
 - **Not done**: everything in Ghosted tasks 9.1 to 9.4 and Study Dungeon task 22. These wait for the developer's go-ahead.
-- **Credits used**: not recorded (the usage panel figure for this IDE session was not kept).
+- **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
 - **Screenshot file names**: none.
 
 ---
@@ -1928,7 +1934,7 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - "Who wrote what": one row for Claude Code's work after Nov 21 and one for Kiro's late features. A fourth tip for other builders.
 - **What I changed by hand**: nothing yet.
 - **What went wrong or surprised me**: every shell call returned exit -1 with no output (three tries), so nothing was recounted. The line counts and the steering file count were not checked, and the count was taken out of the steering bullet rather than guessed.
-- **Credits used**: (add from the usage panel)
+- **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
 - **Screenshot file names**: none.
 
 ## Session 61: Study Dungeon P5, "What this session saves" under the Triage picks (tasks 23.1 to 23.4)
@@ -2316,4 +2322,76 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Test files not read**: every other test file in both apps, including Ghosted `App.accessibility.test.tsx`, `primary-buttons.test.tsx`, `MoonDock.test.tsx`, `layout-css.test.ts`, `tokens.test.ts`, `wording.test.ts`, `App.live.test.tsx`, and Study Dungeon `App.accessibility.test.tsx`, `App.first-run.test.tsx`, `motion.test.ts`, `theme.test.ts`, `styles/layout-css.test.ts`, `contrast.test.ts`. None of them passes `firstLook`, so none can start a first look.
 - **Not done**: 14.6 and 27.6.
 - **Credits used**: 84.63 (24 min 51 s)
+- **Screenshot file names**: none.
+
+---
+
+## Session 74: browser check of "the first ten seconds" (Ghosted 14.6, Study Dungeon 27.6)
+- **Goal**: check the L6 first look in a real browser with the real clock, on the developer-started servers (Ghosted http://localhost:5174, Study Dungeon http://localhost:5173; the request had the two ports the other way round, and the page titles showed which was which). Fresh state on every run: unload save blocked, both storages cleared, `about:blank`, then the app. Fix nothing; no file under `apps/` or `packages/` edited; no server started; `scripts/check.sh` not run (already green).
+- **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools (run code, evaluate, screenshot, emulate media). The first attempt in this session had no Playwright tools loaded and stopped without checking anything.
+- **What Kiro produced**: measurements only, four screenshots taken about 2.3 to 3 s into the first look, and this entry. Neither task is ticked.
+- **Results, both apps**: the first look starts by itself about 0.2 s after the tour is skipped (Study Dungeon) or right after "Load sample street" once the splash is gone (Ghosted). The dock text goes from "Today, 24 Nov 2026" through about +1 day at 1 s, +10 at 2 s, +26 at 3 s and +30 days at 4 s ("24 Dec 2026"), then back to "Today, 24 Nov 2026" at about 5.05 s. The banner reads "FUTURE PREVIEW · NOTHING IS SAVED" with "Back to today". The live region says "Showing the next 30 days. Nothing is saved." once, and nothing else is announced while it plays. Skip (Enter), Escape, a slider arrow key, Play (labelled "Stop" while it plays), a jump (+7 days in Study Dungeon, +30 days in Ghosted) and "Back to today" all stop it at once on today, and the touch does not move the offset. Focus after Skip goes to `<main>` (Study Dungeon) or the hero heading (Ghosted). No write to engine storage while it plays (setItem was recorded). There is one write about 20 ms after it ends, at the real time. Under reduced motion it does not play and the flag is still `"1"`. A reload does not replay it. Counts at +30 days: Study Dungeon goes from Crypt 4 / Dungeon 4 / Graveyard 4 to 0 / 4 / 8, and Ghosted goes from Still lit 4 / Fading 4 / Empty windows 4 to 1 / 4 / 7, the same at 390 and 320. No console errors from either app. The only errors came from this session's own `unload` listener and a favicon 404.
+- **Failed, Study Dungeon only**: "Skip the preview" cannot be clicked or tapped. `.sd-dock` has `pointer-events: none` (`styles/dock.css` line 17), and the Skip button inherits it, so a click at its centre lands on the page behind it (`.sd-world`, `.sd-layout` or `.sd-toolbar-hint`). The keyboard works. The button is also 164.4 × 40 px at every width, below 44 px tall. Ghosted's is 175.6 × 44 and clickable.
+- **Open in both apps**: check 6 asked that clearing only the flag and reloading plays it again. It does not, because Requirement 40.1 and Requirement 25.1 make it due only after "Load sample", never on a page load with data. Check 9 asks for exactly that. It plays again after the flag and the data are both cleared and the sample is loaded again.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: the clock-guard message ("This device's clock is behind the last saved time…") showed in the live region twice in about 25 runs: once after Skip in Study Dungeon and once after a slider touch in Ghosted, both after the first look had ended. It did not happen again in five targeted retries, and no saved time was ahead of the real clock. While Skip shows, the dock is about 48 to 52 px taller, the same as for the toast (at 320 px its top is at 413 or 414 instead of 461 or 466), so at the top of the page it covers more of the hero. Inside the dock, Skip is at least 38 px from every control, and it never overlaps a dock control or the toast. Screenshots are 0.3 to 0.8 s late because the screenshot itself takes time.
+- **Credits used**: 17.81 (20 min 36 s; the CLI's running session total was 18.00)
+- **Screenshot file names**: `study-dungeon-l6-1280.png`, `study-dungeon-l6-390.png`, `ghosted-l6-1280.png`, `ghosted-l6-390.png`
+
+---
+
+## Session 75: re-check of Study Dungeon's Skip button after the CSS fix (Study Dungeon 27.6)
+- **Goal**: after the developer's CSS fix, re-check only the two Session 74 failures: Skip's size, and whether a real mouse click and a touch tap reach it. Study Dungeon on http://localhost:5173 (title "Study Dungeon"), real clock, fresh state each run (unload save blocked, storage cleared, `about:blank`, app), sample loaded, tour skipped. Fix nothing; no file under `apps/` or `packages/` edited; no server started.
+- **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools (`page.mouse.click`, and `touchscreen.tap` in a separate context with `hasTouch`).
+- **What Kiro produced**: measurements only, this entry, and the tick for 27.6.
+- **Results**: Skip is 164.4 × 44 px with computed height `44px` and `pointer-events: auto` at all three sizes: at 16,662 at 1280×800, 16,631 at 390×844 and 16,420.5 at 320×640. `document.elementFromPoint` at its centre is the button every time. A real mouse click at 1280, 390 and 320, and a touch tap at 390, each stop the first look at once. The dock goes from "28 Nov 2026 · 3 days ahead" to "Today, 24 Nov 2026", the slider goes to 0, the banner and Skip are gone, and focus goes to `<main>` (`MAIN.sd-app`). All pass.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: nothing. The Session 74 note about the clock-guard message was not re-checked here.
+- **Credits used**: 1.46 (57 s)
+- **Screenshot file names**: none.
+
+---
+
+## Session 76: real-browser pass on the live Study Dungeon (https://decay-engine-study-dungeon.netlify.app)
+- **Goal**: check the deployed Study Dungeon end to end at 1280×800, 390×844 and 320×640: first look, hero and dock, Triage, autopsy, fight, add/edit/remove, the notification setting, keyboard use, console, network and the Netlify badge. Real clock, fresh state on every run (unload save blocked, storage cleared, `about:blank`, then the URL). Fix nothing, no file under `apps/` or `packages/` edited, no server started, no task ticked.
+- **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools (run code, mouse, touch in a `hasTouch` context, keyboard, request and console listeners).
+- **What Kiro produced**: measurements only, and this entry. No screenshots were asked for.
+- **Results (the same at all three sizes unless noted)**:
+  - **First look**: it does not start on a bare first visit. It starts after "Load sample data" and "Skip tour", as Requirement 25.1 says. Skip is 164.4 × 44 px and is the element at its centre. It ends on "Today, 24 Nov 2026", a reload does not replay it, and a real mouse click and a touch tap both stop it on today (focus on `<main>`).
+  - **Hero line**: "If you do nothing, in the next 7 days 1 fact weakens and 1 dies." At 1280 and 390 the dock does not cover it at the top of the page. **At 320 it does**: the line spans y 502 to 556 and the collapsed dock starts at y 461.
+  - **Dock**: the collapsed bar is 112 / 154 / 180 px tall. It expands to 290 / 325 / 360 px, with +7, +14 and +30 days and Play inside the viewport. A jump shows the banner, "Back to today" returns to today, and Play runs to "23 Jan 2027 · 60 days ahead".
+  - **Triage, 20 min**: the saves line is "Answering these right saves 1 fact that would die in the next 7 days." The picks are Derivative of ln x?, Treaty that ended the Thirty Years' War?, Enzyme that unwinds DNA? and What does the mitochondrion do?
+  - **Autopsy**: the cause is "Missed answers kept cutting the half-life (10 → 20 → 10 → 20 → 10 days). It never grew long enough to survive a gap." The review line is "A review on 29 Oct 2026, when it went weak, would have kept it alive until 4 Jan 2027, 44 days longer." Years are shown.
+  - **Fight**: a right answer gives "Correct! Health → 100, half-life doubled", and a wrong one gives "Incorrect. Health → 45, half-life halved". Add, edit (Save) and remove (confirm "Remove this fact? This cannot be undone.") all work.
+  - **Notification setting**: off by default. The checkbox is 17.6 px, but its label "Notify me about changes while this tab is open" is 44 px tall and is the click target. The honest limit sentence shows: "There is no server, so nothing can notify you when this tab is closed or the computer is asleep." Allow was not clicked.
+  - **Keyboard**: 29 Tab stops, every one with a visible focus ring, including the dock's "Days ahead" and "Coming up". The keyboard can expand the dock, jump and go back to today. Escape closes the fight, autopsy and add dialogs.
+  - **Console and network**: no console errors. No request to any other domain.
+- **Netlify badge**: a "Powered by Netlify" iframe (`#nl-badge-frame`, `srcdoc`, not in this repo, so Netlify adds it) sits fixed at the bottom right, 194 × 64 px (1086,736 at 1280; 196,780 at 390; 126,576 at 320). It takes clicks and covers dock controls. At 1280 and 320 a mouse click on "Coming up" lands on the badge. At 390 it covers the slider's centre, and with the dock open it covers Play (at 390 and 320) and +30 days (at 320). The keyboard still reaches every control.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: the first run stopped when a click on "Coming up" timed out on the badge. Later runs used the keyboard as a fallback and recorded the block. One script was rewritten because a local variable shadowed `URL`. Test facts named "Kiro test question <width>?" were added and removed in fresh storage only.
+- **Credits used**: 8.63 (9 min 30 s)
+- **Screenshot file names**: none.
+
+---
+
+## Session 77: real-browser pass on the live Ghosted (https://decay-engine-ghosted.netlify.app)
+- **Goal**: check the deployed Ghosted end to end at 1280×800, 390×844 and 320×640: first look, the street and hero, the moon dock, Triage at +15 days, autopsy, add/edit/remove, import duplicates, the notification setting, keyboard use, console, network and the Netlify badge. Real clock, fresh state on every run. Fix nothing, no file under `apps/` or `packages/` edited, no server started, no task ticked.
+- **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools (run code, mouse, touch in a `hasTouch` context, keyboard, request and console listeners).
+- **What Kiro produced**: measurements only, and this entry.
+- **Results (the same at all three sizes unless noted)**:
+  - **First look**: it does not start on a bare first visit. It starts after "Load sample street", as Requirement 40.1 says. Skip is 175.6 × 44 px and is the element at its centre. It ends on "Today, 24 Nov 2026", a reload does not replay it, and a real mouse click and a touch tap both stop it (focus on the hero heading).
+  - **Street**: 12 windows. With the page at the top, the windows fully visible above the dock are 6 at 1280 and 2 at 390. At 320 there are none: the first window starts at y 608 and its row ends at 739, against a dock top of 466, so it is 273 px below the visible area.
+  - **Hero line**: "If you do nothing, in the next 7 days 1 window starts to flicker." It is not covered (it ends at y 311 / 200 / 229).
+  - **Moon dock**: collapsed 92 / 133 / 174 px. When open, the jumps (+30, +90, +180 days, +1 year) and "Play the year" are reachable, but at 1280 they sit at y 867 to 911, below the 800 px viewport, inside the dock's 180 px scrolling box, so you have to scroll the dock to see them. A jump shows the banner, and "Back to today" works when nothing is playing. **While "Play the year" runs, neither "Back to today" (the dock's or the banner's) stops it, by mouse or keyboard**: the date keeps going (for example +80, then +108, then +199 days) up to +365 days, and the Play button still reads "Stop".
+  - **Triage, 30 min at "9 Dec 2026, 15 days ahead"**: "A call or meet-up with these people keeps 1 window from going dark in the next 7 days." The picks are Dan Okafor and Meera Joshi.
+  - **Autopsy**: four windows. One was already dark when added, so it has no "A call on" line, as expected. The other three have one each, for example "A call on 2 Oct 2026, when the window started to flicker, would have kept the light on until 9 Nov 2026, 16 days longer." No autopsy uses the word "dead". Escape closes it.
+  - **Add, edit, remove**: all work (edit and remove are in the person's open view). The confirm reads "Remove Kiro Edited <width>? This cannot be undone."
+  - **Import**: pasting a name twice flags the repeat: "1 person ready to import. Line 2: same name and relationship as line 1". Escape closes it.
+  - **Notification switch**: a `button` with `role="switch"`, off by default (`aria-checked="false"`), 44 / 57 / 76.5 px tall. The honest limit sentence shows. Allow was not clicked.
+  - **Keyboard**: 72 Tab stops, every app control with a visible focus ring. The only stop without a ring is the Netlify badge iframe ("Powered by Netlify"), the last stop. Escape closes the autopsy, add and import dialogs.
+  - **Console and network**: no console errors. No request to any other domain.
+- **Netlify badge**: the same injected "Powered by Netlify" iframe as on Study Dungeon, fixed at the bottom right, 194 × 64 px (1086,736 / 196,780 / 126,576). It takes clicks and is in the Tab order. It covers "Coming up" at 1280, and the "Days ahead" slider's centre at 320 (and at 390 during the first look). At 390 and 320 it covers the dock's "Back to today" while a preview is open. The keyboard still reaches every control.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: two script runs stopped on timeouts. One was a person row that has only an "Open" button (Edit and Remove are inside the open view). The other was the "Back to today" lookup during Play. Each was diagnosed with a separate evaluate call before going on. The dock remembers whether it is open across reloads, so the first keyboard toggle closed it in one run. Test people "Kiro Tester <width>" were added and removed in fresh storage only. The run went slightly past 20 minutes.
+- **Credits used**: 11.07 (12 min 42 s)
 - **Screenshot file names**: none.

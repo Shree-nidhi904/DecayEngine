@@ -52,7 +52,7 @@
         <a class="card sd" href="https://decay-engine-study-dungeon.netlify.app">
           <span class="tag">Study Dungeon</span>
           <span class="head">Facts you study fade into monsters.</span>
-          <span class="body">Review them before they die. A right answer makes a fact stronger and gives it a longer memory. A wrong one shortens it.</span>
+          <span class="body">Review them before they die. A right answer makes a fact stronger and gives it a longer memory. A wrong one shortens it. Bring your own facts from CSV or Anki.</span>
           <span class="go">Open Study Dungeon <span aria-hidden="true">→</span></span>
         </a>
         <a class="card gh" href="https://decay-engine-ghosted.netlify.app">
@@ -64,11 +64,29 @@
       </div>
     </section>
 
+    <section class="apps" aria-labelledby="more-h">
+      <h2 id="more-h">Try the engine itself</h2>
+      <div class="cards">
+        <a class="card sd" href="https://decay-engine-lab.netlify.app">
+          <span class="tag">Policy Lab</span>
+          <span class="head">Write your own decay rules.</span>
+          <span class="body">Edit a short policy, and the real engine runs it day by day. A checker says whether the rules are sound. Milk, a fact and a broken policy are built in.</span>
+          <span class="go">Open Policy Lab <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="card gh" href="https://decay-engine-life-triage-app.netlify.app">
+          <span class="tag">Life Triage</span>
+          <span class="head">One budget for facts and friends.</span>
+          <span class="body">Load both apps' backups and say how many minutes you have. It picks the best set across both, with an exact answer.</span>
+          <span class="go">Open Life Triage <span aria-hidden="true">→</span></span>
+        </a>
+      </div>
+    </section>
+
     <section class="how" aria-labelledby="how-h">
       <h2 id="how-h">How it is built</h2>
       <ul>
         <li><strong>One policy and one skin.</strong> The engine knows nothing about what an item is. Each app adds a decay rule and a look.</li>
-        <li><strong>Ghosted needed no change to the engine.</strong> A script in the check suite proves it on every run.</li>
+        <li><strong>Ghosted needed no change to the engine.</strong> A script in the check suite proves it on every run. <a href="https://github.com/Shree-nidhi904/DecayEngine/blob/main/docs/ADDING_A_POLICY.md">Add a policy of your own.</a></li>
         <li><strong>Everything stays in your browser.</strong> No account, no server, no network calls.</li>
         <li><strong>Tested.</strong> Over two thousand tests across the engine, the shared shell and both apps.</li>
         <li><strong>Built with Kiro.</strong> Specs, steering files, hooks and a read-only reviewing agent, with a log of every session.</li>

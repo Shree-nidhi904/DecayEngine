@@ -6,11 +6,16 @@
  * Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
  */
 
+/* Netlify injects a fixed "Powered by Netlify" badge (194×64 px, bottom right) on the live site that takes clicks. The dock sits above it (found in the live P2 pass). */
+:root {
+  --badge-room: 72px;
+}
+
 .sd-dock {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--badge-room, 0px);
   z-index: 6;
   padding: 26px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
   background: linear-gradient(180deg, rgb(6 5 9 / 0), var(--color-bg) 24%);

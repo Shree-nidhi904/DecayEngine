@@ -1,0 +1,11 @@
+# Netlify config for policy-lab (written with the netlify-deployment power's guide).
+# Netlify's base directory is apps/policy-lab; pnpm installs the whole workspace,
+# so the engine and shell packages are built from source with the app.
+[build]
+  base = "apps/policy-lab"
+  command = "pnpm --filter @decay-engine/policy-lab build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  PNPM_VERSION = "12.21.0"

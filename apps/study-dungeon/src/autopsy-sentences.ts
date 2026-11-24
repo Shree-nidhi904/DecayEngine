@@ -13,11 +13,11 @@ import type { AutopsyReport } from "@decay-engine/engine"
 import {
   DAY_MS,
   FIRST_HALF_LIFE_DAYS,
-  studyDungeonPolicy,
   type Fact,
   type FactPayload,
   type ReviewEvent,
 } from "./policy"
+import { activePolicy } from "./policy-select"
 
 export type CauseSentenceOptions = {
   /** IANA time zone for dates, e.g. "UTC". Defaults to the viewer's zone. */
@@ -148,7 +148,7 @@ export function halfLifeChain(report: AutopsyReport<ReviewEvent>, payload: FactP
 function nextHalfLife(halfLifeDays: number, event: ReviewEvent): number {
   // applyEvent only reads policyData, so a partial item is enough here.
   const item = { policyData: { halfLifeDays } } as Fact
-  return studyDungeonPolicy.applyEvent(item, event, 0).policyData.halfLifeDays
+  return activePolicy().applyEvent(item, event, 0).policyData.halfLifeDays
 }
 
 function dateFormatter(options: CauseSentenceOptions): (ms: number) => string {

@@ -28,6 +28,7 @@ export type FactPayload = {
 
 export type FactPolicyData = {
   halfLifeDays: number // current half-life, always 1..180
+  difficulty?: number // 1..10, kept only by the memory model (policy-memory.ts); absent for the doubling policy
 }
 
 export type ReviewEvent = {
