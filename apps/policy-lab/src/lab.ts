@@ -12,10 +12,31 @@ export type LabPolicy = DecayPolicy<unknown, unknown, unknown>
 
 export type Sample = { day: number; health: number; state: "alive" | "weak" | "dead" }
 
+/** The lab item's fixed importance and cost (stated on the page, Requirement 15.2). */
+export const LAB_IMPORTANCE = 2
+export const LAB_COST_MINUTES = 5
+/** Longest window, in days, and the last day a tend can be set on. */
+export const MAX_LAB_DAYS = 730
+/** How many checkPolicy problems the page lists before "…and N more". */
+export const MAX_FAILURES_SHOWN = 5
+
+/** A whole number of days shown, from 1 to MAX_LAB_DAYS (anything else is clamped; NaN gives 1). */
+export function clampHorizon(days: number): number {
+  return Number.isFinite(days) ? Math.min(Math.max(Math.floor(days), 1), MAX_LAB_DAYS) : 1
+}
+
+/** A tend day from 0 to MAX_LAB_DAYS, or null for never (an empty or non-number input). */
+export function clampTendDay(days: number | null): number | null {
+  if (days === null || !Number.isFinite(days)) return null
+  return Math.min(Math.max(Math.floor(days), 0), MAX_LAB_DAYS)
+}
+
 export type LabResult =
   | { ok: false; error: string }
   | {
       ok: true
+      /** The compiled policy's thresholds, for the chart's weak and dead lines. */
+      thresholds: { weak: number; dead: number }
       check: { passed: boolean; failures: string[] }
       series: Sample[]
       weakDay: number | null
@@ -64,12 +85,14 @@ export function runLab(input: {
   const event = parseJson("Event", input.event)
   if (!event.ok) return event
 
-  const horizon = Math.min(Math.max(Math.floor(input.horizonDays), 1), 730)
+  const horizon = clampHorizon(input.horizonDays)
   try {
     const check = checkPolicy(compiled.policy, [payload.value], [event.value], T0)
     let n = 0
     const engine = new DecayEngine(compiled.policy, new InMemoryAdapter(), () => `item-${++n}`)
-    const id = engine.addItem({ payload: payload.value, importance: 2, costMinutes: 5 }, T0)
+    const id = engine.addItem({ payload: payload.value, importance: LAB_IMPORTANCE, costMinutes: LAB_COST_MINUTES }, T0)
+    // The engine has accepted the thresholds (its constructor checks them), so they are numbers here.
+    const thresholds = { weak: compiled.policy.thresholds.weak, dead: compiled.policy.thresholds.dead }
 
     let tendError: string | null = null
     const series: Sample[] = []
@@ -89,7 +112,7 @@ export function runLab(input: {
       if (weakDay === null && item.state !== "alive") weakDay = day
       if (deadDay === null && item.state === "dead") deadDay = day
     }
-    return { ok: true, check, series, weakDay, deadDay, tendError }
+    return { ok: true, thresholds, check, series, weakDay, deadDay, tendError }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }

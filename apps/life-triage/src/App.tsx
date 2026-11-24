@@ -1,100 +1,98 @@
 import { useMemo, useState } from "react"
-import { lifeTriage, type LifeCandidate, type Source } from "@decay-engine/life-triage"
-import { loadBackup, sampleSources } from "./load"
+import { lifeTriage, type Source } from "@decay-engine/life-triage"
+import { sampleSources } from "./load"
+import { readBackupFiles } from "./files"
+import { MAX_AHEAD_DAYS, clampAhead, clampBudget, detailOf, ltText, nameOf } from "./text"
 
 const DAY = 86_400_000
 
-function name(c: LifeCandidate): string {
-  const p = c.payload as { question?: string; name?: string }
-  return p.question ?? p.name ?? c.id
+export interface AppProps {
+  /** The time the page treats as now. Defaults to the clock, read once; tests pass a fixed time. */
+  now?: number
 }
 
-function dies(c: LifeCandidate, now: number): string {
-  if (c.diesAt === null) return "not within 10 years"
-  const days = Math.max(0, Math.ceil((c.diesAt - now) / DAY))
-  return days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`
-}
-
-export function App() {
-  const [now] = useState(() => Date.now())
+export function App({ now: fixedNow }: AppProps = {}) {
+  const [now] = useState(() => fixedNow ?? Date.now())
   const [sources, setSources] = useState<Source[]>([])
   const [notes, setNotes] = useState<string[]>([])
-  const [budget, setBudget] = useState(30)
-  const [ahead, setAhead] = useState(0)
+  const [budgetInput, setBudgetInput] = useState(30)
+  const [aheadInput, setAheadInput] = useState(0)
 
-  const at = now + ahead * DAY
+  const budget = clampBudget(budgetInput)
+  const ahead = clampAhead(aheadInput)
+  const at = now + ahead.days * DAY
   const result = useMemo(() => {
     if (sources.length === 0) return null
     try {
-      return lifeTriage(sources, Math.min(Math.max(Math.floor(budget) || 1, 1), 1440), at)
+      return lifeTriage(sources, budget.minutes, at)
     } catch (e) {
       return e instanceof Error ? e.message : String(e)
     }
-  }, [sources, budget, at])
+  }, [sources, budget.minutes, at])
 
   async function onFiles(files: FileList | null) {
     if (!files) return
-    const next = new Map(sources.map((s) => [s.label, s]))
-    const msgs: string[] = []
-    for (const f of Array.from(files)) {
-      const r = loadBackup(await f.text())
-      if (r.ok) {
-        next.set(r.label, { label: r.label, engine: r.engine })
-        msgs.push(`${f.name}: ${r.label}, ${r.count} item${r.count === 1 ? "" : "s"}`)
-      } else msgs.push(`${f.name}: ${r.reason}`)
-    }
-    setSources([...next.values()])
-    setNotes(msgs)
+    const read = await readBackupFiles(Array.from(files), sources)
+    setSources(read.sources)
+    setNotes(read.notes)
   }
 
   return (
     <main>
-      <h1>Life Triage</h1>
-      <p className="lede">
-        One time budget for everything that is fading: facts and friends together. Study Dungeon and Ghosted keep your data in
-        separate browser storage, so export a backup from each and load them here. Nothing is uploaded; the files are read in this page.
-      </p>
+      <h1>{ltText.title}</h1>
+      <p className="lede">{ltText.lede}</p>
+      <p id="lt-limits" className="lede">{ltText.limits}</p>
 
       <div className="presets">
         <label className="filebtn">
-          Load backup files
+          {ltText.loadFiles}
           <input type="file" accept="application/json,.json" multiple onChange={(e) => onFiles(e.target.files)} />
         </label>
-        <button onClick={() => { setSources(sampleSources(now)); setNotes(["Sample facts and people"]) }}>Use sample data</button>
+        <button type="button" onClick={() => { setSources(sampleSources(now)); setNotes([ltText.sampleLoaded]) }}>
+          {ltText.sample}
+        </button>
       </div>
-      {notes.length > 0 && <ul className="failures" aria-live="polite">{notes.map((n) => <li key={n}>{n}</li>)}</ul>}
+      {notes.length > 0 && (
+        <ul className="failures" aria-live="polite">
+          {notes.map((n, i) => <li key={i}>{n}</li>)}
+        </ul>
+      )}
 
       <div className="controls">
-        <label htmlFor="b">I have (minutes)</label>
-        <input id="b" type="number" min={1} max={1440} value={budget} onChange={(e) => setBudget(Number(e.target.value))} />
-        <label htmlFor="a">Looking ahead (days)</label>
-        <input id="a" type="number" min={0} max={365} value={ahead} onChange={(e) => setAhead(Math.max(0, Number(e.target.value) || 0))} />
+        <label htmlFor="b">{ltText.budgetLabel}</label>
+        <input id="b" type="number" min={1} max={1440} value={budgetInput} aria-describedby="lt-limits lt-budget-note"
+          onChange={(e) => setBudgetInput(Number(e.target.value))} />
+        <label htmlFor="a">{ltText.aheadLabel}</label>
+        <input id="a" type="number" min={0} max={MAX_AHEAD_DAYS} value={aheadInput} aria-describedby="lt-limits lt-ahead-note"
+          onChange={(e) => setAheadInput(Number(e.target.value))} />
       </div>
+      <p id="lt-budget-note" className="legend" aria-live="polite">{budget.note ?? ""}</p>
+      <p id="lt-ahead-note" className="legend" aria-live="polite">{ahead.note ?? ""}</p>
 
       {typeof result === "string" && <p className="error" role="alert">{result}</p>}
-      {result === null && <p className="blurb">Load a backup or use the sample data to begin.</p>}
+      {result === null && <p className="blurb">{ltText.begin}</p>}
       {result !== null && typeof result !== "string" && (
         <section aria-live="polite">
           <p className="verdict pass">
-            Save {result.picks.length} of {result.picks.length + result.others.length} fading items in {result.totalMinutes} of {budget} minutes.
+            Save {result.picks.length} of {result.picks.length + result.others.length} fading items in {result.totalMinutes} of {budget.minutes} minutes.
           </p>
           <p className="legend">
             Value kept {result.totalValue.toFixed(0)}. An even split of the time between your apps would keep {result.evenSplitValue.toFixed(0)}.
             The choice across both apps is exact, not greedy.
           </p>
-          <h2>Do these</h2>
+          <h2>{ltText.doThese}</h2>
           <ul className="list">
             {result.picks.map((c) => (
-              <li key={c.source + c.id}><span className="tag">{c.source}</span> {name(c)} <span className="mut">{c.costMinutes} min · health {c.health.toFixed(0)} · dies {dies(c, at)}</span></li>
+              <li key={c.source + c.id}><span className="tag">{c.source}</span> {nameOf(c)} <span className="mut">{detailOf(c, at, true)}</span></li>
             ))}
-            {result.picks.length === 0 && <li className="mut">Nothing is weak yet at this time.</li>}
+            {result.picks.length === 0 && <li className="mut">{ltText.nothingWeak}</li>}
           </ul>
           {result.others.length > 0 && (
             <>
-              <h2>Left to fade</h2>
+              <h2>{ltText.leftToFade}</h2>
               <ul className="list">
                 {result.others.map((c) => (
-                  <li key={c.source + c.id}><span className="tag">{c.source}</span> {name(c)} <span className="mut">{c.costMinutes} min · dies {dies(c, at)}</span></li>
+                  <li key={c.source + c.id}><span className="tag">{c.source}</span> {nameOf(c)} <span className="mut">{detailOf(c, at, false)}</span></li>
                 ))}
               </ul>
             </>

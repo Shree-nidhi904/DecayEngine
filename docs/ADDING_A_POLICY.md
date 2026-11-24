@@ -44,17 +44,21 @@ export const milkPolicy: DecayPolicy<Milk, MilkData, Event> = {
 }
 ```
 
+To see it run, paste the object (from `{` to `}`, without the types) into [Policy Lab](https://decay-engine-lab.netlify.app). Its "Milk (straight line)" example is this policy. The page runs the text as JavaScript in your browser, so paste only code you trust.
+
 ## 3. Connect it
 
 ```ts
 import { DecayEngine, LocalStorageAdapter } from "@decay-engine/engine"
 
 const engine = new DecayEngine(milkPolicy, new LocalStorageAdapter("milk"), () => crypto.randomUUID())
-const id = engine.addItem({ payload: { label: "Milk", shelfLifeDays: 7 }, importance: 5, costMinutes: 1 }, Date.now())
+const id = engine.addItem({ payload: { label: "Milk", shelfLifeDays: 7 }, importance: 2, costMinutes: 1 }, Date.now())
 engine.view(Date.now())
 ```
 
 Ghosted does exactly this in [apps/ghosted/src/engine-instance.ts](../apps/ghosted/src/engine-instance.ts).
+
+`importance` is a whole number from 1 to 3 and `costMinutes` a whole number from 1 to 600. Anything else makes `addItem` throw (`INVALID_IMPORTANCE`, `INVALID_COST_MINUTES`).
 
 ## 4. What you get without writing it
 
@@ -62,7 +66,7 @@ States and settling, the due queue and graveyard, per-item history, `triage(budg
 
 ## 5. Check it
 
-`checkPolicy(policy, samplePayloads, sampleEvents, startTime)` runs the contract's rules against your policy and returns `{ passed, failures }`. It never throws.
+`checkPolicy(policy, samplePayloads, sampleEvents, startTime)` returns `{ passed, failures }` and never throws. It checks the thresholds, that `init` returns data that survives JSON, and the health curve of each sample item (and of each item after each sample event): from 0 to 100, the same answer twice, and never rising, at nine times from `startTime` to 10 years later. It does not check `nextDueAt` or `resurrect`, so test those yourself. A pass means the decay curve is well formed for your samples, not that every rule is right.
 
 Then prove you did not touch the engine:
 

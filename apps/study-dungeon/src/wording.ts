@@ -5,6 +5,7 @@
 
 import type { AutopsyChartSummary, WordingProps } from "@decay-engine/shell"
 import type { Knowledge } from "./policy"
+import type { ModelName } from "./policy-select"
 
 /** "1 day", "2 days". */
 const daysText = (days: number) => `${days} ${days === 1 ? "day" : "days"}`
@@ -259,12 +260,30 @@ export const landmarkText = {
   tools: "Triage",
 } as const
 
-/** The sound setting (task 20.1, Requirement 18.1). */
-/** The memory-model setting (MemoryModelToggle). */
+/** The memory-model setting (MemoryModelToggle; extensions spec, Requirements 3 and 4). */
 export const memoryModelText = {
   toggle: "Memory model",
-  help: "Off: each right answer doubles a fact's half-life. On: a right answer helps more the later it comes, and hard facts gain less. Your facts are kept; the page reloads.",
+  help: "Off: each right answer doubles a fact's half-life. On: a right answer helps more the later it comes, and hard facts gain less. The numbers are hand-picked. This is not FSRS and is not fitted to anyone's data. Your facts are kept; the page reloads.",
+  /** Said when the choice cannot be saved (extensions Requirement 3.5). */
+  notSaved: "This choice could not be saved in this browser, so nothing changed.",
 } as const
+
+/**
+ * What the fight says after an answer, for the policy that is running
+ * (extensions spec, Requirement 4.2). The doubling texts are fightText's;
+ * the memory model neither doubles nor halves, so it says longer or shorter.
+ */
+export function fightResultText(model: ModelName): { correct: string; incorrect: string; quipRight: string } {
+  return model === "memory"
+    ? {
+        correct: "Correct! Health → 100, half-life longer",
+        incorrect: "Incorrect. Health → 45, half-life shorter",
+        quipRight: "Defeated. It sleeps longer now.",
+      }
+    : { correct: fightText.correct, incorrect: fightText.incorrect, quipRight: "Defeated. It sleeps twice as long now." }
+}
+
+/** The sound setting (task 20.1, Requirement 18.1). */
 
 export const soundText = {
   toggle: "Sound effects",

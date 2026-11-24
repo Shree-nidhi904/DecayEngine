@@ -2395,3 +2395,83 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **What went wrong or surprised me**: two script runs stopped on timeouts. One was a person row that has only an "Open" button (Edit and Remove are inside the open view). The other was the "Back to today" lookup during Play. Each was diagnosed with a separate evaluate call before going on. The dock remembers whether it is open across reloads, so the first keyboard toggle closed it in one run. Test people "Kiro Tester <width>" were added and removed in fresh storage only. The run went slightly past 20 minutes.
 - **Credits used**: 11.07 (12 min 42 s)
 - **Screenshot file names**: none.
+
+---
+
+## Session 78: a spec for four features 
+- **Goal**: write one spec, `.kiro/specs/extensions/`, for four features that were in the repo with no spec: the Study Dungeon memory model, Policy Lab, Life Triage, and `docs/ADDING_A_POLICY.md`. File reads and edits only. No commands, and nothing under `apps/`, `packages/` or `scripts/` was edited.
+- **Written by **: Kiro, according to the developer, in earlier sessions that left nothing under `.kiro/` and no entry in this log. This session did not see that work, so it cannot say which sessions they were, which Kiro feature was used, or what they cost.
+- **Kiro feature used**: Kiro IDE chat (agent mode), specs and steering.
+- **What Kiro produced**:
+  - `requirements.md`: 16 requirements. Each describes what the code does, and marks with **(not met today)** each criterion the code does not meet. Five correctness properties (P1 exists; P2 to P5 to be added).
+  - `design.md`: the four features as built, including the memory model's formula with two worked examples, how Policy Lab compiles and runs text, the Life Triage knapsack and even split, and the design for each open task. It also has a test table and the real-browser plan.
+  - `tasks.md`: the existing file groups ticked as "built before this spec", and open tasks for every gap. Each feature has an unticked real-browser check by Kiro CLI.
+- **Gaps found between the code and the requirements**:
+  - **Memory model**: the help text does not say that the numbers are hand-picked, that it is not FSRS, or that it is not fitted to data. Under the memory model the fight still says "half-life doubled" / "halved", and the creature still says "It sleeps twice as long now". A failed save does nothing and says nothing. The reload uses `window.location.reload()`, not the App's `reload` prop, so tests cannot check it.
+  - **Policy Lab**: no warning that the text runs as code with the page's access, that you should paste only trusted code, that there is no time limit, or that it reruns on every keystroke. The chart has no weak or dead lines, and it shows state by colour only. The fixed importance 2 and cost 5, the single payload and event given to `checkPolicy`, and the 0 to 730 day ranges are not stated.
+  - **Life Triage**: people rows say "dies", not "goes dark". Study Dungeon backups are always read with the doubling policy, and the page does not say so. The budget and look-ahead ranges are not stated, and the look-ahead is not capped at 365. A second file for the same app replaces the first without a word. One unreadable file stops the whole load.
+  - **Guide**: the connect example uses `importance: 5`, so the engine's `validateImportance` throws `INVALID_IMPORTANCE` when it is copied. There is no pointer to Policy Lab.
+  - **checkPolicy is oversold**: Policy Lab says it "tells you if the rules are sound", and the guide says it "runs the contract's rules". It checks only the thresholds, `init`'s JSON and the `healthAt` curve at nine times. It never calls `nextDueAt` or `resurrect`.
+  - **Across all four**: no no-network or wording scan test. In Policy Lab and Life Triage, buttons and the file label are about 42 px tall and inputs about 38 px, so under 44 px. The `scripts/check.sh` header does not list the eight new steps. Neither new app can have component tests yet: Vitest runs in `node`, with no jsdom or Testing Library installed.
+  - **Already met**: the README and the `policy-memory.ts` header both say the memory model is not FSRS and that its constants are hand-picked, not fitted to data. Only the app's own text does not.
+- **Second pass**: after the developer's go-ahead, Kiro re-read the README (for the live URLs: https://decay-engine-lab.netlify.app and https://decay-engine-life-triage-app.netlify.app), `check-policy.ts`, the engine's `validateImportance`, the doubling policy's `applyEvent`, both new apps' `tsconfig.json` and `vite.config.ts`, and looked for component tests (none). The spec was updated with each finding, and no gap from the first pass was dropped.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**:
+  - No commands were run, so folders could not be listed. File names come from following imports, and a file nothing imports may be missing from the spec.
+  - The first request said to write "NOT written in Kiro" here. The developer then said Kiro wrote the code, so this entry says that instead.
+  - Two points conflict with `authorship.md`: `policy-memory.ts` is decay-rule code (Kiro's only exception is Ghosted), and `policy.ts` (Claude Code's file) gained `difficulty?` with no task naming it. Left for the developer (task 7.1).
+  - The doubling policy drops a fact's `difficulty` on its next answer, so switching models back and forth resets difficulty to 5. Recorded in the design and pinned by task 2.6, not changed.
+- **Credits used**:
+- **Screenshot file names**: none.
+
+---
+
+## Session 79: closing the gaps the extensions spec found (tasks 2 to 6)
+- **Goal**: change the code so the four features meet `.kiro/specs/extensions/requirements.md`, and add the tests the spec asks for. File reads and edits only, no commands. Browser checks (2.7, 3.6, 4.6), the full check (8.1) and the authorship decision (7.1) are left open.
+- **Kiro feature used**: Kiro IDE chat (agent mode), specs and steering.
+- **What Kiro produced**:
+  - **Memory model** (Study Dungeon):
+    - `wording.ts`: new help text ("The numbers are hand-picked. This is not FSRS and is not fitted to anyone's data."), `memoryModelText.notSaved`, and `fightResultText(model)`.
+    - `components/FightDialog.tsx`: an optional `model` prop, defaulting to the doubling texts. Under the memory model a right answer says "half-life longer" and "It sleeps longer now", and a wrong one says "half-life shorter". Claude Code's P6 lines were not touched.
+    - `App.tsx`: passes `model`. The switch now reloads through the `reload` prop, and when the choice cannot be saved it announces that and does not reload.
+    - Tests: `MemoryModelToggle.test.tsx` (exact help text, no research or proof words), new `components/FightDialog.model.test.tsx`, new `App.memory-model.test.tsx`, new `memory-model.source.test.ts`, and new cases in `policy-memory.test.ts` (P2 with 200 runs, the worked examples, `nextDueAt`, `resurrect`, `init`, switching back).
+  - **Policy Lab**:
+    - New `src/text.ts` with all page words.
+    - `App.tsx`: the trust warning, linked to the editor. A lede that says what `checkPolicy` checks and does not, with "sound" gone. The limits line. Clamped inputs. 44 px targets. A Life Triage footer link.
+    - The chart has labelled weak and dead lines, a circle, triangle and cross for the states, and a summary as its name.
+    - `lab.ts`: `thresholds` in the result, the constants and `clampHorizon` and `clampTendDay`.
+    - Tests: new `page.test.tsx` (rendered with `react-dom/server` in Node), `source.test.ts` (no network, CSS) and `guide.test.ts` (the guide's milk object compiles, passes `checkPolicy` and matches the preset, and the connect example is accepted). New cases in `lab.test.ts`.
+  - **Life Triage**:
+    - New `src/text.ts`: people rows say "goes dark" and "freshness", fact rows say "dies" and "health". The limits line, and `clampBudget` and `clampAhead` with notes. The look-ahead is now capped at 365.
+    - New `src/files.ts`: each file is read on its own, an unreadable file is listed, and a replaced file says so.
+    - `App.tsx` uses both and takes an optional `now` prop. 44 px targets.
+    - Tests: new `text.test.ts`, `files.test.ts` (backups built from real engines), `page.test.tsx` and `source.test.ts`. In the package, new `life-triage.property.test.ts` (coverage, P3 against a brute force, P4, order, a three-source even split) and `source.test.ts` (no network, no clock, no engine writes, only the engine imported).
+  - **Guide**: `importance: 2`, the allowed importance and cost, a Policy Lab link with the trust note, and an accurate description of `checkPolicy`.
+  - **`scripts/check.sh`**: header comment only (Claude Code's file, named by task 5.4).
+  - **Spec**: the task ticks and status line, and design notes for the choices below.
+- **What I changed by hand**: nothing.
+- **Choices made**:
+  - No new dependencies, so `pnpm-lock.yaml` is unchanged and Netlify's frozen-lockfile install still works. The page tests use `react-dom/server` instead of jsdom, and Policy Lab's P5 runs over a fixed grid instead of fast-check.
+  - The memory model's habit of dropping a fact's difficulty after a doubling-policy answer is pinned by a test, not changed (it would need `policy.ts`, Claude Code's file).
+- **What went wrong or surprised me**:
+  - **Nothing was run.** None of the new or changed tests, the typechecks or the builds has been run, so failures are possible. Expected values were worked by hand: the fact preset weak on day 4 and dead on day 9, the memory model's 5.48 and 10.21 days, and the memory wrong answer giving 2 days. Task 8.1 runs them.
+  - Not every existing Study Dungeon test file was read. Any test that checks the old help text or scans every wording string could need a look.
+  - The memory switch's size is still unmeasured: its CSS was not found by reading.
+  - Deploying needs the developer: the live sites still show the old text until the three apps are redeployed.
+- **Credits used**:
+- **Screenshot file names**: none.
+
+---
+
+## Session 80: who wrote the memory model (extensions task 7.1)
+- **Goal**: record the authorship of Study Dungeon's memory model, which conflicted with `authorship.md` (Kiro writes decay-rule code only for Ghosted).
+- **Developer's decision**: Kiro wrote the code of `policy-memory.ts`. The developer chose the rules: the formula and every constant.
+- **Kiro feature used**: Kiro IDE chat (agent mode), steering.
+- **What Kiro produced**:
+  - `.kiro/steering/authorship.md`: a new section, "Exception: Study Dungeon's memory model". It records that the rules are the developer's (with every constant listed), the code is Kiro's, there was no spec first, and the `policy-reviewer` agent has not been run on it yet. It also records the `difficulty?` field Kiro added to `policy.ts` (Claude Code's file).
+  - `README.md`: one sentence in the Kiro paragraph, on the same split as Ghosted's policy.
+  - Extensions spec: task 7.1 ticked, new open task 7.2 (run `policy-reviewer`), and design section 7 and the requirements' authorship note updated.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: who chose the example rules in Policy Lab's presets and the guide's milk example is still not recorded. They are examples, not app policies, so they were left out of `authorship.md`.
+- **Credits used**:
+- **Screenshot file names**: none.

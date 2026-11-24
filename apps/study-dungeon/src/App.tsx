@@ -33,7 +33,7 @@ import { RaidIntro } from "./components/RaidIntro"
 import { ImportFactsDialog } from "./components/ImportFactsDialog"
 import { BackupControls } from "./components/BackupControls"
 import { buildChoices, loadAnswerCheck, saveAnswerCheck, type AnswerCheck } from "./answer-check"
-import { answerText, dailyRaidText, firstLookText, importText } from "./wording"
+import { answerText, dailyRaidText, firstLookText, importText, memoryModelText } from "./wording"
 import { FirstLookSkip } from "./components/FirstLookSkip"
 import { firstLookOffsetForProgress, firstLookSeen, markFirstLookSeen } from "./first-look"
 import type { FirstLookDockControl } from "./first-look-dock"
@@ -895,7 +895,10 @@ export function App({
               <MemoryModelToggle
                 enabled={readModel(storage) === "memory"}
                 onChange={(on) => {
-                  if (saveModel(storage, on ? "memory" : "doubling")) window.location.reload()
+                  // The engine is built once with one policy, so a saved change reloads the page.
+                  // A choice that cannot be saved changes nothing, and says so (extensions Req 3.5).
+                  if (saveModel(storage, on ? "memory" : "doubling")) reload()
+                  else announce(memoryModelText.notSaved, true)
                 }}
               />
               {/* Task L5: a preference beside the sound switch, so it works in a preview too. */}
@@ -980,6 +983,7 @@ export function App({
             choices={choicesFor(dialog.fact)}
             sleepsUntil={sleepsUntilFor(dialog.fact.id)}
             combo={session === null ? 0 : combo}
+            model={readModel(storage)}
           />
         )}
         {dialog?.kind === "autopsy" && (

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Runs every check the project has, in order, and prints a short summary:
 # install, the engine-unchanged check, typecheck (shell, app, Ghosted),
-# tests (engine, shell, app, Ghosted), the app and Ghosted builds, typecheck and tests of
-# @decay-engine/insight, and the landing page (site/).
+# tests (engine, shell, app, Ghosted), the app and Ghosted builds, typecheck, tests and
+# build of Policy Lab and of the Life Triage app, typecheck and tests of
+# @decay-engine/life-triage, typecheck and tests of @decay-engine/insight, and the
+# landing page (site/).
 # "app" is Study Dungeon.
 # Run it from anywhere in WSL:  bash scripts/check.sh
 # Exit code is 0 only when every step passes.
@@ -10,6 +12,8 @@
 # Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 # The three Ghosted steps were added by Kiro (Ghosted task 2.10, design section 8.3).
 # The two Insight steps were added by Kiro (task E1).
+# The eight Policy Lab and Life Triage steps were added by Kiro, according to the
+# developer; this comment was updated by Kiro for the extensions spec (task 5.4).
 
 set -u
 cd "$(dirname "$0")/.."

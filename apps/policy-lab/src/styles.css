@@ -23,3 +23,10 @@ textarea { resize:vertical }
 .controls { display:grid; grid-template-columns:auto 90px auto 90px; gap:8px; align-items:center }
 .controls label { margin:0 }
 footer { margin-top:32px; color:var(--mut) } footer a { color:var(--acc) }
+/* Extensions spec (tasks 3.2, 3.3, 5.2): the warning, the legend shapes, and 44px targets. */
+.warn { margin:12px 0 0; padding:8px 12px; border:1px solid var(--acc); border-left-width:4px; border-radius:8px; color:var(--fg); font-size:14px }
+.legend-item { display:inline-flex; align-items:center; gap:4px }
+.threshold line { stroke-dasharray:6 4; opacity:.8 }
+button { min-height:44px; min-width:44px }
+input, textarea { min-height:44px }
+footer a { display:inline-block; min-height:44px; line-height:44px }

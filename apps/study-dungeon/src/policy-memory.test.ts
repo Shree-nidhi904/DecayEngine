@@ -86,6 +86,76 @@ describe("memoryPolicy", () => {
   })
 })
 
+// Extensions spec, task 2.5 and 2.6 (Requirements 2.3, 2.6 to 2.8, 2.10). Expected values are worked by hand in
+// design section 2.2, not taken from running the code.
+describe("memoryPolicy, extensions spec", () => {
+  it("worked examples: half-life 5, difficulty 5, recalled 0.95 gives about 5.48; recalled 0.55 about 10.21", () => {
+    expect(grownHalfLife(5, 5, 0.95)).toBeCloseTo(5.48, 2)
+    expect(grownHalfLife(5, 5, 0.55)).toBeCloseTo(10.21, 2)
+  })
+
+  it("nothing forgotten means no growth: recalled 1 keeps the half-life", () => {
+    for (const h of [1, 5, 37.5, 180]) expect(grownHalfLife(h, 5, 1)).toBeCloseTo(h, 12)
+  })
+
+  it("P2: a later answer (lower recalled share) never grows the half-life less, and never shrinks it", () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 1, max: 180, noNaN: true }),
+        fc.double({ min: 1, max: 10, noNaN: true }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        (h, d, a, b) => {
+          const r1 = Math.min(a, b)
+          const r2 = Math.max(a, b)
+          const late = grownHalfLife(h, d, r1)
+          const early = grownHalfLife(h, d, r2)
+          expect(late).toBeGreaterThanOrEqual(early - 1e-9)
+          expect(early).toBeGreaterThanOrEqual(Math.min(h, 180) - 1e-9)
+          expect(late).toBeLessThanOrEqual(180)
+        }
+      ),
+      { numRuns: 200 }
+    )
+  })
+
+  it("nextDueAt: null when dead, now when below 60, otherwise the time health reaches 60", () => {
+    expect(memoryPolicy.nextDueAt(fact({ state: "dead", health: 5 }), T0)).toBeNull()
+    // Half-life 5 from 100: health is 60 after 5 × log2(100/60) ≈ 3.685 days.
+    const due = memoryPolicy.nextDueAt(fact({ halfLifeDays: 5 }), T0)!
+    expect((due - T0) / DAY_MS).toBeCloseTo(5 * Math.log2(100 / 60), 9)
+    expect(memoryPolicy.healthAt(fact({ halfLifeDays: 5 }), due)).toBeCloseTo(60, 9)
+    const late = T0 + 4 * DAY_MS
+    expect(memoryPolicy.nextDueAt(fact({ halfLifeDays: 5 }), late)).toBe(late)
+  })
+
+  it("resurrect: a right answer succeeds and keeps the policy data; a wrong one is refused with the reason", () => {
+    const dead = fact({ state: "dead", health: 5, halfLifeDays: 7, difficulty: 8 })
+    expect(memoryPolicy.resurrect(dead, { kind: "review", correct: true }, T0)).toEqual({ ok: true })
+    expect(memoryPolicy.resurrect(dead, { kind: "review", correct: false }, T0)).toEqual({
+      ok: false,
+      reason: "You got it wrong. The fact stays dead.",
+    })
+  })
+
+  it("switching back: the doubling policy drops difficulty on the next answer, and the memory model then reads it as 5", () => {
+    const hard = fact({ halfLifeDays: 5, difficulty: 8 })
+    const r = studyDungeonPolicy.applyEvent(hard, { kind: "review", correct: true }, T0)
+    expect(r.policyData).toEqual({ halfLifeDays: 10 })
+    const back = fact({ halfLifeDays: 10 })
+    delete (back.policyData as { difficulty?: number }).difficulty
+    // Read as 5, a wrong answer raises it to 6 (not 9, as it would be from 8).
+    expect(memoryPolicy.applyEvent(back, { kind: "review", correct: false }, T0).policyData.difficulty).toBe(6)
+  })
+
+  it("init: difficulty new 7, shaky 5, solid 3; an unknown level throws an error that names it", () => {
+    expect(memoryPolicy.init(payload("new"), T0)).toEqual({ halfLifeDays: 2, difficulty: 7 })
+    expect(memoryPolicy.init(payload("shaky"), T0)).toEqual({ halfLifeDays: 5, difficulty: 5 })
+    expect(memoryPolicy.init(payload("solid"), T0)).toEqual({ halfLifeDays: 10, difficulty: 3 })
+    expect(() => memoryPolicy.init({ ...payload("new"), knowledge: "expert" as unknown as FactPayload["knowledge"] }, T0)).toThrow(/"expert"/)
+  })
+})
+
 describe("policy selection", () => {
   it("defaults to doubling, saves memory, and removes the key for doubling", () => {
     const store = new Map<string, string>()

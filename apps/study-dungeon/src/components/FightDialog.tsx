@@ -5,13 +5,16 @@
 // "Walk away" (and Escape) closes without calling the engine.
 // The time comes from the injected now(), so tests never read the clock.
 // The sound player and the error handler are injected too (tasks 20.2, 18.3).
+// The `model` prop and the result texts from fightResultText were added by
+// Kiro for the extensions spec (task 2.3).
 
 import { useRef, useState } from "react"
 import { DecayEngineError } from "@decay-engine/engine"
 import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
 import type { SoundPlayer } from "../sound"
-import { comboText, fightText, sessionText, studyDungeonWording } from "../wording"
+import { comboText, fightResultText, fightText, sessionText, studyDungeonWording } from "../wording"
+import type { ModelName } from "../policy-select"
 import { Sparks } from "./art/Particles"
 import { useModalDialog } from "./useModalDialog"
 import { DialogFoe } from "./DialogFoe"
@@ -62,6 +65,11 @@ export interface FightDialogProps {
   sleepsUntil?: () => string | null
   /** Right answers in a row in this Triage session, counting this one once answered. */
   combo?: number
+  /**
+   * Which policy is running (policy-select.ts), so the result text is true
+   * for it (extensions spec, Requirement 4.2). Defaults to "doubling".
+   */
+  model?: ModelName
 }
 
 /** How a fight ended: answered right, answered wrong, or the fact died first. */
@@ -83,7 +91,9 @@ export function FightDialog({
   choices = null,
   sleepsUntil,
   combo = 0,
+  model = "doubling",
 }: FightDialogProps) {
+  const results = fightResultText(model)
   const ref = useModalDialog()
   const [step, setStep] = useState<Step>("question")
   const [sleepLine, setSleepLine] = useState<string | null>(null)
@@ -119,7 +129,7 @@ export function FightDialog({
 
   const done = step === "correct" || step === "incorrect" || step === "died"
   const resultText =
-    step === "correct" ? fightText.correct : step === "incorrect" ? fightText.incorrect : fightText.diedFirst
+    step === "correct" ? results.correct : step === "incorrect" ? results.incorrect : fightText.diedFirst
 
   return (
     <dialog
@@ -142,7 +152,7 @@ export function FightDialog({
           mood={step === "correct" ? "happy" : step === "incorrect" || step === "died" ? "feral" : moodOf(fact.state, fact.health)}
           quip={
             step === "correct"
-              ? "Defeated. It sleeps twice as long now."
+              ? results.quipRight
               : step === "incorrect"
                 ? "It got stronger. You will face it again sooner."
                 : quipOf(moodOf(fact.state, fact.health))
