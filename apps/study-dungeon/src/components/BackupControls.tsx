@@ -2,10 +2,10 @@
 // downloads your facts as a JSON file. Restore reads one, checks it, asks
 // before replacing everything, then reloads.
 //
-// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { useRef, useState } from "react"
 import { applyBackup, checkBackup, makeBackup } from "../backup"
+import { markBackedUp } from "../backup-reminder"
 import type { FlagStorage } from "../first-run"
 import { backupText } from "../wording"
 import { useModalDialog } from "./useModalDialog"
@@ -74,6 +74,7 @@ export function BackupControls({ storage, reload, announce, restoreDisabledReaso
             return
           }
           download(`study-dungeon-${today().toISOString().slice(0, 10)}.json`, text)
+          markBackedUp(storage, today().getTime())
           announce(backupText.saved)
         }}
       >

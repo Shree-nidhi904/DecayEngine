@@ -2,9 +2,10 @@
 // so clearing the browser does not lose them. A backup is checked by building
 // a real engine from it before anything is replaced.
 //
-// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { DecayEngine } from "@decay-engine/engine"
+import { bumpRevision } from "@decay-engine/persist"
+import { STORAGE_NAMESPACE } from "./engine-instance"
 import { type FactPayload, type FactPolicyData, type ReviewEvent } from "./policy"
 import { activePolicy } from "./policy-select"
 import { ENGINE_STORAGE_KEY, STARTED_FLAG, type FlagStorage } from "./first-run"
@@ -53,7 +54,9 @@ export function checkBackup(text: string): RestoreCheck {
 }
 
 /** Replaces the saved facts with a checked backup's snapshot. The app reloads afterwards. */
-export function applyBackup(storage: Pick<FlagStorage, "setItem">, snapshot: unknown): void {
+export function applyBackup(storage: Pick<FlagStorage, "getItem" | "setItem">, snapshot: unknown): void {
   storage.setItem(ENGINE_STORAGE_KEY, JSON.stringify(snapshot))
+  // Tabs that loaded the old data must reload before saving, not write over the restore.
+  bumpRevision(storage, STORAGE_NAMESPACE, Date.now())
   storage.setItem(STARTED_FLAG, "1")
 }

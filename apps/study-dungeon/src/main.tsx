@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Root } from "./Root";
 import { DoorSplash } from "./components/DoorSplash";
 import { createEngine } from "./engine-instance";
+import { registerApp } from "./pwa";
 import type { FlagStorage } from "./first-run";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
@@ -36,3 +37,6 @@ createRoot(rootElement).render(
     <DoorSplash />
   </React.StrictMode>,
 );
+
+// Offline support: registers the service worker in production builds only.
+registerApp(import.meta.env.PROD, import.meta.env.BASE_URL);

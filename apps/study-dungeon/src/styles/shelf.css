@@ -1,0 +1,184 @@
+/*
+ *
+ * The settings row used to be a loose line of controls of different sizes.
+ * Here it is a carved stone shelf: one slab per setting, each with its
+ * control on top and its sentence under it, the long ones across the whole
+ * shelf, and the data buttons on the bottom ledge. Switches look like small
+ * levers. Markup is unchanged; every control keeps its label, role and a
+ * 44px tap target. Colours are the app's variables and color-mix of them.
+ * No motion here (animations.css holds all of it).
+ */
+
+.sd-world .sd-settings {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 28px 20px 20px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse 60% 120px at 50% 0, color-mix(in srgb, var(--color-pumpkin) 7%, transparent), transparent),
+    repeating-linear-gradient(180deg, transparent 0 47px, color-mix(in srgb, var(--color-bg) 55%, transparent) 47px 49px),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-stone-hi) 70%, var(--color-stone)), var(--color-bg));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-bone) 6%, transparent),
+    0 6px 0 #000;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* A carved line across the top of the shelf, with a rune stone in the middle. */
+.sd-world .sd-settings::before {
+  content: "";
+  position: absolute;
+  inset-inline: 20px;
+  inset-block-start: 12px;
+  block-size: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-pumpkin) 40%, var(--color-line)) 30%, color-mix(in srgb, var(--color-pumpkin) 40%, var(--color-line)) 70%, transparent);
+}
+.sd-world .sd-settings::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: 8px;
+  inline-size: 9px;
+  block-size: 9px;
+  margin-inline-start: -4.5px;
+  border: 1px solid color-mix(in srgb, var(--color-pumpkin) 60%, var(--color-line));
+  background: var(--color-stone);
+  transform: rotate(45deg);
+}
+
+/* One slab per setting. */
+.sd-world .sd-settings > .sd-answer-setting,
+.sd-world .sd-settings > .sd-sound-toggle,
+.sd-world .sd-settings > .sd-haunt-setting,
+.sd-world .sd-settings > .sd-notify {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-line) 85%, var(--color-bone-dim));
+  border-radius: 8px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-stone-hi) 85%, var(--color-bone-dim)), var(--color-stone));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-bone) 7%, transparent),
+    0 3px 0 #000;
+}
+
+/* The long settings take the whole shelf. */
+.sd-world .sd-settings > .sd-notify,
+.sd-world .sd-settings > .sd-sound-toggle:has(.sd-notify-note) {
+  grid-column: 1 / -1;
+}
+
+/* The sentences under the controls read as text, not as labels. */
+.sd-world .sd-settings p {
+  font-family: var(--font-body);
+}
+
+/* "Answer by": the label, then the choice. */
+.sd-world .sd-settings > .sd-answer-setting {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.sd-world .sd-settings .sd-answer-setting select {
+  min-height: 44px;
+  min-width: 0;
+  background: var(--color-bg);
+}
+
+/* A switch: the lever, then its label; a sentence (if any) under both. */
+.sd-world .sd-settings > .sd-sound-toggle {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  min-block-size: 44px;
+}
+.sd-world .sd-settings > .sd-sound-toggle .sd-notify-note {
+  grid-column: 1 / -1;
+}
+.sd-world .sd-settings label {
+  cursor: pointer;
+}
+
+/* Levers: a slot of stone with a knob that moves to the lit side when on. */
+.sd-world .sd-settings input[role="switch"] {
+  flex: none;
+  appearance: none;
+  width: 46px;
+  height: 26px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--color-line) 70%, var(--color-bone-dim));
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 13px 50%, var(--color-bone-dim) 0 8px, transparent 8.5px),
+    var(--color-bg);
+  box-shadow: inset 0 2px 4px #000;
+  cursor: pointer;
+}
+.sd-world .sd-settings input[role="switch"]:checked {
+  border-color: var(--color-pumpkin);
+  background:
+    radial-gradient(circle at calc(100% - 13px) 50%, var(--color-bone) 0 8px, transparent 8.5px),
+    color-mix(in srgb, var(--color-pumpkin) 75%, var(--color-bg));
+  box-shadow:
+    inset 0 2px 4px color-mix(in srgb, #000 50%, transparent),
+    0 0 14px color-mix(in srgb, var(--color-pumpkin) 35%, transparent);
+}
+.sd-world .sd-settings input[role="switch"]:focus-visible {
+  outline: 2px solid var(--color-moon);
+  outline-offset: 3px;
+}
+
+/* The notification slab keeps its own row of switch and sentences (notify.css). */
+.sd-world .sd-settings .sd-notify-toggle {
+  gap: 12px;
+}
+
+/* The spooky level and the share card: a full-width button over its sentence. */
+.sd-world .sd-settings > .sd-haunt-setting .sd-button {
+  min-height: 44px;
+  width: 100%;
+}
+.sd-world .sd-settings .sd-haunt-toggle[aria-pressed="true"] {
+  color: var(--color-pumpkin);
+  background: color-mix(in srgb, var(--color-pumpkin) 8%, transparent);
+}
+
+/* The bottom ledge: backup on the left, reset on the right. */
+.sd-world .sd-settings > .sd-backup {
+  align-self: center;
+}
+.sd-world .sd-settings > .sd-button {
+  align-self: center;
+  justify-self: end;
+  min-height: 44px;
+}
+.sd-world .sd-settings > .sd-backup .sd-button {
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  .sd-world .sd-settings {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 12px 12px;
+  }
+  .sd-world .sd-settings > .sd-answer-setting {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .sd-world .sd-settings > .sd-button {
+    justify-self: start;
+  }
+}
+
+/* A switch with no sentence sits in the middle of its slab. */
+.sd-world .sd-settings > .sd-sound-toggle:not(:has(.sd-notify-note)) {
+  align-content: center;
+}

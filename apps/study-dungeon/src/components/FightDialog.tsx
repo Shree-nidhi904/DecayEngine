@@ -16,6 +16,7 @@ import type { SoundPlayer } from "../sound"
 import { comboText, fightResultText, fightText, sessionText, studyDungeonWording } from "../wording"
 import type { ModelName } from "../policy-select"
 import { Sparks } from "./art/Particles"
+import { hauntText } from "../wording"
 import { useModalDialog } from "./useModalDialog"
 import { DialogFoe } from "./DialogFoe"
 import { AnswerPanel } from "./AnswerPanel"
@@ -75,6 +76,9 @@ export interface FightDialogProps {
 /** How a fight ended: answered right, answered wrong, or the fact died first. */
 export type FightResult = "correct" | "incorrect" | "died"
 
+/** A right answer this soon after the fight opens is a critical hit (haunt pass). */
+export const CRIT_MS = 6_000
+
 type Step = "question" | "answer" | FightResult
 
 export function FightDialog({
@@ -97,6 +101,8 @@ export function FightDialog({
   const ref = useModalDialog()
   const [step, setStep] = useState<Step>("question")
   const [sleepLine, setSleepLine] = useState<string | null>(null)
+  const [openedAt] = useState(() => now())
+  const [crit, setCrit] = useState(false)
   const checked = check !== "self"
   // Guards against a second answer before React re-renders.
   const answered = useRef(false)
@@ -123,6 +129,7 @@ export function FightDialog({
     sound?.play(correct ? "right" : "wrong")
     const result: FightResult = correct ? "correct" : "incorrect"
     if (correct) setSleepLine(sleepsUntil?.() ?? null)
+    if (correct) setCrit(now() - openedAt <= CRIT_MS)
     setStep(result)
     onResult?.(result)
   }
@@ -191,6 +198,11 @@ export function FightDialog({
       {step === "correct" && sleepLine !== null && <p className="sd-result-more">{sleepLine}</p>}
       {step === "correct" && combo >= 2 && <p className="sd-combo">{comboText(combo)}</p>}
       {step === "correct" && <Sparks color="#ff8a2b" />}
+      {step === "correct" && crit && (
+        <p className="sd-crit" aria-hidden="true">
+          {hauntText.critical}
+        </p>
+      )}
       {step === "incorrect" && (
         <p className="sd-damage" aria-hidden="true">
           Miss!

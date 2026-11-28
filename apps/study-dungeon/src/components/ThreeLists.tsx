@@ -11,6 +11,7 @@ import { buildLists, lastReviewHealth, type FactState } from "../lists"
 import { emptyCryptPrompt, landmarkText, sceneText, studyDungeonWording } from "../wording"
 import { ConfirmRemoveDialog } from "./ConfirmRemoveDialog"
 import { FactCard } from "./FactCard"
+import { previewCrossings } from "../preview-crossings"
 import { Torch, Tree } from "./art/Scenery"
 import { Embers, Fireflies, Motes } from "./art/Particles"
 import { PeacefulYard } from "./art/Scenery"
@@ -100,6 +101,11 @@ export function ThreeLists({
     return new Map(engine.view(realNow).map((f) => [f.id, f.state] as const))
   }, [engine, realNow, now, version])
 
+  const crossed = useMemo(
+    () => (realNow === undefined || realNow === now ? null : previewCrossings(engine.view(realNow), engine.view(now))),
+    [engine, realNow, now, version]
+  )
+
   // Health right after each weak fact's last review, read with the lists so a
   // fact removed since then is never looked up.
   const baseHealths = useMemo(() => {
@@ -128,6 +134,7 @@ export function ThreeLists({
         disabledReason={writesDisabledReason}
         justChanged={justChanged?.has(fact.id) === true}
         onReacted={onReacted}
+        crossed={crossed?.get(fact.id)}
       />
     </li>
   )

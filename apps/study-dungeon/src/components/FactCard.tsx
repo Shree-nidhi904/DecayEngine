@@ -11,7 +11,6 @@
 // are aria-disabled with a reason while previewing; Autopsy never is.
 // Fight (or Challenge) is the one primary button; Edit and Remove are quiet.
 //
-// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 // Changed by Kiro for task L3 (task 25.4): the optional `justChanged` and `onReacted` props.
 
 import { useEffect, useId, useRef, type ReactNode } from "react"
@@ -51,6 +50,8 @@ export interface FactCardProps {
   justChanged?: boolean
   /** Called when that animation ends, so the App removes the class. */
   onReacted?: (id: string) => void
+  /** Haunt pass (Req 1.4): this fact crosses in the time machine's preview. */
+  crossed?: "fades" | "dies"
 }
 
 /** The two L3 animations whose end removes the marker (live.css). */
@@ -72,6 +73,7 @@ export function FactCard({
   disabledReason,
   justChanged = false,
   onReacted,
+  crossed,
 }: FactCardProps) {
   // Task L3: the end of the wake (it bubbles up from the creature) removes the
   // marker. A native listener, so it hears the unprefixed event; another
@@ -173,6 +175,7 @@ export function FactCard({
         ref={cardRef}
         className={`shell-item-card sd-card sd-monster${marker}`}
         data-state={state}
+        data-crossed={crossed}
         data-mood={mood}
         aria-labelledby={textId}
       >
@@ -208,6 +211,7 @@ export function FactCard({
         ref={cardRef}
         className={`shell-item-card sd-card sd-sleeper${marker}`}
         data-state={state}
+        data-crossed={crossed}
         data-mood={mood}
         aria-labelledby={textId}
       >
@@ -234,7 +238,8 @@ export function FactCard({
 
   const daysDead = fact.diedAt === undefined ? null : Math.max(0, Math.floor((now - fact.diedAt) / DAY_MS))
   return (
-    <article ref={cardRef} className={`shell-item-card sd-card sd-grave${marker}`} data-state={state} aria-labelledby={textId}>
+    <article ref={cardRef} className={`shell-item-card sd-card sd-grave${marker}`} data-state={state}
+        data-crossed={crossed} aria-labelledby={textId}>
       <Tombstone kind={creature.kind} />
       {stateLine()}
       {question}

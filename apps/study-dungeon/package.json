@@ -11,8 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@decay-engine/cloud": "workspace:*",
     "@decay-engine/engine": "workspace:*",
     "@decay-engine/insight": "workspace:*",
+    "@decay-engine/persist": "workspace:*",
+    "@decay-engine/pwa": "workspace:*",
     "@decay-engine/shell": "workspace:*",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/pirata-one": "^5.3.0",

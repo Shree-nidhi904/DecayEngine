@@ -2,7 +2,6 @@
 // Uses the real engine and LocalStorageAdapter over a fake localStorage, so the
 // errors are the ones the engine really throws.
 //
-// Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 
 import { afterEach, describe, expect, it } from "vitest"
 import { DecayEngine, DecayEngineError, InMemoryAdapter, LocalStorageAdapter } from "@decay-engine/engine"
@@ -201,7 +200,7 @@ describe("classifyLoadError and createEngineSafely", () => {
 
 describe("storageProblemText", () => {
   it("has a sentence for every problem, and the full one says 'Storage full' as the design asks", () => {
-    expect(Object.keys(storageProblemText).sort()).toEqual(["corrupt", "full", "unavailable"])
+    expect(Object.keys(storageProblemText).sort()).toEqual(["corrupt", "full", "stale", "unavailable"])
     expect(storageProblemText.full.startsWith("Storage full.")).toBe(true)
     expect(storageProblemText.corrupt).toContain("Reset all data")
   })

@@ -25,7 +25,7 @@ describe("Life Triage: no network", () => {
     expect(networkUses("// new WebSocket(u)")).toEqual([])
   })
 
-  for (const file of ["./App.tsx", "./load.ts", "./files.ts", "./text.ts", "./main.tsx"]) {
+  for (const file of ["./App.tsx", "./load.ts", "./files.ts", "./text.ts", "./main.tsx", "./account.ts", "./AccountLoader.tsx"]) {
     it(`${file} makes no network request`, () => {
       expect(networkUses(read(file))).toEqual([])
     })

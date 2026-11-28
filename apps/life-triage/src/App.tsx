@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { lifeTriage, type Source } from "@decay-engine/life-triage"
 import { sampleSources } from "./load"
+import { AccountLoader } from "./AccountLoader"
 import { readBackupFiles } from "./files"
 import { MAX_AHEAD_DAYS, clampAhead, clampBudget, detailOf, ltText, nameOf } from "./text"
 
@@ -52,6 +53,13 @@ export function App({ now: fixedNow }: AppProps = {}) {
           {ltText.sample}
         </button>
       </div>
+      <AccountLoader
+        existing={sources}
+        onLoaded={(next, accountNotes) => {
+          setSources(next)
+          setNotes(accountNotes)
+        }}
+      />
       {notes.length > 0 && (
         <ul className="failures" aria-live="polite">
           {notes.map((n, i) => <li key={i}>{n}</li>)}

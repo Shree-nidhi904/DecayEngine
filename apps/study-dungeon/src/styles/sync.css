@@ -1,0 +1,84 @@
+/* The Sync panel (components/SyncPanel.tsx). Theme variables only. */
+
+.sd-sync {
+  max-width: 34rem;
+  font-size: 0.9rem;
+  margin: 0 auto;
+  padding: 8px 16px 24px;
+  color: var(--color-bone);
+}
+
+.sd-sync > summary {
+  cursor: pointer;
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-bone-dim);
+  font-size: 0.85rem;
+}
+
+.sd-sync-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-stone);
+}
+
+.sd-sync-body p {
+  margin: 0;
+}
+
+.sd-sync-notice {
+  padding: 8px 12px;
+  border-left: 4px solid var(--color-blood);
+}
+
+.sd-sync-small {
+  color: var(--color-bone-dim);
+  font-size: 0.85rem;
+}
+
+.sd-sync-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sd-sync-body label {
+  display: grid;
+  gap: 4px;
+}
+
+.sd-sync-body input {
+  min-block-size: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-bone);
+  font: inherit;
+}
+
+.sd-sync-body button {
+  min-block-size: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-bone);
+  font: inherit;
+  cursor: pointer;
+}
+
+.sd-sync-body button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sd-sync-body form {
+  display: grid;
+  gap: 12px;
+}

@@ -16,6 +16,15 @@ import { useState } from "react"
 import { App, type AppProps } from "./App"
 import type { StudyDungeonEngine } from "./engine-instance"
 import { resetAllData, type FlagStorage } from "./first-run"
+import { quarantineSnapshot } from "@decay-engine/persist"
+import { useOtherTabChange } from "./cross-tab"
+import { TabChangedBanner } from "./components/TabChangedBanner"
+import { UpdateBanner } from "./components/UpdateBanner"
+import { PersistStatus } from "./components/PersistStatus"
+import { BackupNudge } from "./components/BackupNudge"
+import { SyncPanel } from "./components/SyncPanel"
+import { useUpdateReady } from "./pwa"
+import { STORAGE_NAMESPACE } from "./engine-instance"
 import { createEngineSafely, storageProblemText } from "./storage-errors"
 import { ErrorBoundary, ProblemScreen, type ErrorBoundaryProps } from "./components/ErrorBoundary"
 
@@ -58,7 +67,17 @@ function LoadedApp({
 }) {
   // Built once. Errors that are not storage problems are rethrown by
   // createEngineSafely and reach the ErrorBoundary above.
-  const [result] = useState(() => createEngineSafely(createEngine))
+  const [result] = useState(() => {
+    const created = createEngineSafely(createEngine)
+    // Keep a copy of data that could not be read, so "Reset all data" is not the end of it.
+    if (!created.ok && created.problem === "corrupt" && storage !== null) {
+      quarantineSnapshot(storage, STORAGE_NAMESPACE, Date.now())
+    }
+    return created
+  })
+  // Hooks run before any early return below.
+  const otherTabChanged = useOtherTabChange()
+  const applyUpdate = useUpdateReady()
 
   if (!result.ok) {
     return (
@@ -73,5 +92,16 @@ function LoadedApp({
   if (storage === null) {
     return <ProblemScreen message={storageProblemText.unavailable} reload={reload} />
   }
-  return <App {...appProps} engine={result.engine} storage={storage} reload={reload} />
+  return (
+    <>
+      {otherTabChanged && <TabChangedBanner reload={reload} />}
+      {applyUpdate !== null && <UpdateBanner apply={applyUpdate} />}
+      <BackupNudge storage={storage} hasData={result.engine.view(Date.now()).length > 0} />
+      <App {...appProps} engine={result.engine} storage={storage} reload={reload} />
+      <div className="sd-footer">
+        <PersistStatus />
+        <SyncPanel storage={storage} reload={reload} engine={result.engine} />
+      </div>
+    </>
+  )
 }

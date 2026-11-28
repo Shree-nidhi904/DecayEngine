@@ -17,7 +17,7 @@ import { MemoryStorage, makeAppKit } from "./test/app-kit"
 import { day } from "./test/fixtures"
 import { expandDock } from "./test/dock"
 import { TOUR_TARGET_ATTRIBUTE } from "./components/Tour"
-import { RESET_KEYS, STARTED_FLAG, TOUR_DONE_FLAG, ENGINE_STORAGE_KEY } from "./first-run"
+import { RESET_KEYS, STARTED_FLAG, TOUR_DONE_FLAG, ENGINE_STORAGE_KEY, ENGINE_META_KEY, BACKUP_REMINDER_KEYS, SYNC_STATE_KEY } from "./first-run"
 import { SOUND_SETTING_KEY } from "./sound"
 
 afterEach(cleanup)
@@ -163,8 +163,15 @@ describe("the tour", () => {
 })
 
 describe("Reset all data and the tour flag", () => {
-  it("RESET_KEYS are the snapshot, the first-run flag and the tour flag", () => {
-    expect(RESET_KEYS).toEqual([ENGINE_STORAGE_KEY, STARTED_FLAG, TOUR_DONE_FLAG])
+  it("RESET_KEYS are the snapshot, its meta record, the backup reminder's flags, the sync note, the first-run flag and the tour flag", () => {
+    expect(RESET_KEYS).toEqual([
+      ENGINE_STORAGE_KEY,
+      ENGINE_META_KEY,
+      ...BACKUP_REMINDER_KEYS,
+      SYNC_STATE_KEY,
+      STARTED_FLAG,
+      TOUR_DONE_FLAG,
+    ])
   })
 
   it("reset removes the tour flag (so first run and the tour come back) and keeps the sound setting", () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react"
 import {
   PreviewBanner,
   TIME_MACHINE_MAX_OFFSET_MS,
@@ -63,6 +63,14 @@ import {
   triageNoteText,
 } from "./wording"
 import { triageSaves } from "./triage-saves"
+import { countDeaths, previewCrossings } from "./preview-crossings"
+import { doom, doomBand } from "./doom"
+import { guideRotation, keeperCaseOf, keeperLine } from "./guide"
+import { readSpooky, saveSpooky, type SpookyLevel } from "./spooky-level"
+import { Drips, Lightning, type Strike } from "./components/Haunt"
+import { SpookyToggle } from "./components/SpookyToggle"
+import { ShareCard } from "./components/ShareCard"
+import { allHistory, countSoulsBanished } from "./stats"
 import "./styles/dialogs.css"
 import "./styles/app.css"
 import "./styles/world.css"
@@ -70,6 +78,9 @@ import "./styles/dock.css"
 import "./styles/fx.css"
 import "./styles/animations.css"
 import "./styles/live.css"
+import "./styles/haunt.css"
+import "./styles/shelf.css"
+import "./styles/depth.css"
 import "./styles/layout.css"
 import { LiveToast } from "./components/LiveToast"
 import { liveNotice } from "./live-changes"
@@ -738,13 +749,87 @@ export function App({
     ? { active: firstLookPlaying, onFrame: firstLookFrame, onTouch: endFirstLook }
     : undefined
 
+  // in the preview (Req 1), how grim the dungeon is at the time shown (Req 2),
+  // lightning (Req 3), the Keeper (Req 5) and the Spooky level (Req 6).
+  const factsNow = useMemo(() => engine.view(now), [engine, now, version])
+  const crossedCount = useMemo(
+    () => (previewing ? countDeaths(previewCrossings(engine.view(realNow), factsNow)) : 0),
+    [previewing, engine, realNow, factsNow]
+  )
+  const doomValue = useMemo(() => doom(factsNow), [factsNow])
+  const band = doomBand(doomValue)
+  const [spooky, setSpooky] = useState<SpookyLevel>(() => readSpooky(storage))
+  const changeSpooky = useCallback(
+    (level: SpookyLevel) => {
+      setSpooky(level)
+      saveSpooky(storage, level)
+    },
+    [storage]
+  )
+  const [strike, setStrike] = useState<Strike | null>(null)
+  const strikesOn = spooky === "haunted" && !reducedMotion()
+  const lastDeaths = useRef(0)
+  useEffect(() => {
+    if (crossedCount > lastDeaths.current && strikesOn) setStrike((s) => ({ n: (s?.n ?? 0) + 1, kind: "dark" }))
+    lastDeaths.current = crossedCount
+  }, [crossedCount, strikesOn])
+  const brightStrike = useCallback(() => {
+    if (strikesOn) setStrike((s) => ({ n: (s?.n ?? 0) + 1, kind: "bright" }))
+  }, [strikesOn])
+  const worldRef = useRef<HTMLDivElement>(null)
+  const onPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const el = worldRef.current
+    if (el === null || event.pointerType !== "mouse") return
+    el.style.setProperty("--px", `${event.clientX}px`)
+    el.style.setProperty("--py", `${event.clientY}px`)
+    el.style.setProperty("--pxr", (event.clientX / Math.max(1, window.innerWidth)).toFixed(3))
+    el.style.setProperty("--pyr", (event.clientY / Math.max(1, window.innerHeight)).toFixed(3))
+  }, [])
+  const keeperCounts = useMemo(() => {
+    const c = { alive: 0, weak: 0, dead: 0 }
+    for (const f of factsNow) c[f.state]++
+    return c
+  }, [factsNow])
+  const keeper = {
+    line: keeperLine({
+      keeperCase: keeperCaseOf(keeperCounts),
+      previewing,
+      band,
+      dies: crossedCount,
+      rotation: guideRotation(realNow),
+    }),
+    band,
+  }
+  const cardCounts = useCallback(() => {
+    const today = engine.view(realNow)
+    return {
+      alive: today.filter((f) => f.state === "alive").length,
+      weak: today.filter((f) => f.state === "weak").length,
+      dead: today.filter((f) => f.state === "dead").length,
+      souls: countSoulsBanished(allHistory(engine, realNow)),
+    }
+  }, [engine, realNow])
+
   // 0 today, 1 at +60 days: ages the room (torches dim, fog and cobwebs).
   const age = Math.min(1, previewOffsetMs / TIME_MACHINE_MAX_OFFSET_MS)
-  const worldStyle = { "--age": age.toFixed(3) } as CSSProperties
+  const worldStyle = { "--age": age.toFixed(3), "--doom": doomValue.toFixed(4) } as CSSProperties
 
   return (
-    <div className="sd-world" style={worldStyle} data-previewing={previewing ? "" : undefined}>
+    <div
+      ref={worldRef}
+      className="sd-world"
+      style={worldStyle}
+      data-previewing={previewing ? "" : undefined}
+      data-doom={band}
+      data-spooky={spooky}
+      onPointerMove={onPointerMove}
+    >
       <Atmosphere />
+      {/* Haunt pass: the vignette closes in with doom, drips, torchlight and lightning. */}
+      <div className="sd-doom-veil" aria-hidden="true" />
+      <Drips />
+      <div className="sd-torchlight" aria-hidden="true" />
+      <Lightning strike={strike} onDone={() => setStrike(null)} />
       {previewing && (
         <PreviewBanner
           theme={studyDungeonShellTheme}
@@ -795,6 +880,7 @@ export function App({
               onFight={fightWeakest}
               fightDisabledReason={previewing ? previewBlockedText : undefined}
               previewDate={previewing ? formatDate(now) : undefined}
+              keeper={keeper}
             />
 
             <div className="sd-layout">
@@ -892,6 +978,8 @@ export function App({
             <ResetData onConfirm={reset} disabledReason={previewing ? previewBlockedText : undefined}>
               <AnswerCheckSetting value={answerCheck} onChange={changeAnswerCheck} />
               <SoundToggle enabled={soundOn} onChange={changeSound} />
+              <SpookyToggle level={spooky} onChange={changeSpooky} />
+              <ShareCard counts={cardCounts} announce={announcePlain} />
               <MemoryModelToggle
                 enabled={readModel(storage) === "memory"}
                 onChange={(on) => {
@@ -1008,7 +1096,10 @@ export function App({
             onWrite={bumpVersion}
             onClose={closeDialog}
             sound={sound}
-            onResult={(result) => announceChallenge(dialog.fact.id, result)}
+            onResult={(result) => {
+              if (result.ok) brightStrike()
+              announceChallenge(dialog.fact.id, result)
+            }}
             onWriteError={handleWriteError}
             check={answerCheck}
             choices={choicesFor(dialog.fact)}

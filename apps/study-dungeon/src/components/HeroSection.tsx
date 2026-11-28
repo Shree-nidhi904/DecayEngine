@@ -27,6 +27,8 @@ import { HeroBoss } from "./HeroBoss"
 import { heroExtraText, heroText, studyDungeonWording } from "../wording"
 import { studyDungeonIcons } from "./icons"
 import "../styles/hero.css"
+import { Keeper } from "./Haunt"
+import type { DoomBand } from "../doom"
 
 export interface HeroSectionProps {
   /** Read-only methods only. `forecast` is for the loss forecast line (task P4). */
@@ -45,6 +47,8 @@ export interface HeroSectionProps {
   fightDisabledReason?: string
   /** The previewed day, formatted, while the time machine looks ahead. */
   previewDate?: string
+  /** Haunt pass (Req 5): the Keeper's line and the doom band. Not shown when undefined. */
+  keeper?: { line: string; band: DoomBand }
 }
 
 const DAY_MS = 86_400_000
@@ -91,6 +95,7 @@ export function HeroSection({
   onFight,
   fightDisabledReason,
   previewDate,
+  keeper,
 }: HeroSectionProps) {
   // version is a dependency on purpose: a write changes what the engine returns.
   const groups = useMemo(() => groupByState(engine.view(now)), [engine, now, version])
@@ -202,6 +207,7 @@ export function HeroSection({
   return (
     <section className="sd-hero" aria-label={heroText.eyebrow} data-previewing={previewing ? "" : undefined}>
       <div className="sd-hero-main">
+        {keeper !== undefined && <Keeper line={keeper.line} band={keeper.band} />}
         <p className="sd-hero-eyebrow">
           {previewing && previewDate !== undefined ? heroExtraText.previewEyebrow(previewDate) : heroText.eyebrow}
         </p>

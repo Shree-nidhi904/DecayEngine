@@ -48,12 +48,23 @@ const appProps: RootProps["appProps"] = {
   timeZone: "UTC",
 }
 
-/** Everything left in jsdom's localStorage. */
+/** Everything left in jsdom's localStorage, except quarantine copies (see quarantined). */
 function stored(): Record<string, string> {
   const out: Record<string, string> = {}
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)!
+    if (key.startsWith(`${ENGINE_STORAGE_KEY}:corrupt-`)) continue
     out[key] = localStorage.getItem(key)!
+  }
+  return out
+}
+
+/** The texts of the copies kept of unreadable snapshots (@decay-engine/persist quarantineSnapshot). */
+function quarantined(): string[] {
+  const out: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)!
+    if (key.startsWith(`${ENGINE_STORAGE_KEY}:corrupt-`)) out.push(localStorage.getItem(key)!)
   }
   return out
 }
@@ -105,6 +116,8 @@ describe("a snapshot that cannot be read", () => {
     // The sound setting is a preference for this browser and is kept; so is another app's data.
     expect(stored()).toEqual({ [SOUND_SETTING_KEY]: "on", "decay-engine:ghosted": "other app" })
     expect(reload).toHaveBeenCalledTimes(1)
+    // Reset does not take the unreadable text with it: a copy was kept at startup.
+    expect(quarantined()).toContain("{not json")
   })
 
   it("Reload only reloads", () => {

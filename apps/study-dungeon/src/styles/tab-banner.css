@@ -1,0 +1,57 @@
+/* The "another tab changed your data" bar (components/TabChangedBanner.tsx).
+   Fixed to the top so it is seen without moving the page. Theme variables only. */
+
+.sd-tab-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 2px solid var(--color-blood);
+  background: var(--color-stone);
+  color: var(--color-bone);
+}
+
+.sd-tab-banner button {
+  min-block-size: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-bone);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The storage line under the app (components/PersistStatus.tsx). */
+.sd-persist {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 16px;
+  color: var(--color-bone-dim);
+  font-size: 0.85rem;
+}
+
+.sd-persist button {
+  min-block-size: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-bone);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Below the app: room for the fixed time dock, so nothing here sits under it. */
+.sd-footer {
+  padding-block-end: 180px;
+}

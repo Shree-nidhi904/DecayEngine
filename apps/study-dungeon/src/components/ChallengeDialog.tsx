@@ -15,6 +15,7 @@ import { useModalDialog } from "./useModalDialog"
 import { DialogFoe } from "./DialogFoe"
 import { AnswerPanel } from "./AnswerPanel"
 import { Sparks } from "./art/Particles"
+import { Ritual } from "./Haunt"
 import type { AnswerCheck } from "../answer-check"
 import "../styles/dialogs.css"
 
@@ -127,6 +128,8 @@ export function ChallengeDialog({
           }
           fx={result === null ? "popin" : result.ok ? "rise" : "lunge"}
         />
+        {/* Haunt pass (Req 4): the rune ring, the spirits and the stamp. Art only; the result line says it. */}
+        {result?.ok === true && <Ritual />}
       </div>
 
       <p className="sd-dialog-label">{challengeText.question}</p>

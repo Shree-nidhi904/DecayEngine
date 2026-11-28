@@ -1,0 +1,131 @@
+/*
+ *
+ * - The raid planner's left side had an empty stretch above the queue of
+ *   creatures. Now the queue waits on a stone floor in front of a gate:
+ *   an arched doorway with a portcullis and the glow of the dungeon behind
+ *   it. A raid is a way in, and the picture says so.
+ * - The Dungeon scene's title sits under a stone arch with a keystone.
+ * Art only (pseudo-elements, no text). No motion here: animations.css.
+ */
+
+/* ----- The raid gate ----- */
+.sd-raid-intro {
+  padding-bottom: 270px;
+  /* Bricks behind the gate, fading out above it into the panel. */
+  background:
+    linear-gradient(180deg, #1a1320 30%, rgb(26 19 32 / 0) 78%),
+    repeating-linear-gradient(0deg, transparent 0 22px, rgb(0 0 0 / 0.34) 22px 24px),
+    repeating-linear-gradient(90deg, transparent 0 46px, rgb(0 0 0 / 0.22) 46px 48px);
+}
+.sd-raid-queue {
+  right: 196px;
+  bottom: 14px;
+  z-index: 1;
+  border-top: 0;
+}
+/* The floor the queue stands on, running to the gate. */
+.sd-raid-intro > .sd-raid-queue::after {
+  content: "";
+  position: absolute;
+  left: -22px;
+  right: -196px;
+  bottom: -14px;
+  height: 16px;
+  border-top: 2px solid #0a0710;
+  background: repeating-linear-gradient(90deg, #2d2536 0 38px, #231c2c 38px 40px);
+  z-index: -1;
+}
+/* The arch and its portcullis; the dungeon glows through the bars. */
+.sd-raid-intro::after {
+  content: "";
+  position: absolute;
+  right: 26px;
+  bottom: 16px;
+  width: 156px;
+  height: 224px;
+  border: 14px solid #2a2030;
+  border-bottom: 0;
+  border-radius: 78px 78px 0 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 13px, #0a0710 13px 17px),
+    repeating-linear-gradient(180deg, transparent 0 20px, #0a0710 20px 24px),
+    radial-gradient(ellipse 80% 70% at 50% 100%, rgb(255 138 43 / calc(0.42 - var(--age, 0) * 0.25)), transparent 75%),
+    #0d0912;
+  box-shadow:
+    0 0 0 1px #0a0710,
+    inset 0 0 0 1px #0a0710,
+    inset 0 -20px 30px rgb(255 138 43 / 0.12),
+    0 0 50px rgb(255 138 43 / 0.08);
+}
+/* The keystone. */
+.sd-raid-intro::before {
+  content: "";
+  position: absolute;
+  right: 90px;
+  bottom: 220px;
+  width: 28px;
+  height: 26px;
+  background: linear-gradient(180deg, #3a2c40, #2a2030);
+  clip-path: polygon(0 0, 100% 0, 78% 100%, 22% 100%);
+  z-index: 1;
+}
+
+@media (max-width: 760px) {
+  .sd-raid-intro {
+    padding-bottom: 96px;
+  }
+  .sd-raid-intro::after,
+  .sd-raid-intro::before,
+  .sd-raid-intro > .sd-raid-queue::after {
+    display: none;
+  }
+  .sd-raid-queue {
+    right: 22px;
+  }
+}
+
+/* ----- The Dungeon scene: its title under a stone arch ----- */
+.sd-scene[data-scene="weak"]::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: min(560px, 74%);
+  height: 104px;
+  transform: translateX(-50%);
+  border: 14px solid #2a2030;
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: radial-gradient(ellipse 70% 90% at 50% 100%, rgb(255 138 43 / 0.09), transparent 70%);
+  box-shadow:
+    0 0 0 1px #0a0710,
+    inset 0 0 0 1px #0a0710,
+    inset 0 3px 0 rgb(240 230 204 / 0.05);
+  pointer-events: none;
+}
+.sd-scene[data-scene="weak"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 30px;
+  height: 26px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #3a2c40, #2a2030);
+  clip-path: polygon(0 0, 100% 0, 78% 100%, 22% 100%);
+  pointer-events: none;
+}
+.sd-scene[data-scene="weak"] .sd-scene-title {
+  padding-top: 18px;
+}
+
+/* Each creature in the queue shuffles on its own beat (the move is in animations.css). */
+.sd-raid-queue > :nth-child(2) {
+  animation-delay: -0.45s;
+}
+.sd-raid-queue > :nth-child(3) {
+  animation-delay: -0.9s;
+}
+.sd-raid-queue > :nth-child(4) {
+  animation-delay: -1.35s;
+}

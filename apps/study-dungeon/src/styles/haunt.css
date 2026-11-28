@@ -1,0 +1,182 @@
+/*
+ *
+ * Study Dungeon tokens only, with color-mix for tints. No animation or
+ * transition here: every movement is in animations.css, inside its
+ * no-preference block and stopped again in its reduce block. --doom (0-1,
+ * set on .sd-world) darkens scenery only, never text.
+ */
+
+/* ----- Doom: the vignette closes in as more facts wake and die ----- */
+.sd-doom-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 75% at 50% 40%, transparent 50%, color-mix(in srgb, var(--color-blood) 22%, var(--color-bg)));
+  opacity: calc(var(--doom, 0) * 0.8);
+}
+
+/* ----- Lightning (Req 3) ----- */
+.sd-lightning {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0;
+}
+.sd-lightning[data-kind="dark"] {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-slate) 60%, transparent), color-mix(in srgb, var(--color-slate) 10%, transparent));
+}
+.sd-lightning[data-kind="bright"] {
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-ecto) 45%, transparent), transparent 65%);
+}
+
+/* ----- Torchlight (Req 7): a warm light at the pointer, fine pointers only ----- */
+.sd-torchlight {
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .sd-world[data-spooky="haunted"] .sd-torchlight {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(
+      circle 180px at var(--px, -999px) var(--py, -999px),
+      color-mix(in srgb, var(--color-pumpkin) 13%, transparent),
+      transparent 70%
+    );
+    mix-blend-mode: screen;
+  }
+}
+
+/* ----- Drips from the ceiling ----- */
+.sd-drips {
+  display: none;
+}
+
+/* ----- The Keeper (Req 5) ----- */
+.sd-keeper {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.sd-keeper-art {
+  flex: none;
+  inline-size: 56px;
+  block-size: 56px;
+  overflow: visible;
+}
+.sd-keeper-skull {
+  fill: var(--color-bone);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--color-bone) 35%, transparent));
+}
+.sd-keeper-eyes circle {
+  fill: var(--color-bg);
+}
+.sd-keeper-eyes .sd-keeper-pupil {
+  fill: var(--color-ecto);
+  transform: translate(calc((var(--pxr, 0.5) - 0.5) * 4px), calc((var(--pyr, 0.5) - 0.5) * 3px));
+}
+.sd-keeper[data-band="grim"] .sd-keeper-pupil {
+  fill: var(--color-blood);
+}
+.sd-keeper-nose {
+  fill: var(--color-bg);
+}
+.sd-keeper-hook {
+  stroke: var(--color-bone-dim);
+  stroke-width: 2;
+}
+.sd-keeper-lantern {
+  fill: color-mix(in srgb, var(--color-pumpkin) 25%, var(--color-stone));
+  stroke: var(--color-bone-dim);
+  stroke-width: 1.5;
+}
+.sd-keeper-light {
+  fill: var(--color-pumpkin);
+  opacity: calc(1 - var(--doom, 0) * 0.6);
+  filter: drop-shadow(0 0 6px var(--color-pumpkin));
+}
+.sd-keeper-line {
+  min-inline-size: 0;
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px 12px 12px 2px;
+  background: var(--color-stone);
+  color: var(--color-bone);
+  font-size: 15px;
+  line-height: 1.45;
+  box-shadow: 0 4px 0 #000;
+}
+
+/* ----- The challenge ritual (Req 4) ----- */
+.sd-challenge .sd-dialog-head {
+  position: relative;
+}
+.sd-ritual {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.sd-ritual-ring {
+  position: absolute;
+  inline-size: 140px;
+  block-size: 140px;
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-ecto) 70%, transparent);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-ecto) 60%, transparent));
+  opacity: 0.6;
+}
+.sd-ritual-ring path {
+  fill: color-mix(in srgb, var(--color-ecto) 45%, transparent);
+}
+.sd-spirit {
+  display: none;
+}
+.sd-ritual-stamp {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: 6%;
+  padding: 2px 10px;
+  border: 2px solid var(--color-ecto);
+  border-radius: 4px;
+  background: var(--color-stone);
+  color: var(--color-ecto);
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  transform: rotate(-8deg);
+}
+
+/* ----- Critical hit ----- */
+.sd-crit {
+  margin: 8px 0 0;
+  color: var(--color-pumpkin);
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--color-pumpkin) 60%, transparent);
+}
+
+/* ----- Settings and the share card ----- */
+.sd-haunt-setting {
+  display: grid;
+  gap: 8px;
+}
+.sd-haunt-toggle[aria-pressed="true"] {
+  border-color: var(--color-pumpkin);
+}
+.sd-haunt-note {
+  margin: 0;
+  color: var(--color-bone-dim);
+  font-size: 15px;
+  line-height: 1.5;
+}

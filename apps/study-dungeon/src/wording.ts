@@ -553,3 +553,65 @@ export const firstLookText = {
   /** Said once, through the live region, when it starts (Requirement 25.9). */
   announce: "Showing the next 30 days. Nothing is saved.",
 } as const
+
+
+export const keeperText = {
+  name: "The Keeper",
+  empty: [
+    "An empty dungeon. Even I get lonely. Add a fact and I'll find it a monster.",
+    "Nothing to guard yet. Add a fact, or import a list.",
+  ],
+  asleep: [
+    "Everything sleeps. Suspiciously quiet. Drag the candle to see who wakes first.",
+    "All asleep. Peek ahead with the candle and see what stirs.",
+  ],
+  weak: [
+    "Monsters are stirring. Fight the weakest before it bites.",
+    "I hear growling. A quick review puts it back to sleep. Fight one now.",
+    "Something's awake down here. Start Today's raid and clear it in minutes.",
+  ],
+  grim: [
+    "The whole dungeon is howling. Start small: fight the weakest first.",
+    "Too many monsters for one night. Pick a few minutes in Today's raid.",
+  ],
+  graveyard: [
+    "The Graveyard has visitors. Open a grave and challenge it to rise.",
+    "Some facts are buried. Read the autopsy, then try a challenge.",
+  ],
+  previewCalm: [
+    "Peeking ahead? Nothing is saved out here. Drag further, if you dare.",
+    "The future looks sleepy so far. Keep dragging the candle.",
+  ],
+  previewUneasy: [
+    "Hear that? In this future the monsters wake. Back to today to fight them.",
+    "The candle burns low out here. Go back to today and review first.",
+  ],
+  previewDeath: [
+    "A fact died in this future. Spooky. Fixable, though: back to today.",
+    "Another tombstone, out here. Go back to today and save it first.",
+  ],
+} as const
+
+/** The haunt pass's other words (Req 3-9). */
+export const hauntText = {
+  risenStamp: "Risen",
+  critical: "Critical!",
+  spooky: {
+    label: "Spooky level",
+    haunted: "Haunted",
+    calm: "Calm",
+    help: "Calm turns off lightning, the torchlight and the drips. Monsters still wake and fall.",
+  },
+  share: {
+    button: "Share a card",
+    title: "My Dungeon tonight",
+    privacy: "Made on your device. Only counts are shown, never your facts.",
+    made: "Your dungeon card is downloading.",
+    failed: "This browser could not make the card.",
+    footer: "Study Dungeon · built on Decay Engine",
+    alive: "asleep",
+    weak: "awake",
+    dead: "in the Graveyard",
+    souls: "souls banished",
+  },
+} as const
