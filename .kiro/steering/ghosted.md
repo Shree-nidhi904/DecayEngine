@@ -34,7 +34,8 @@ Look and screens: `docs/design/ghosted-visual-brief.md` (state table, numbered p
 ## 4. Data
 
 - Sample people are fictional. No real names, and no name repeats.
-- Everything stays in the browser: local storage through the engine's storage adapter. No network calls, analytics or contact imports from outside services.
+- Everything stays in the browser by default: local storage through the engine's storage adapter (wrapped by `@decay-engine/persist`). No network calls, analytics or contact imports from outside services. `apps/ghosted/src` contains no network call, and `no-network.test.ts` enforces it.
+- The one opt-in exception is cloud sync and notifications (`docs/CLOUD.md`): they run only when the build has Supabase settings and the person signs in, through `packages/cloud`, loaded on request. The privacy line says a copy is also kept in the account while signed in.
 
 ## 5. Tests
 

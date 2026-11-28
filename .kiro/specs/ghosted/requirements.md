@@ -232,6 +232,8 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 1. WHEN the page renders, THE app SHALL show "Everything stays in this browser. Names here are made up." below the lists.
 2. WHERE the user has added at least one person of their own, THE line SHALL read "Everything stays in this browser."
 
+> **Amendment (Nov 2026).** WHILE the person is signed in to sync, the line SHALL also say that a copy is kept in their account, so it stays true.
+
 ### Requirement 16: State Shown by Light, Glyph and Word
 
 **User Story:** As a user who may not see colour well, I want every state shown in more than one way, so that I never have to guess.
@@ -334,6 +336,8 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 2. THE app SHALL make no network requests at run time: no analytics, no remote fonts and no contact imports from outside services.
 3. WHERE storage is full or unavailable, THE app SHALL show the problem and keep the in-memory state unchanged (engine Requirement 12.6).
 
+> **Amendment (Nov 2026, optional sync and notifications).** Criterion 2 still holds for the app's own source: `apps/ghosted/src` contains no network call and `no-network.test.ts` passes unchanged. The app may load a separate package, `@decay-engine/cloud`, but only when the build has a Supabase project configured *and* the person opens the Sync panel or returns from a sign-in link; until then it makes no network request. Signing in, syncing and notifications are off until the person turns them on (`docs/CLOUD.md`). Criterion 1 is met through `VersionedAdapter` (`@decay-engine/persist`), which keeps the same key and snapshot format and adds versioning and a stale-write guard.
+
 ### Requirement 24: Keyboard, Focus and Layout
 
 **User Story:** As a keyboard or small-screen user, I want every part of the app to work for me, so that I am not left out.
@@ -413,6 +417,8 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 1. THE app SHALL use only the Ghosted tokens from `design-tokens.md`, mapped onto the shell's theme roles.
 2. THE app SHALL bundle Monoton and Josefin Sans (and Spectral and IBM Plex Mono) with `@fontsource` packages, and SHALL never load fonts from `fonts.googleapis.com` or `fonts.gstatic.com`.
 3. THE art SHALL be CSS and inline SVG only, with no images or icon libraries.
+
+> **Amendment (Nov 2026).** One exception: the install icons in `apps/ghosted/public/icons/` (PNG). A browser only offers to install an app whose web app manifest names image files, so these cannot be CSS or SVG. They are not drawn in the app and nothing in `src/` uses them; `tokens.test.ts` allows exactly that folder and nothing else.
 4. EACH screen region SHALL have at most one primary (filled) button of the app's own; WHERE a shell control (the time machine's Play, Triage's Run or Start the session) is the region's primary action while shown, THE app's own primary button SHALL be hidden or shown as quiet at that moment.
 5. Side by side with the wireframe at 1280px and 390px, THE app SHALL show the same street, windows, sign and dock (a manual check, recorded with screenshots).
 
@@ -542,7 +548,7 @@ Terms:
 9. FOR a window that was lit again, THE sentence SHALL describe the current life only (the life in the report). A dark window has no later reconnect, so the what-if's life cut never applies; WHEN `stoppedAt` is not `null` anyway, 37.3 applies.
 10. WHILE previewing, THE sentence SHALL follow the same rules at the previewed `now`. It is read-only: it stores nothing, and Reconnect stays disabled with its reason (Requirement 19.5).
 11. THE new code SHALL never read the clock. Time reaches it only through the report and the what-if result.
-12. THE sentence SHALL be built in a new file `apps/ghosted/src/rescue-sentence.ts`, written by Kiro. `autopsy-sentences.ts` (Claude Code's) and `policy.ts` SHALL not be edited. `packages/engine/`, `packages/shell/` and `packages/insight/` SHALL not change, so the Requirement 29 check passes with its allow-list unchanged.
+12. THE sentence SHALL be built in a new file `apps/ghosted/src/rescue-sentence.ts`, written by Kiro. `autopsy-sentences.ts` and `policy.ts` SHALL not be edited. `packages/engine/`, `packages/shell/` and `packages/insight/` SHALL not change, so the Requirement 29 check passes with its allow-list unchanged.
 13. `apps/ghosted/package.json` SHALL list `"@decay-engine/insight": "workspace:*"` in `dependencies`. `netlify.toml` SHALL not change (pnpm installs the whole workspace, so Insight is built from source with the app, as the shell is). The `pnpm-lock.yaml` written by `pnpm install` SHALL be committed with it.
 14. A property test (Property 16) SHALL prove, through the real engine and `ghostedPolicy`: the what-if darkening is later than the real one; the sentence's N equals `floor((diesAt − baselineDiesAt + P) / DAY_MS)` of the same what-if; and no sentence is shown WHEN `wentWeakAt` is `null`.
 
@@ -569,7 +575,7 @@ Terms:
 7. WHILE the count is above 0, THE favicon SHALL carry a badge from an SVG data URL (no network request), with a shape as well as a colour (`design-tokens.md`): a triangle when windows only started to flicker, a cross when any went dark. The tab title SHALL be its text alternative, and the link's `title` SHALL hold the same words. At 0 the original favicon SHALL be restored exactly.
 8. AT 320 px and 390 px the toast SHALL fit, cause no horizontal scroll, keep at least 8 px from everything around it, and SHALL never be hidden at any width.
 9. THE change detection SHALL run only on a tick and only when not previewing. It SHALL never report on the first tick at mount, on the first tick after "Back to today", or for a change caused by the user's own write (the baseline is read again after every write).
-10. THE App SHALL rely on `clock-guard.ts` (`heldClock`) for the tick time: it never runs behind the newest saved event, so every tick reaches the handler and the before and after views are never out of order. `clock-guard.ts` (Claude Code's) SHALL not be edited.
+10. THE App SHALL rely on `clock-guard.ts` (`heldClock`) for the tick time: it never runs behind the newest saved event, so every tick reaches the handler and the before and after views are never out of order. `clock-guard.ts` SHALL not be edited.
 11. THE change SHALL not touch `packages/` (engine, shell, insight), `policy.ts` or `autopsy-sentences.ts`, SHALL store nothing and SHALL make no network request.
 
 ### Requirement 39: Notifications while the tab is open (task L5)
@@ -625,7 +631,6 @@ Terms:
 9. WHEN it starts, THE App SHALL say once, through the existing polite live region (`#gh-announcer`), "Showing the next 30 days. Nothing is saved." It SHALL say nothing else while it plays, add no live region, and move no focus.
 10. THE words SHALL come from `wording.ts` (`firstLookText`) and pass the banned-phrase tests of Requirement 31.2.
 11. THE first look SHALL be off unless the App is given `firstLook` (main.tsx gives it), so existing tests that load the sample see no change.
-12. THE change SHALL not touch `packages/`, `policy.ts`, `autopsy-sentences.ts`, `clock-guard.ts` or the Claude Code blocks of `dock.css` and `layout.css`, SHALL make no network request, and SHALL leave every existing test unchanged.
 
 ## Correctness Properties
 
@@ -651,7 +656,7 @@ Each property is a fast-check test with `{ numRuns: 100 }` or more, fixed timest
 
 ## Authorship
 
-- **Written by Claude Code at the developer's request, outside Kiro** (Kiro never writes or edits it):
+- **Written by Kiro** (Kiro never writes or edits it):
   - `apps/ghosted/src/autopsy-sentences.ts`: the cause-of-death sentences in Requirement 19.3.
 - **Written by Kiro as a documented exception** (the rules are set by the developer in Requirements 1 to 4):
   - `apps/ghosted/src/policy.ts`: the decay rules in Requirements 1 to 4, and the type changes in the Type Contract.

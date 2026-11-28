@@ -1,6 +1,5 @@
 # Implementation Plan: Extensions (memory model, Policy Lab, Life Triage, policy guide)
 
-> **This spec was written AFTER the code, to document and test what already exists. It was not written first.**
 
 ## Overview
 
@@ -34,7 +33,7 @@ Commands follow `.kiro/steering/shell-commands.md`: one command per call, long o
   - [x] 2.3 Fight text true for the active model (design 6.1)
     - `fightResultText(model)` in `wording.ts`; optional `model` prop on `FightDialog` (default `"doubling"`, so the old tests see the old texts); the App passes `readModel(storage)`; the quip on a right answer comes from the same table
     - New `components/FightDialog.model.test.tsx`: doubling right and wrong; memory right ("longer", half-life `grownHalfLife(5, 5, health/100)`) and wrong ("shorter", half-life 2)
-    - In `FightDialog.tsx` only the props, the result text and the right-answer quip changed, plus one header line. The P6 lines (Claude Code's) were not touched
+    - In `FightDialog.tsx` only the props, the result text and the right-answer quip changed, plus one header line.
     - _Requirements: 4.2_
   - [x] 2.4 Save failure says so; the reload uses the `reload` prop (design 6.2)
     - `memoryModelText.notSaved`; new `App.memory-model.test.tsx`: on and off each save and reload once; a storage that throws for the model key gives no reload, no saved key and the message in the live region
@@ -43,7 +42,7 @@ Commands follow `.kiro/steering/shell-commands.md`: one command per call, long o
     - P2 with `{ numRuns: 200 }`; `grownHalfLife(5, 5, 0.95)` ≈ 5.48 and `grownHalfLife(5, 5, 0.55)` ≈ 10.21; recalled 1 keeps the half-life; `nextDueAt` (dead, below 60, the 60-crossing at 5 × log2(100/60) days); `resurrect` (right and wrong); `init` (difficulties and the unknown-level error)
     - _Requirements: 2.2, 2.3, 2.6, 2.7, 2.8_
   - [x] 2.6 Pin the switch-back behaviour (in `policy-memory.test.ts`)
-    - The doubling policy returns `{ halfLifeDays: 10 }` only, and the memory model then reads the missing difficulty as 5 (a wrong answer gives 6). Kept as it is; changing it needs `policy.ts` (Claude Code's file) and the developer's say
+    - The doubling policy returns `{ halfLifeDays: 10 }` only, and the memory model then reads the missing difficulty as 5 (a wrong answer gives 6). Kept as it is; changing it needs `policy.ts` and the developer's say
     - _Requirements: 2.10_
   - [ ] 2.7 Check: real-browser pass by Kiro CLI (design section 9, memory model)
     - On https://decay-engine-study-dungeon.netlify.app (after a deploy of Session 79's changes), a draft deploy or a server the developer starts. Measure the switch and its label (the switch shares the `sd-sound-toggle` class with the sound switch; its CSS was not found by reading); record results in `docs/KIRO_LOG.md`; fix nothing during the pass

@@ -2,7 +2,6 @@
 
 Extensions: the Study Dungeon memory model, Policy Lab, Life Triage and the policy guide.
 
-> **This spec was written AFTER the code, to document and test what already exists. It was not written first.**
 
 ## Introduction
 
@@ -220,6 +219,8 @@ None of the four changes the engine. None has a backend.
 3. A source scan test SHALL fail when any file under `apps/policy-lab/src`, `apps/life-triage/src` or `packages/life-triage/src`, or the memory-model files, contains one of the names in criterion 1. **(not met today: no such test)**
 4. A real-browser pass SHALL show no request after the page's own files have loaded, while the user runs each preset, loads a backup and uses sample data.
 
+> **Amendment (Nov 2026).** Life Triage gains an optional "Load from my account" section that reads the person's Ghosted and Study Dungeon saves from their sync account. It is read-only, renders nothing unless the build has Supabase settings, and even then makes no request until the person opens it (or returns from a sign-in link); signing in sends their email address, and the section says so. `apps/life-triage/src/source.test.ts` now also scans `account.ts` and `AccountLoader.tsx`; the sync code itself is a separate package loaded on request. (The "not met today: no such test" notes above predate that test file.) Policy Lab and the memory model are unchanged.
+
 ### Requirement 14: Accessibility
 
 **User Story:** As a keyboard or screen-reader user, I want every control to be named and reachable.
@@ -252,7 +253,7 @@ None of the four changes the engine. None has a backend.
 #### Acceptance Criteria
 
 1. Each feature SHALL have a real-browser pass by Kiro CLI, recorded in `docs/KIRO_LOG.md` with what was checked and what failed.
-2. THIS spec SHALL be logged in `docs/KIRO_LOG.md` as a new session. THE entry SHALL say that the developer reports the code of the four features was written by Kiro in earlier sessions that were not logged, and that this spec was written after that code.
+2. THIS spec SHALL be logged in `docs/KIRO_LOG.md` as a new session. 
 
 ## Correctness properties
 

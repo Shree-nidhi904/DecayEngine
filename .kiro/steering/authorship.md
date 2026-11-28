@@ -65,6 +65,27 @@ Written at the developer's request, each with a header comment saying so. Do not
 - **Landing page**: everything in `site/`, and `scripts/check-site.sh`.
 - **CSS fixes that followed browser checks**: the blocks marked "Written by Claude Code" in `apps/ghosted/src/styles/dock.css` and `layout.css`, and the narrow-width and bottom-room rules in `apps/study-dungeon/src/styles/dock.css` and `world.css` (with the CSS test values they pin).
 
+## Haunt pass 
+
+At the developer's request, Claude Code wrote the spec `.kiro/specs/haunt-pass/` first and then built it task by task, outside Kiro and with no Kiro credits. Each new file has a header saying so. The pass adds no decay rule and changes nothing in `packages/`, a `policy.ts`, `policy-memory.ts` or an `autopsy-sentences.ts`.
+
+- **New in both apps**: `preview-crossings.ts`, `doom.ts`, `spooky-level.ts`, `guide.ts`, `share-card.ts`, `components/Haunt.tsx`, `components/ShareCard.tsx`, `styles/haunt.css`, and their tests (`haunt.test.ts`, `share-card.test.ts`, `App.haunt.test.tsx`).
+- **New in Ghosted**: `sound.ts` (copied from Study Dungeon's, with Ghosted's own sounds), `sound.test.ts`, `components/HauntSettings.tsx`.
+- **New in Study Dungeon**: `components/SpookyToggle.tsx`.
+- **Changed**:
+  - Ghosted: `App.tsx`, `Hero.tsx`, `Street.tsx`, `House.tsx`, `NeonSign.tsx`, `Splash.tsx`, `LiveToast.tsx`, `PersonCard.tsx`, `ReachOutDialog.tsx`, `ReconnectDialog.tsx`, `wording.ts` (`wispText`, `hauntText`) and `motion.css`.
+  - Study Dungeon: `App.tsx`, `HeroSection.tsx`, `ThreeLists.tsx`, `FactCard.tsx`, `FightDialog.tsx` (the critical hit only, not the P6 lines), `ChallengeDialog.tsx`, `wording.ts` (`keeperText`, `hauntText`) and `animations.css`.
+  - The landing page: the hero scene and the "Built with Kiro" strip in `site/index.html` and `site/styles.css`.
+
+## Art direction pass
+
+At the developer's request, after the haunt pass, Claude Code made the two worlds read as places. It adds no decay rule, no wording and no colour token, and changes nothing in `packages/`, a `policy.ts`, `policy-memory.ts` or an `autopsy-sentences.ts`. All motion stays in each app's reduced-motion block.
+
+- **Ghosted, new**: `components/Scene.tsx` (the skyline, the branch and the road), `styles/scene.css` (sky, moon, houses with four roof shapes, chimneys, doors and porch lights, streetlamps, the wet road, ground fog, the hero's counters as house fronts, the card tops, the hanging sign) and `components/Scene.test.tsx`.
+- **Ghosted, changed**: `Street.tsx` (the scenery and each house's place), `House.tsx` (`variant`, `ROOFS`, `porchValue`, the chimney, door and lamp), `Haunt.tsx` (two clouds) and `motion.css` (smoke, clouds, town windows, branch, lamps, the hero's fading window).
+- **Study Dungeon, new**: `styles/shelf.css` (the settings as a stone shelf with lever switches) and `styles/depth.css` (the raid gate, the Dungeon scene's arch).
+- **Study Dungeon, changed**: `App.tsx` (imports the two files before `layout.css`) and `animations.css` (the queue and the gate glow, stopped in the reduce block too).
+
 ## What Kiro writes (generated)
 
 Kiro is used for:

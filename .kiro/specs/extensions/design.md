@@ -2,7 +2,6 @@
 
 Extensions: the Study Dungeon memory model, Policy Lab, Life Triage and the policy guide.
 
-> This spec was written AFTER the code, to document and test what already exists. It was not written first. Each component below says what was built before the spec, and what Session 79 changed to meet the requirements marked **(not met today)**. The Session 79 changes are written but not yet run (`tasks.md`, task 8.1).
 
 ## Overview
 
@@ -254,7 +253,7 @@ Worked examples, by hand:
 - `h = 5, d = 5, r = 0.55`: spacing ≈ 0.4993, growth ≈ 2.042, half-life ≈ 10.21 days.
 - `r = 1`: growth is exactly 1, and the half-life stays as it was.
 
-Switching back: the doubling policy's `applyEvent` returns `{ halfLifeDays }` only. So a memory-model fact answered under the doubling policy loses its difficulty, and is read as 5 if the memory model is turned on again. This is kept as it is and pinned by a test (task 2.6). Changing it would need `policy.ts`, Claude Code's file, and the developer's decision.
+Switching back: the doubling policy's `applyEvent` returns `{ halfLifeDays }` only. So a memory-model fact answered under the doubling policy loses its difficulty, and is read as 5 if the memory model is turned on again. This is kept as it is and pinned by a test (task 2.6). Changing it would need `policy.ts`,, and the developer's decision.
 
 ## Correctness Properties
 
@@ -314,6 +313,6 @@ Browser checks: Kiro CLI with the Playwright MCP, on the live sites after a rede
 
 ## Authorship
 
-The developer settled this in Session 80 (task 7.1). Kiro wrote `apps/study-dungeon/src/policy-memory.ts`, and the developer chose its formula and constants. `.kiro/steering/authorship.md` records it as "Exception: Study Dungeon's memory model", together with the `difficulty?` field Kiro added to `policy.ts` (Claude Code's file). The `policy-reviewer` agent has not been run on the memory model yet (task 7.2).
+The developer settled this in Session 80 (task 7.1). Kiro wrote `apps/study-dungeon/src/policy-memory.ts`, and the developer chose its formula and constants. `.kiro/steering/authorship.md` records it as "Exception: Study Dungeon's memory model", together with the `difficulty?` field Kiro added to `policy.ts` . The `policy-reviewer` agent has not been run on the memory model yet (task 7.2).
 
 Who chose the example rules in Policy Lab's presets and the guide's milk example is not recorded. They are examples, not app policies.

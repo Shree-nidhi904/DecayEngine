@@ -23,9 +23,13 @@ React with Vite.
 
 ## Storage
 
-Browser local storage behind an adapter interface. No accounts, no login, no database.
+Browser local storage behind an adapter interface (`@decay-engine/persist` wraps it with versioning, migrations and a stale-write guard). By default: no accounts, no login, no database.
+
+**Optional, off by default:** cloud sync, notifications while the app is closed, and Life Triage's "Load from my account". They use a Supabase project the owner sets up (`supabase/`), and run only when the build has its settings *and* the person signs in. The sync code lives in `packages/cloud`, is loaded on request, and is never in an app's main bundle (`scripts/check-bundles.mjs` checks this). See `docs/CLOUD.md`.
 
 ## Hosting
 
-Static Netlify sites, one per app. No backend. No serverless functions.
+Static Netlify sites, one per app. The apps have no backend of their own and no serverless functions on Netlify.
+
+The optional sync and push features use Supabase: SQL in `supabase/migrations/` (tables with row-level security, three small functions) and one Edge Function (`supabase/functions/send-due-pushes`) run on a schedule. None of it is needed to run the apps.
 

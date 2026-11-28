@@ -214,6 +214,8 @@ type ReviewEvent = {
 3. WHERE the user returns to the app, WHEN the page loads, THE engine SHALL load the snapshot from localStorage and restore all facts and history.
 4. WHEN storing data, THE adapter SHALL use the key "decay-engine:study-dungeon".
 
+> **Amendment (Nov 2026, optional sync and notifications).** The data still lives in the browser and needs no account. The app's own source (`apps/study-dungeon/src`) contains no network call. Optional cloud sync and notifications run through `@decay-engine/cloud`, loaded only when the build has Supabase settings and the person opens the Sync panel or returns from a sign-in link (`docs/CLOUD.md`). The adapter is `VersionedAdapter` (`@decay-engine/persist`): the same key and snapshot format, plus versioning and a stale-write guard.
+
 ### Requirement 15: Visual Theme and Accessibility
 
 **User Story:** As a learner, I want a dark, spooky, readable interface that works with keyboard and respects my motion preferences, so that the app is usable and comfortable.
