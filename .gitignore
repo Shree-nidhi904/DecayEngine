@@ -38,3 +38,10 @@ audit/
 .playwright-mcp/
 
 docs/submission
+
+# Local environment files (may hold project settings).
+.env.local
+.env.*.local
+
+# Created by "supabase link"; local to this machine.
+supabase/.temp/
