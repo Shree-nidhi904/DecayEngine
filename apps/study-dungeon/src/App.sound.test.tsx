@@ -17,7 +17,7 @@
 import "./test/dialog-polyfill"
 import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, screen, within } from "@testing-library/react"
-import { MemoryStorage, makeAppKit } from "./test/app-kit"
+import { MemoryStorage, closeSettings, makeAppKit, openSettings } from "./test/app-kit"
 import { day } from "./test/fixtures"
 import { fakeAudio, tonesOf } from "./test/round7-helpers"
 import { SOUND_SETTING_KEY } from "./sound"
@@ -41,6 +41,13 @@ function setup(stored: Record<string, string> = {}) {
   return { kit, audio }
 }
 
+/** Flips the sound switch in the Settings sheet, then closes the sheet. */
+function toggleSound() {
+  openSettings()
+  fireEvent.click(soundSwitch())
+  closeSettings()
+}
+
 /** Fights the first fact in the Dungeon and answers. */
 function fightFirstMonster(correct: boolean) {
   fireEvent.click(tab("Dungeon"))
@@ -53,6 +60,7 @@ function fightFirstMonster(correct: boolean) {
 describe("the sound switch", () => {
   it("is off by default, sits in the settings area beside Reset all data, and saves nothing until used", () => {
     const { kit } = setup()
+    openSettings()
     expect(soundSwitch().checked).toBe(false)
     const settings = button("Reset all data").parentElement!
     expect(settings.contains(soundSwitch())).toBe(true)
@@ -61,6 +69,7 @@ describe("the sound switch", () => {
 
   it("turning it on saves on; turning it off saves off", () => {
     const { kit } = setup()
+    openSettings()
     fireEvent.click(soundSwitch())
     expect(soundSwitch().checked).toBe(true)
     expect(kit.storage.entries()[SOUND_SETTING_KEY]).toBe("on")
@@ -71,6 +80,7 @@ describe("the sound switch", () => {
 
   it("starts on when on was saved", () => {
     setup({ [SOUND_SETTING_KEY]: "on" })
+    openSettings()
     expect(soundSwitch().checked).toBe(true)
   })
 })
@@ -86,7 +96,7 @@ describe("sounds from the dialogs", () => {
 
   it("with sound on, a right answer plays right and a wrong one plays wrong, through one player", () => {
     const { audio } = setup()
-    fireEvent.click(soundSwitch())
+    toggleSound()
 
     fightFirstMonster(true) // w1 (50): right, back to the Crypt
     expect(audio.tones).toEqual(tonesOf("right"))
@@ -115,7 +125,7 @@ describe("sounds from the dialogs", () => {
     const { audio } = setup({ [SOUND_SETTING_KEY]: "on" })
     fightFirstMonster(true)
     expect(audio.tones).toEqual(tonesOf("right"))
-    fireEvent.click(soundSwitch())
+    toggleSound()
     fightFirstMonster(false)
     expect(audio.tones).toEqual(tonesOf("right"))
   })

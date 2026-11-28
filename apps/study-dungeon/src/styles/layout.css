@@ -43,7 +43,8 @@ main.sd-app:focus {
 /* The live region: empty until something changes. It stays in the page (not
    display: none) so screen readers keep listening; while empty it cancels
    the column gap below it. */
-.sd-announcer:empty {
+.sd-announcer:empty,
+.sd-announcer:has(> .sd-visually-hidden:only-child) {
   margin-bottom: -1rem;
 }
 

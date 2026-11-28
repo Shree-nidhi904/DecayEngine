@@ -11,7 +11,7 @@ import { cleanup, fireEvent, screen } from "@testing-library/react"
 import { ANNOUNCER_ID } from "./App"
 import { MODEL_KEY } from "./policy-select"
 import { memoryModelText } from "./wording"
-import { MemoryStorage, makeAppKit } from "./test/app-kit"
+import { MemoryStorage, makeAppKit, openSettings } from "./test/app-kit"
 import { T0 } from "./test/fixtures"
 
 afterEach(cleanup)
@@ -35,6 +35,7 @@ describe("App: the memory-model switch", () => {
     const kit = makeAppKit()
     kit.add("f1", "shaky", T0)
     kit.renderApp(T0)
+    openSettings()
     expect(memorySwitch().checked).toBe(false)
     fireEvent.click(memorySwitch())
     expect(kit.storage.getItem(MODEL_KEY)).toBe("memory")
@@ -45,6 +46,7 @@ describe("App: the memory-model switch", () => {
     const kit = makeAppKit(new MemoryStorage({ "study-dungeon:started": "1", [MODEL_KEY]: "memory" }))
     kit.add("f1", "shaky", T0)
     kit.renderApp(T0)
+    openSettings()
     expect(memorySwitch().checked).toBe(true)
     fireEvent.click(memorySwitch())
     expect(kit.storage.getItem(MODEL_KEY)).toBeNull()
@@ -55,6 +57,7 @@ describe("App: the memory-model switch", () => {
     const kit = makeAppKit(new ModelBlockedStorage({ "study-dungeon:started": "1" }))
     kit.add("f1", "shaky", T0)
     kit.renderApp(T0)
+    openSettings()
     fireEvent.click(memorySwitch())
     expect(kit.reload).not.toHaveBeenCalled()
     expect(kit.storage.getItem(MODEL_KEY)).toBeNull()

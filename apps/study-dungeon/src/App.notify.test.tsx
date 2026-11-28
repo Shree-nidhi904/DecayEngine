@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { act, cleanup, fireEvent, screen } from "@testing-library/react"
 import { STARTED_FLAG } from "./first-run"
 import { NOTIFY_SETTING_KEY, NOTIFY_TAG } from "./notify"
-import { MemoryStorage, makeAppKit } from "./test/app-kit"
+import { MemoryStorage, makeAppKit, openSettings } from "./test/app-kit"
 import { expandDock } from "./test/dock"
 import { fakeNotifications, throwingStorage, type FakeNotifications } from "./test/fake-notification"
 import { T0, day } from "./test/fixtures"
@@ -52,6 +52,7 @@ function setup(options: {
   })
   for (const id of options.ids ?? ["a"]) kit.add(id, "solid", T0)
   const view = kit.renderApp(options.start ?? day(7))
+  openSettings()
   const tickAt = (at: number) => {
     kit.setClock(at)
     act(() => kit.fireTick())
@@ -209,6 +210,7 @@ describe("App: the setting is stored (Requirement 24.4)", () => {
     expect(kit.storage.entries()[NOTIFY_SETTING_KEY]).toBe("on")
     view.unmount()
     kit.renderApp(day(7))
+    openSettings()
     expect(theSwitch().checked).toBe(true)
   })
 
@@ -246,7 +248,8 @@ describe("App: a click on a notification (Requirement 24.7)", () => {
     expect(focused).toBe(1)
     expect(fake.shown[0]!.closed).toBe(true)
     expect(JSON.stringify([kit.engine.view(day(8)), kit.engine.history("a")])).toBe(before)
-    expect(screen.queryAllByRole("dialog")).toEqual([])
+    // The Settings sheet is open (setup opened it); nothing else is.
+    expect(screen.queryAllByRole("dialog").filter((d) => d.id !== "sd-settings-sheet")).toEqual([])
   })
 })
 

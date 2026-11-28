@@ -7,7 +7,7 @@
 import "./test/dialog-polyfill"
 import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, screen, within } from "@testing-library/react"
-import { makeAppKit, MemoryStorage } from "./test/app-kit"
+import { makeAppKit, MemoryStorage, openSettings } from "./test/app-kit"
 import { day } from "./test/fixtures"
 import { ANSWER_CHECK_KEY } from "./answer-check"
 
@@ -51,6 +51,7 @@ describe("answer checking in the App", () => {
 
   it("the Answer by setting switches to typing and is remembered", () => {
     const kit = setup()
+    openSettings()
     fireEvent.change(screen.getByRole("combobox", { name: "Answer by" }), { target: { value: "typed" } })
     expect(kit.storage.getItem(ANSWER_CHECK_KEY)).toBe("typed")
     fireEvent.click(screen.getByRole("button", { name: "Fight the weakest" }))

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react"
 import {
-  PreviewBanner,
   TIME_MACHINE_MAX_OFFSET_MS,
   TriagePanel,
   type FrameScheduler,
@@ -11,6 +10,7 @@ import { useSettleTicks, type Scheduler } from "./ticking"
 import { CLOCK_BEHIND_NOTICE_MS, clockBehindText, heldClock } from "./clock-guard"
 import { browserSessionStorage, type SessionFlagStorage } from "./dock-state"
 import type { Fact, FactPayload, FactPolicyData } from "./policy"
+import { sortDungeon, type FactState } from "./lists"
 import { activePolicy } from "./policy-select"
 import { ThreeLists, type FactAction } from "./components/ThreeLists"
 import { AddEditFactDialog } from "./components/AddEditFactDialog"
@@ -23,7 +23,6 @@ import { ResetData } from "./components/ResetData"
 import { SoundToggle } from "./components/SoundToggle"
 import { MemoryModelToggle } from "./components/MemoryModelToggle"
 import { readModel, saveModel } from "./policy-select"
-import { Tour } from "./components/Tour"
 import { TimeDock } from "./components/TimeDock"
 import { Creature } from "./components/art/Creature"
 import { Atmosphere, Bats, Torch } from "./components/art/Scenery"
@@ -33,16 +32,14 @@ import { RaidIntro } from "./components/RaidIntro"
 import { ImportFactsDialog } from "./components/ImportFactsDialog"
 import { BackupControls } from "./components/BackupControls"
 import { buildChoices, loadAnswerCheck, saveAnswerCheck, type AnswerCheck } from "./answer-check"
-import { answerText, dailyRaidText, firstLookText, importText, memoryModelText } from "./wording"
+import { answerText, dailyRaidText, firstLookText, importText, memoryModelText, tendLinkText, topBarText } from "./wording"
 import { FirstLookSkip } from "./components/FirstLookSkip"
 import { firstLookOffsetForProgress, firstLookSeen, markFirstLookSeen } from "./first-look"
 import type { FirstLookDockControl } from "./first-look-dock"
 import { loadSampleData } from "./sample-data"
 import {
   hasStarted,
-  isTourDone,
   markStarted,
-  markTourDone,
   needsFirstRun,
   resetAllData,
   type FlagStorage,
@@ -51,6 +48,8 @@ import { classifyWriteError, storageProblemText, type WriteProblem } from "./sto
 import { reportWriteError, runWrite } from "./write-guard"
 import { createSoundPlayer, loadSoundEnabled, saveSoundEnabled, type AudioContextLike } from "./sound"
 import { studyDungeonShellTheme } from "./theme"
+import { GuidedTour } from "@decay-engine/shell"
+import { helpTourText } from "./wording"
 import {
   announceText,
   factFormText,
@@ -70,6 +69,13 @@ import { readSpooky, saveSpooky, type SpookyLevel } from "./spooky-level"
 import { Drips, Lightning, type Strike } from "./components/Haunt"
 import { SpookyToggle } from "./components/SpookyToggle"
 import { ShareCard } from "./components/ShareCard"
+import { Sheet } from "./components/Sheet"
+import { TopBar } from "./components/TopBar"
+import { CornerToast } from "./components/CornerToast"
+import { ActivityList } from "./components/ActivityList"
+import { Margins } from "./components/Margins"
+import { SyncPanel, type SyncPanelProps } from "./components/SyncPanel"
+import { activityRows } from "./activity"
 import { allHistory, countSoulsBanished } from "./stats"
 import "./styles/dialogs.css"
 import "./styles/app.css"
@@ -81,6 +87,8 @@ import "./styles/live.css"
 import "./styles/haunt.css"
 import "./styles/shelf.css"
 import "./styles/depth.css"
+import "./styles/backdrop.css"
+import "./styles/topbar.css"
 import "./styles/layout.css"
 import { LiveToast } from "./components/LiveToast"
 import { liveNotice } from "./live-changes"
@@ -137,6 +145,13 @@ export interface AppProps {
   storage?: FlagStorage
   /** Reloads the page after a reset. Defaults to window.location.reload. */
   reload?: () => void
+  /**
+   * Builds the engine again, inside the page, after the memory model is switched (no page load).
+   * Omitted: the page reloads, as before.
+   */
+  remount?: () => void
+  /** Opens Settings on the first render: set by Root after a remount, so the pop-up stays open. */
+  settingsOpenAtStart?: boolean
   /** Time zone for the streak's days and the autopsy's dates. Defaults to the viewer's. */
   timeZone?: string
   /**
@@ -169,6 +184,15 @@ export interface AppProps {
    * tests that load the sample are unchanged.
    */
   firstLook?: boolean
+  /** Passed to the sync panel in the Profile sheet (tests pass a fake sync server). */
+  syncProps?: Partial<SyncPanelProps>
+  /** Formats a time in the activity history. Defaults to the viewer's own date and time. */
+  formatTime?: (ms: number) => string
+  /**
+   * The id from `?tend=<id>` in the address (feedback list, point 6), as Life Triage links to it.
+   * main.tsx reads it. Opens that fact's fight on load; a fact that is not here is said so.
+   */
+  tendId?: string | null
 }
 
 /** The one dialog open at a time, if any. */
@@ -201,6 +225,7 @@ type ToastState = { id: number; text: string; announced: boolean }
 
 const defaultFormatDate = (ms: number) => formatPreviewDate(ms)
 const browserReload = () => window.location.reload()
+const defaultFormatTime = (ms: number) => new Date(ms).toLocaleString()
 
 export function App({
   engine,
@@ -212,6 +237,8 @@ export function App({
   formatDate = defaultFormatDate,
   storage = window.localStorage,
   reload = browserReload,
+  remount,
+  settingsOpenAtStart = false,
   timeZone,
   createAudioContext,
   defaultAnswerCheck,
@@ -219,6 +246,9 @@ export function App({
   notifications,
   focusWindow = focusThisWindow,
   firstLook = false,
+  syncProps,
+  formatTime = defaultFormatTime,
+  tendId = null,
 }: AppProps) {
   // The dock's session storage (task 21.1). `session` below is the Triage session.
   const [dockSession] = useState(() => (sessionProp === undefined ? browserSessionStorage() : sessionProp))
@@ -245,6 +275,12 @@ export function App({
   const bumpVersion = useCallback(() => setVersion((v) => v + 1), [])
 
   const [dialog, setDialog] = useState<OpenDialog | null>(null)
+  // The two side sheets (feedback list, point 7), who is signed in, and the corner message (point 18).
+  const [settingsOpen, setSettingsOpen] = useState(settingsOpenAtStart)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [account, setAccount] = useState<string | null>(null)
+  const [corner, setCorner] = useState<{ id: number; text: string } | null>(null)
+  const closeCorner = useCallback(() => setCorner(null), [])
   const closeDialog = useCallback(() => setDialog(null), [])
 
   const [session, setSession] = useState<Session | null>(null)
@@ -254,10 +290,24 @@ export function App({
   // The polite live region (task 16.4): state changes and storage problems.
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
   const announce = useCallback(
-    (text: string, problem = false, toast = false) =>
-      setAnnouncement((a) => ({ id: (a?.id ?? 0) + 1, text, problem, toast })),
+    (text: string, problem = false, toast = false) => {
+      // A plain message shows as a toast in the bottom right (top layer, so it is visible over the Settings
+      // pop-up too); only a storage problem stays in the banner at the top.
+      if (!problem && !toast) setCorner((c) => ({ id: (c?.id ?? 0) + 1, text }))
+      setAnnouncement((a) => ({ id: (a?.id ?? 0) + 1, text, problem, toast: toast || !problem }))
+    },
     []
   )
+
+  // A plain message ("Backup downloaded", "Showing the next 30 days...") is shown for 5 seconds, then
+  // only read: the live region keeps the text, the page does not. A storage problem stays on screen.
+  const [fadedId, setFadedId] = useState<number | null>(null)
+  useEffect(() => {
+    if (announcement === null || announcement.problem || announcement.toast) return
+    const id = announcement.id
+    const timer = setTimeout(() => setFadedId(id), 5000)
+    return () => clearTimeout(timer)
+  }, [announcement])
 
   // Focused after the tour, which has no opener to go back to.
   const mainRef = useRef<HTMLElement>(null)
@@ -395,6 +445,14 @@ export function App({
     [storage]
   )
   const announcePlain = useCallback((text: string) => announce(text), [announce])
+  /** A message that shows in the corner for five seconds. The live region reads it too. */
+  const cornerMessage = useCallback(
+    (text: string) => {
+      setCorner((c) => ({ id: (c?.id ?? 0) + 1, text }))
+      announce(text, false, true)
+    },
+    [announce]
+  )
   useEffect(() => {
     if (previewing) baseline.current = null
   }, [previewing])
@@ -478,8 +536,8 @@ export function App({
   // are no facts. Decided once, at mount.
   const [firstRun, setFirstRun] = useState(() => needsFirstRun(storage, engine.view(realNow).length))
 
-  // The tour (task 11.5): offered right after first run, once.
-  const [touring, setTouring] = useState(false)
+  // The old walk-through tour was removed (Nov 28).
+  const touring = false
 
   // Facts from before the flag existed: set the flag and skip first run.
   useEffect(() => {
@@ -489,7 +547,7 @@ export function App({
   /** Leaves first run and starts the tour unless it was done before. */
   const finishFirstRun = useCallback(() => {
     setFirstRun(false)
-    if (!isTourDone(storage)) setTouring(true)
+    // The old walk-through tour is gone (Nov 28); the "?" help button replaces it.
   }, [storage])
 
   // Task L6: the first look is due after the first sample load in this browser (Requirement 25.1).
@@ -516,17 +574,6 @@ export function App({
     finishFirstRun()
   }, [storage, guardWrite, finishFirstRun])
 
-  const endTour = useCallback(() => {
-    setTouring(false)
-    // A preference: if it cannot be saved, the tour may simply show again.
-    try {
-      markTourDone(storage)
-    } catch (error) {
-      if (classifyWriteError(error) === null) throw error
-    }
-    mainRef.current?.focus()
-  }, [storage])
-
   // Reset (task 11.4): blocked while previewing, like every write.
   const reset = useCallback(() => {
     if (previewing) return
@@ -544,13 +591,17 @@ export function App({
     [previewing]
   )
 
-  const fightWeakest = useCallback(
-    (fact: Fact) => {
-      if (previewing) return
-      setDialog({ kind: "fight", fact })
-    },
-    [previewing]
-  )
+  // Feedback list, point 6: a link from Life Triage (`?tend=<id>`) opens that fact's fight, once, on load.
+  // A fact that is not on this device (another device, or removed) leaves the app as it is and says so.
+  const tendHandled = useRef(false)
+  useEffect(() => {
+    if (tendHandled.current || tendId === null || tendId === "") return
+    tendHandled.current = true
+    const fact = engine.view(writeNow()).find((f) => f.id === tendId)
+    if (fact === undefined) cornerMessage(tendLinkText.missing)
+    else if (fact.state === "dead") cornerMessage(tendLinkText.dead)
+    else setDialog({ kind: "fight", fact })
+  }, [tendId, engine, writeNow, cornerMessage])
 
   const handleRemove = useCallback(
     (id: string) => {
@@ -668,6 +719,28 @@ export function App({
     },
     [previewing, openSessionFight]
   )
+
+  // Feedback list, point 11: "Fight the weakest" shows the Dungeon (every weak fact) and runs
+  // through all of them, weakest first, as a session. One weak fact is a plain fight.
+  const [listRequest, setListRequest] = useState({ state: "weak" as FactState, n: 0 })
+  const fightWeakest = useCallback(() => {
+    if (previewing) return
+    setListRequest((r) => ({ state: "weak", n: r.n + 1 }))
+    const weak = sortDungeon(engine.view(writeNow()).filter((f) => f.state === "weak"))
+    const first = weak[0]
+    if (first === undefined) return
+    if (weak.length === 1) {
+      setDialog({ kind: "fight", fact: first })
+      return
+    }
+    setSessionDone(null)
+    setCombo(0)
+    openSessionFight(
+      weak.map((f) => ({ id: f.id, question: f.payload.question })),
+      0,
+      []
+    )
+  }, [previewing, engine, writeNow, openSessionFight])
 
   /** "Today's raid": Triage for 5 minutes, then the session, in one click. */
   const dailyRaid = useCallback(() => {
@@ -800,6 +873,13 @@ export function App({
     }),
     band,
   }
+  // The Profile's history: the engine's own log, which after a sync holds every device's events.
+  const activity = useMemo(() => {
+    if (!profileOpen) return { rows: [], hidden: 0 }
+    const facts = engine.view(realNow)
+    const names = new Map(facts.map((f) => [f.id, f.payload.question]))
+    return activityRows(allHistory(engine, realNow), (id) => names.get(id))
+  }, [profileOpen, engine, realNow, version])
   const cardCounts = useCallback(() => {
     const today = engine.view(realNow)
     return {
@@ -825,22 +905,18 @@ export function App({
       onPointerMove={onPointerMove}
     >
       <Atmosphere />
+      {/* Feedback list, point 9: scenery in the side margins of wide screens. */}
+      <Margins />
       {/* Haunt pass: the vignette closes in with doom, drips, torchlight and lightning. */}
       <div className="sd-doom-veil" aria-hidden="true" />
       <Drips />
       <div className="sd-torchlight" aria-hidden="true" />
       <Lightning strike={strike} onDone={() => setStrike(null)} />
-      {previewing && (
-        <PreviewBanner
-          theme={studyDungeonShellTheme}
-          wording={studyDungeonWording}
-          onBackToToday={() => {
-            // Task L6: a running first look ends first (its dock then stops Play).
-            endFirstLook()
-            setPreviewOffsetMs(0)
-          }}
-        />
-      )}
+      <TopBar
+        onSettings={() => setSettingsOpen(true)}
+        onProfile={() => setProfileOpen(true)}
+        signedInAs={account}
+      />
       <header className="sd-header">
         <Torch className="sd-header-torch" />
         <div className="sd-title">
@@ -861,7 +937,7 @@ export function App({
         >
           {announcement !== null && (
             // A live-change message is shown by the toast in the dock, so here it is only read (task L3).
-            <p key={announcement.id} className={announcement.toast ? "sd-visually-hidden" : undefined}>
+            <p key={announcement.id} className={announcement.toast || announcement.id === fadedId ? "sd-visually-hidden" : undefined}>
               {announcement.text}
             </p>
           )}
@@ -908,6 +984,7 @@ export function App({
                   startDisabled={previewing}
                   startDisabledReason={previewing ? previewBlockedText : undefined}
                   initialBudget={10}
+                  autoRun
                   picksNote={triageNote}
                 />
               </div>
@@ -925,18 +1002,6 @@ export function App({
                     }}
                   >
                     {factFormText.addEntry}
-                  </button>
-                  <button
-                    type="button"
-                    className="sd-button sd-button-quiet sd-button-import"
-                    aria-disabled={previewing ? true : undefined}
-                    title={previewing ? previewBlockedText : undefined}
-                    onClick={() => {
-                      if (previewing) return
-                      setDialog({ kind: "import" })
-                    }}
-                  >
-                    {importText.button}
                   </button>
                 </div>
 
@@ -970,45 +1035,15 @@ export function App({
                   writesDisabledReason={previewing ? previewBlockedText : undefined}
                   justChanged={justChanged}
                   onReacted={cardReacted}
+                  show={listRequest}
                 />
               </div>
 
             </div>
 
-            <ResetData onConfirm={reset} disabledReason={previewing ? previewBlockedText : undefined}>
-              <AnswerCheckSetting value={answerCheck} onChange={changeAnswerCheck} />
-              <SoundToggle enabled={soundOn} onChange={changeSound} />
-              <SpookyToggle level={spooky} onChange={changeSpooky} />
-              <ShareCard counts={cardCounts} announce={announcePlain} />
-              <MemoryModelToggle
-                enabled={readModel(storage) === "memory"}
-                onChange={(on) => {
-                  // The engine is built once with one policy, so a saved change reloads the page.
-                  // A choice that cannot be saved changes nothing, and says so (extensions Req 3.5).
-                  if (saveModel(storage, on ? "memory" : "doubling")) reload()
-                  else announce(memoryModelText.notSaved, true)
-                }}
-              />
-              {/* Task L5: a preference beside the sound switch, so it works in a preview too. */}
-              <NotifySetting
-                api={notifyApi}
-                enabled={notifyOn}
-                saved={notifySaved}
-                onChange={changeNotify}
-                announce={announcePlain}
-              />
-              <BackupControls
-                storage={storage}
-                reload={reload}
-                announce={announce}
-                restoreDisabledReason={previewing ? previewBlockedText : undefined}
-                today={() => new Date(writeNow())}
-              />
-            </ResetData>
           </>
         )}
 
-        {touring && !firstRun && <Tour onDone={endTour} />}
 
         {dialog?.kind === "add" && (
           <AddEditFactDialog
@@ -1105,8 +1140,57 @@ export function App({
             choices={choicesFor(dialog.fact)}
           />
         )}
+        {/* Feedback list, points 7 and 17: Settings and Profile are side sheets. They stay mounted, so a setting
+            keeps its state and the sync panel keeps syncing by itself while a sheet is closed. */}
+        <Sheet id="sd-settings-sheet" title={topBarText.settingsTitle} open={settingsOpen} onClose={() => setSettingsOpen(false)}>
+                <ResetData onConfirm={reset} disabledReason={previewing ? previewBlockedText : undefined}>
+                  <AnswerCheckSetting value={answerCheck} onChange={changeAnswerCheck} />
+                  <SoundToggle enabled={soundOn} onChange={changeSound} />
+                  <SpookyToggle level={spooky} onChange={changeSpooky} />
+                  <ShareCard counts={cardCounts} announce={announcePlain} />
+                  <MemoryModelToggle
+                    enabled={readModel(storage) === "memory"}
+                    onChange={(on) => {
+                      // The engine is built once with one policy, so a saved change reloads the page.
+                      // A choice that cannot be saved changes nothing, and says so (extensions Req 3.5).
+                      if (saveModel(storage, on ? "memory" : "doubling")) (remount ?? reload)()
+                      else announce(memoryModelText.notSaved, true)
+                    }}
+                  />
+                  {/* Task L5: a preference beside the sound switch, so it works in a preview too. */}
+                  <NotifySetting
+                    api={notifyApi}
+                    enabled={notifyOn}
+                    saved={notifySaved}
+                    onChange={changeNotify}
+                    announce={announcePlain}
+                  />
+                  <BackupControls
+                    storage={storage}
+                    reload={reload}
+                    announce={announce}
+                    onSaved={cornerMessage}
+                    restoreDisabledReason={previewing ? previewBlockedText : undefined}
+                    today={() => new Date(writeNow())}
+                  />
+                </ResetData>
+        </Sheet>
+        <Sheet id="sd-profile-sheet" title={topBarText.profileTitle} open={profileOpen} onClose={() => setProfileOpen(false)}>
+          <SyncPanel
+            storage={storage}
+            reload={reload}
+            engine={engine}
+            {...syncProps}
+            bare
+            active={profileOpen}
+            onAccount={setAccount}
+          />
+          <ActivityList rows={activity.rows} hidden={activity.hidden} formatTime={formatTime} />
+        </Sheet>
+        {corner !== null && <CornerToast key={corner.id} text={corner.text} onDone={closeCorner} />}
       </main>
 
+      {!firstRun && <GuidedTour steps={helpTourText.steps} theme={studyDungeonShellTheme} wording={helpTourText.wording} />}
       {!firstRun && (
         <TimeDock
           engine={engine}
@@ -1130,6 +1214,11 @@ export function App({
             )
           }
           firstLook={firstLookControl}
+          onBackToToday={() => {
+            // Task L6: a running first look ends first (its dock then stops Play).
+            endFirstLook()
+            setPreviewOffsetMs(0)
+          }}
         />
       )}
     </div>

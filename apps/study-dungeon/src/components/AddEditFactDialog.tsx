@@ -20,7 +20,8 @@ import {
   type FactFormField,
   type FactFormValues,
 } from "../fact-form"
-import { factFormText } from "../wording"
+import { factFormText, fieldHelpText } from "../wording"
+import { InfoHint } from "./InfoHint"
 import { classifyWriteError, storageProblemText } from "../storage-errors"
 import { useModalDialog } from "./useModalDialog"
 import "../styles/dialogs.css"
@@ -76,7 +77,9 @@ export function AddEditFactDialog({ engine, now, fact, onSaved, onClose, onWrite
   // again") should not cost the user their text.
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const fieldId = (field: FactFormField) => `${id}-${field}`
+  const [importanceHelp, setImportanceHelp] = useState(false)
+  const [costHelp, setCostHelp] = useState(false)
+  const fieldId = (field: FactFormField | "importance-help" | "cost-help") => `${id}-${field}`
   const errorId = (field: FactFormField) => `${id}-${field}-error`
   const set = <K extends FactFormField>(field: K, value: FactFormValues[K]) =>
     setValues((v) => ({ ...v, [field]: value }))
@@ -184,12 +187,20 @@ export function AddEditFactDialog({ engine, now, fact, onSaved, onClose, onWrite
 
         <div className="sd-field-row">
           <div className="sd-field">
-            <label htmlFor={fieldId("importance")}>{factFormText.importance}</label>
+            <div className="sd-field-label-row">
+              <label htmlFor={fieldId("importance")}>{factFormText.importance}</label>
+              <InfoHint
+                buttonLabel={fieldHelpText.show(factFormText.importance)}
+                note={fieldHelpText.importance}
+                noteId={fieldId("importance-help")}
+                onToggle={setImportanceHelp}
+              />
+            </div>
             <select
               id={fieldId("importance")}
               value={String(values.importance)}
               aria-invalid={errors.importance !== undefined}
-              aria-describedby={describedBy("importance")}
+              aria-describedby={describedBy("importance", importanceHelp ? fieldId("importance-help") : undefined)}
               onChange={(e) => set("importance", Number(e.target.value))}
             >
               {IMPORTANCE_OPTIONS.map((n) => (
@@ -201,12 +212,20 @@ export function AddEditFactDialog({ engine, now, fact, onSaved, onClose, onWrite
             {errorText("importance")}
           </div>
           <div className="sd-field">
-            <label htmlFor={fieldId("costMinutes")}>{factFormText.cost}</label>
+            <div className="sd-field-label-row">
+              <label htmlFor={fieldId("costMinutes")}>{factFormText.cost}</label>
+              <InfoHint
+                buttonLabel={fieldHelpText.show(factFormText.cost)}
+                note={fieldHelpText.cost}
+                noteId={fieldId("cost-help")}
+                onToggle={setCostHelp}
+              />
+            </div>
             <select
               id={fieldId("costMinutes")}
               value={String(values.costMinutes)}
               aria-invalid={errors.costMinutes !== undefined}
-              aria-describedby={describedBy("costMinutes")}
+              aria-describedby={describedBy("costMinutes", costHelp ? fieldId("cost-help") : undefined)}
               onChange={(e) => set("costMinutes", Number(e.target.value))}
             >
               {COST_OPTIONS.map((n) => (

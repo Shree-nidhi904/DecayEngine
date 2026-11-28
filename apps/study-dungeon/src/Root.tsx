@@ -12,7 +12,8 @@
 // Everything that touches the browser is injected, so tests pass a fake
 // storage, a fake reload and an engine on InMemoryAdapter.
 
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { rememberSheetScroll } from "./components/Sheet"
 import { App, type AppProps } from "./App"
 import type { StudyDungeonEngine } from "./engine-instance"
 import { resetAllData, type FlagStorage } from "./first-run"
@@ -20,9 +21,7 @@ import { quarantineSnapshot } from "@decay-engine/persist"
 import { useOtherTabChange } from "./cross-tab"
 import { TabChangedBanner } from "./components/TabChangedBanner"
 import { UpdateBanner } from "./components/UpdateBanner"
-import { PersistStatus } from "./components/PersistStatus"
 import { BackupNudge } from "./components/BackupNudge"
-import { SyncPanel } from "./components/SyncPanel"
 import { useUpdateReady } from "./pwa"
 import { STORAGE_NAMESPACE } from "./engine-instance"
 import { createEngineSafely, storageProblemText } from "./storage-errors"
@@ -45,9 +44,18 @@ const browserReload = () => globalThis.location.reload()
 
 export function Root({ createEngine, storage, reload = browserReload, log, appProps }: RootProps) {
   const reset = storage === null ? undefined : () => resetAllData(storage, reload)
+  // The memory model is switched inside the page: the engine is built again with the new policy and the
+  // App mounts afresh (facts are kept in storage), with Settings still open.
+  const [epoch, setEpoch] = useState(0)
+  const keepSettings = useRef(false)
+  const remount = () => {
+    rememberSheetScroll("sd-settings-sheet")
+    keepSettings.current = true
+    setEpoch((e) => e + 1)
+  }
   return (
     <ErrorBoundary onReset={reset} reload={reload} log={log}>
-      <LoadedApp createEngine={createEngine} storage={storage} reload={reload} reset={reset} appProps={appProps} />
+      <LoadedApp key={epoch} remount={remount} settingsOpenAtStart={keepSettings.current} createEngine={createEngine} storage={storage} reload={reload} reset={reset} appProps={appProps} />
     </ErrorBoundary>
   )
 }
@@ -58,7 +66,11 @@ function LoadedApp({
   reload,
   reset,
   appProps,
+  remount,
+  settingsOpenAtStart,
 }: {
+  remount: () => void
+  settingsOpenAtStart: boolean
   createEngine: () => StudyDungeonEngine
   storage: FlagStorage | null
   reload: () => void
@@ -97,11 +109,7 @@ function LoadedApp({
       {otherTabChanged && <TabChangedBanner reload={reload} />}
       {applyUpdate !== null && <UpdateBanner apply={applyUpdate} />}
       <BackupNudge storage={storage} hasData={result.engine.view(Date.now()).length > 0} />
-      <App {...appProps} engine={result.engine} storage={storage} reload={reload} />
-      <div className="sd-footer">
-        <PersistStatus />
-        <SyncPanel storage={storage} reload={reload} engine={result.engine} />
-      </div>
+      <App {...appProps} remount={remount} settingsOpenAtStart={settingsOpenAtStart} engine={result.engine} storage={storage} reload={reload} />
     </>
   )
 }

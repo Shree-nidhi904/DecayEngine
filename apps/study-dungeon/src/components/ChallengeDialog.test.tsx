@@ -42,6 +42,17 @@ const button = (name: string) => screen.getByRole("button", { name })
 const buttonNames = () => screen.queryAllByRole("button").map((b) => b.textContent)
 
 describe("ChallengeDialog", () => {
+  // Feedback list, point 10: the result line takes focus, so the page behind never does.
+  it("after an answer the result line has focus and Close is the next Tab stop", async () => {
+    const { user } = setup([false], 20)
+    await user.click(button("I forgot"))
+    const result = screen.getByRole("status")
+    expect(result.textContent).toBe(REASON)
+    expect(document.activeElement).toBe(result)
+    await user.tab()
+    expect(document.activeElement).toBe(button("Close"))
+  })
+
   it("shows the question and the answer at once, with I knew it and I forgot", () => {
     // One right answer on day 1: half-life 20, dies at day 1 + 20 × log2(10) ≈ day 67.4.
     const { fact } = setup([true], 70)

@@ -3,7 +3,7 @@
 // frames, an in-memory storage for the first-run flag and a reload spy.
 // Never the real clock, never real timers, never window.localStorage.
 
-import { render } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { vi } from "vitest"
 import { DecayEngine, InMemoryAdapter, type StorageAdapter } from "@decay-engine/engine"
 import type { FrameScheduler } from "@decay-engine/shell"
@@ -78,6 +78,10 @@ export type AppKitOptions = {
   notifications?: AppProps["notifications"]
   /** Task L5: called when a notification is clicked. */
   focusWindow?: AppProps["focusWindow"]
+  /** Passed to the sync panel in the Profile sheet (a fake sync server). */
+  syncProps?: AppProps["syncProps"]
+  /** The id from `?tend=<id>` (feedback list, point 6). */
+  tendId?: AppProps["tendId"]
 }
 
 export function makeAppKit(
@@ -120,6 +124,10 @@ export function makeAppKit(
         session={session}
         notifications={options.notifications ?? null}
         {...(options.focusWindow === undefined ? {} : { focusWindow: options.focusWindow })}
+        // No sync server unless a test passes one, whatever the build's .env says.
+        syncProps={{ env: {}, ...options.syncProps }}
+        {...(options.tendId === undefined ? {} : { tendId: options.tendId })}
+        formatTime={(ms) => new Date(ms).toISOString().slice(0, 16).replace("T", " ")}
       />
     )
   }
@@ -137,4 +145,19 @@ export function makeAppKit(
     /** Runs the minute tick by hand (wrap in act). */
     fireTick: () => ticks.fire(),
   }
+}
+
+/** Opens the Settings side sheet (feedback list, point 7), where the sound switch, backup, reset and the rest now live. */
+export function openSettings(): void {
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }))
+}
+
+/** Closes the Settings sheet with its own Close button, so a later "Close" is the dialog's. */
+export function closeSettings(): void {
+  fireEvent.click(within(document.getElementById("sd-settings-sheet")!).getByRole("button", { name: "Close" }))
+}
+
+/** Opens the Profile side sheet: sync and the activity history. */
+export function openProfile(): void {
+  fireEvent.click(screen.getByRole("button", { name: /^(Sync|Profile)$/ }))
 }

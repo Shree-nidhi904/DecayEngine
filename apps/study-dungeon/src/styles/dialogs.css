@@ -310,3 +310,74 @@
   color: var(--color-bone-dim);
   font-size: 0.85rem;
 }
+
+/* Feedback list, point 10 (Kiro): while a modal dialog or sheet is open the page behind it does not scroll. */
+html:has(dialog:modal) {
+  overflow: hidden;
+}
+
+/* Feedback list, point 13 (Kiro): the (i) beside a field and its note. */
+.sd-field-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sd-info-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -8px 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--color-bone);
+  cursor: pointer;
+}
+
+.sd-info-button span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--color-pumpkin);
+  border-radius: 50%;
+  color: var(--color-pumpkin);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1;
+}
+
+.sd-info-note {
+  margin: 8px 0 0;
+  color: var(--color-bone-dim);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Nov 28: the (i) note floats over the form beside its label, so it takes no row of its own. */
+.sd-field-label-row {
+  position: relative;
+}
+
+.sd-field-label-row > .sd-info-note {
+  position: absolute;
+  inset-block-start: calc(100% - 6px);
+  inset-inline: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-inline-start: 3px solid var(--color-pumpkin);
+  border-radius: 6px;
+  background: var(--color-stone-hi, #1c1421);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.6);
+}
+
+.sd-field-label-row > .sd-info-note[hidden] {
+  display: none;
+}

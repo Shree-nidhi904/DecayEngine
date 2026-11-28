@@ -8,7 +8,7 @@
 import "./test/dialog-polyfill"
 import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, screen } from "@testing-library/react"
-import { MemoryStorage, makeAppKit } from "./test/app-kit"
+import { MemoryStorage, makeAppKit, openSettings } from "./test/app-kit"
 import { day } from "./test/fixtures"
 import { expandDock } from "./test/dock"
 import { previewBlockedText } from "./wording"
@@ -131,12 +131,14 @@ describe("reset all data", () => {
 
   it("asks with the words of Requirement 13.6", () => {
     setup()
+    openSettings()
     fireEvent.click(button("Reset all data"))
     expect(screen.getByRole("dialog", { name: "Reset all data? This cannot be undone." })).toBeTruthy()
   })
 
   it("confirming removes exactly the snapshot and the flag, then reloads", () => {
     const kit = setup()
+    openSettings()
     fireEvent.click(button("Reset all data"))
     fireEvent.click(button("Reset"))
     expect(kit.storage.entries()).toEqual({ "decay-engine:ghosted": "other app", unrelated: "keep me" })
@@ -146,9 +148,10 @@ describe("reset all data", () => {
   it("cancelling removes nothing and does not reload", () => {
     const kit = setup()
     const before = kit.storage.entries()
+    openSettings()
     fireEvent.click(button("Reset all data"))
     fireEvent.click(button("Cancel"))
-    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.queryByRole("dialog", { name: /^Reset all data/ })).toBeNull()
     expect(kit.storage.entries()).toEqual(before)
     expect(kit.reload).not.toHaveBeenCalled()
   })
@@ -158,11 +161,12 @@ describe("reset all data", () => {
     const before = kit.storage.entries()
     expandDock()
     fireEvent.click(button("+7 days"))
+    openSettings()
     const reset = button("Reset all data")
     expect(reset.getAttribute("aria-disabled")).toBe("true")
     expect(reset.getAttribute("title")).toBe(previewBlockedText)
     fireEvent.click(reset)
-    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.queryByRole("dialog", { name: /^Reset all data/ })).toBeNull()
     expect(kit.storage.entries()).toEqual(before)
     expect(kit.reload).not.toHaveBeenCalled()
   })

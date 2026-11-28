@@ -174,7 +174,6 @@ describe("Triage: the saves line under the picks (task P5, Req 21.1, 21.6, 21.7)
   const ONE = "Answering these right saves 1 fact that would die in the next 7 days."
   const runWith = (minutes: number) => {
     fireEvent.click(screen.getByRole("radio", { name: `${minutes} min` }))
-    fireEvent.click(button("Triage"))
   }
 
   it("follows the budget and the writes on the sample: 20 min shows it, 10 min does not, a right answer to helicase removes it", () => {
@@ -357,7 +356,6 @@ describe("time machine: writes are blocked while previewing", () => {
   it("Triage still runs on the previewed day, but Start the session is disabled", () => {
     const { kit, before } = setupPreviewed()
     // Day 17: a1 (57.4) and w1 (35.4) are weak; 2 + 2 minutes fit in 10.
-    fireEvent.click(button("Triage"))
     expect(entries("Fight these first").map((e) => e[0])).toEqual(
       kit.engine.triage(10, day(17)).picks.map((p) => p.item.payload.question)
     )
@@ -465,7 +463,6 @@ describe("Triage: the worked example", () => {
   it("5 minutes picks b then a; c and d are left, soonest death first", () => {
     const kit = setupTriage()
     fireEvent.click(screen.getByRole("radio", { name: "5 min" }))
-    fireEvent.click(button("Triage"))
 
     expect(entries("Fight these first")).toEqual([
       ["Question fact-b", "Worth 75 per minute", "1 min", "dies in 12 days"],
@@ -487,7 +484,6 @@ describe("Triage: the worked example", () => {
 
   it("10 minutes picks b, a and c; d is left", () => {
     const kit = setupTriage()
-    fireEvent.click(button("Triage")) // 10 is the default
     expect(entries("Fight these first").map((e) => e[0])).toEqual([
       "Question fact-b",
       "Question fact-a",
@@ -501,7 +497,6 @@ describe("Triage: the worked example", () => {
     const kit = makeKit()
     kit.add("fresh", "solid", day(0))
     kit.renderApp(day(1))
-    fireEvent.click(button("Triage"))
     expect(screen.getByText("No monsters in the Dungeon. Nothing needs saving right now.")).toBeTruthy()
     expect(screen.queryByRole("list", { name: "Fight these first" })).toBeNull()
     expect(screen.queryByRole("button", { name: "Start the session" })).toBeNull()
@@ -512,7 +507,6 @@ describe("Triage: the worked example", () => {
     const triageSpy = vi.spyOn(kit.engine, "triage")
     fireEvent.click(screen.getByRole("radio", { name: "Other" }))
     fireEvent.change(screen.getByRole("textbox", { name: "Minutes" }), { target: { value: "1441" } })
-    fireEvent.click(button("Triage"))
     expect(screen.getByRole("alert").textContent).toBe("Enter a whole number of minutes from 1 to 1440.")
     expect(triageSpy).not.toHaveBeenCalled()
   })
@@ -531,7 +525,6 @@ describe("Triage: the fight queue", () => {
 
   it("fights the picks in triage order, moves on after Walk away, skips one that died, then says it is done", () => {
     const kit = setupTriage()
-    fireEvent.click(button("Triage"))
     fireEvent.click(button("Start the session"))
 
     // 1 of 3: fact-b, answered right at day 20.
@@ -566,7 +559,6 @@ describe("Triage: the fight queue", () => {
 
   it("skips a fact removed since triage and says so", () => {
     const kit = setupTriage()
-    fireEvent.click(button("Triage"))
     fireEvent.click(button("Start the session"))
     expect(openFight().question).toBe("Question fact-b")
     // Removed elsewhere while fact-b's fight is open.
@@ -580,7 +572,6 @@ describe("Triage: the fight queue", () => {
   it("Stop session closes the fight and drops the rest of the queue", () => {
     const kit = setupTriage()
     const savesBefore = kit.adapter.saves
-    fireEvent.click(button("Triage"))
     fireEvent.click(button("Start the session"))
     expect(openFight().question).toBe("Question fact-b")
 

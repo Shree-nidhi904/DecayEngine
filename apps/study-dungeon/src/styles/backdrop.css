@@ -1,0 +1,150 @@
+/*
+ * The background and the side margins (feedback list, points 9 and 19). Written by Kiro.
+ * CSS only (one inline SVG tile for the bricks, like the grain layer): the room is a
+ * stone wall of dark bricks with warm light rising from the floor, and on wide
+ * screens a pillar with chains and a torch on each side. Colours come from the
+ * app's variables. Nothing here moves except the flames, and those only inside
+ * the no-preference block at the end.
+ */
+
+/* ---- the wall and the light from below ---- */
+.sd-world {
+  /* One brick tile (80 x 40): two courses, the joints staggered. Dark, so text keeps its contrast. */
+  --bricks: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><g fill='none' stroke='%23000' stroke-opacity='.45' stroke-width='2'><path d='M0 1h80M0 21h80M0 1v20M40 21v20'/></g><g fill='%23ffffff' fill-opacity='.018'><rect x='2' y='3' width='76' height='16'/><rect x='42' y='23' width='36' height='16'/><rect x='2' y='23' width='36' height='16'/></g></svg>");
+  background-image:
+    radial-gradient(700px 360px at 12% -60px, var(--torch-glow), transparent 70%),
+    radial-gradient(700px 360px at 88% -60px, var(--torch-glow), transparent 70%),
+    radial-gradient(ellipse 90% 45% at 50% 108%, rgb(255 138 43 / 0.2), transparent 72%),
+    var(--bricks),
+    linear-gradient(180deg, #0c0911 0%, var(--color-bg) 55%);
+  background-size: auto, auto, auto, 80px 40px, auto;
+  /* The warm light stays at the bottom of the screen; the wall scrolls with the page. */
+  background-attachment: scroll, scroll, fixed, scroll, scroll;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, no-repeat;
+}
+
+/* ---- the side margins: shown only where the page leaves room ---- */
+.sd-margin {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .sd-margin {
+    position: fixed;
+    inset-block: 0;
+    z-index: 1;
+    display: block;
+    inline-size: calc((100vw - 1080px) / 2 - 16px);
+    max-inline-size: 240px;
+    pointer-events: none;
+  }
+
+  .sd-margin-left {
+    inset-inline-start: 0;
+  }
+
+  .sd-margin-right {
+    inset-inline-end: 0;
+  }
+
+  /* A pillar edge towards the page. */
+  .sd-margin::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inline-size: 6px;
+    background: linear-gradient(180deg, #1c1625, #0b0810);
+    box-shadow: 0 0 24px rgb(0 0 0 / 0.8);
+  }
+
+  .sd-margin-left::before {
+    inset-inline-end: 0;
+  }
+
+  .sd-margin-right::before {
+    inset-inline-start: 0;
+  }
+
+  /* Hanging chains: links drawn as repeating rings. */
+  .sd-chain {
+    position: absolute;
+    inset-block-start: 0;
+    inline-size: 10px;
+    background: repeating-radial-gradient(ellipse 5px 7px at 50% 7px, transparent 0 3px, #5b5368 3px 5px, transparent 5px 14px);
+    background-size: 10px 14px;
+    background-repeat: repeat-y;
+    opacity: 0.7;
+  }
+
+  .sd-chain-a {
+    inset-inline-start: 22%;
+    block-size: 26vh;
+  }
+
+  .sd-chain-b {
+    inset-inline-start: 48%;
+    block-size: 14vh;
+  }
+
+  .sd-chain-c {
+    inset-inline-start: 72%;
+    block-size: 34vh;
+  }
+
+  /* The wall torch, about a third of the way down. */
+  .sd-wall-torch {
+    position: absolute;
+    inset-block-start: 38%;
+    inset-inline-start: calc(50% - 7px);
+    inline-size: 14px;
+    block-size: 64px;
+  }
+
+  .sd-wall-torch-stick {
+    position: absolute;
+    inset-inline: 3px;
+    inset-block: 22px 0;
+    background: linear-gradient(90deg, #2a2030, #43374a, #2a2030);
+    border-radius: 2px;
+  }
+
+  .sd-wall-torch-flame {
+    position: absolute;
+    inset-inline: 1px;
+    inset-block-start: 2px;
+    block-size: 26px;
+    border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
+    background: radial-gradient(ellipse at 50% 80%, #fff2c8 0 18%, var(--color-pumpkin) 48%, rgb(255 138 43 / 0) 78%);
+    transform-origin: 50% 100%;
+  }
+
+  .sd-wall-torch-glow {
+    position: absolute;
+    inset-inline-start: -60px;
+    inset-block-start: -50px;
+    inline-size: 134px;
+    block-size: 160px;
+    background: radial-gradient(closest-side, rgb(255 138 43 / 0.22), transparent);
+  }
+}
+
+@media (min-width: 1280px) and (prefers-reduced-motion: no-preference) {
+  .sd-wall-torch-flame {
+    animation: sd-margin-flicker 1.8s ease-in-out infinite alternate;
+  }
+
+  .sd-margin-right .sd-wall-torch-flame {
+    animation-delay: -0.9s;
+  }
+
+  @keyframes sd-margin-flicker {
+    from {
+      transform: scale(1, 1);
+      opacity: 0.92;
+    }
+    to {
+      transform: scale(0.92, 1.08) rotate(-2deg);
+      opacity: 1;
+    }
+  }
+}

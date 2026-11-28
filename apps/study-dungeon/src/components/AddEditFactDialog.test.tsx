@@ -11,6 +11,7 @@
 
 import "../test/dialog-polyfill"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { fieldHelpText } from "../wording"
 import { cleanup, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { AddEditFactDialog } from "./AddEditFactDialog"
@@ -86,6 +87,36 @@ describe("AddEditFactDialog: adding", () => {
     const values = (s: HTMLSelectElement) => [...s.options].map((o) => o.value)
     expect(values(select("Importance"))).toEqual(["1", "2", "3"])
     expect(values(select("Review cost"))).toEqual(["1", "2", "3", "5"])
+  })
+
+  // Feedback list, point 13: an (i) beside Importance and Review cost, by keyboard and touch.
+  it.each([
+    ["Importance", "What is importance?", "importance"],
+    ["Review cost", "What is review cost?", "cost"],
+  ] as const)("the (i) beside %s opens and closes its note, and the field points to it while open", async (field, buttonName, key) => {
+    const { user } = setup(day(0))
+    const info = screen.getByRole("button", { name: buttonName })
+    const note = document.getElementById(info.getAttribute("aria-controls")!)!
+    expect(note.textContent).toBe(fieldHelpText[key])
+    expect(note.hidden).toBe(true)
+    expect(info.getAttribute("aria-expanded")).toBe("false")
+    expect(select(field).getAttribute("aria-describedby")).toBeNull()
+    info.focus()
+    await user.keyboard("{Enter}")
+    expect(info.getAttribute("aria-expanded")).toBe("true")
+    expect(note.hidden).toBe(false)
+    expect(select(field).getAttribute("aria-describedby")).toBe(note.id)
+    await user.click(info)
+    expect(note.hidden).toBe(true)
+    expect(select(field).getAttribute("aria-describedby")).toBeNull()
+  })
+
+  it("the (i) never saves or closes the form", async () => {
+    const { user, engine, onSaved, onClose } = setup(day(0))
+    await user.click(screen.getByRole("button", { name: "What is importance?" }))
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(engine.view(day(0))).toEqual([])
   })
 
   it("refuses to save without a question and an answer, and says why", async () => {

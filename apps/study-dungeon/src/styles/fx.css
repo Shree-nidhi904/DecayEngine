@@ -309,8 +309,15 @@
 }
 
 /* ---- combat effects ---- */
+/* A modal dialog is fixed and centred by the browser. "position: relative" here used to override that,
+   which left the fight card near the top of the page and cut off. Fixed also anchors the sparks. */
 .sd-dialog {
-  position: relative;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
 }
 
 .sd-sparks {

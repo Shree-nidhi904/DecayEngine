@@ -11,7 +11,7 @@ import { DAY_MS } from "./policy"
 import { SPOOKY_KEY } from "./spooky-level"
 import { hauntText, keeperText } from "./wording"
 import { day } from "./test/fixtures"
-import { makeAppKit } from "./test/app-kit"
+import { makeAppKit, openSettings } from "./test/app-kit"
 import { expandDock } from "./test/dock"
 
 afterEach(cleanup)
@@ -73,6 +73,7 @@ describe("haunt pass: the Spooky level (Req 6)", () => {
     const kit = makeAppKit()
     kit.add("s1", "solid", day(0))
     const { container } = kit.renderApp(day(0))
+    openSettings()
     const world = container.querySelector<HTMLElement>(".sd-world")!
     expect(world.dataset.spooky).toBe("haunted")
     const toggle = screen.getByRole("button", { name: hauntText.spooky.label })

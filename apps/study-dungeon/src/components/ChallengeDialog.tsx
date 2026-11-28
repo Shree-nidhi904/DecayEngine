@@ -12,6 +12,7 @@ import type { Fact } from "../policy"
 import type { SoundPlayer } from "../sound"
 import { challengeText, studyDungeonWording } from "../wording"
 import { useModalDialog } from "./useModalDialog"
+import { useFocusResult } from "./useFocusResult"
 import { DialogFoe } from "./DialogFoe"
 import { AnswerPanel } from "./AnswerPanel"
 import { Sparks } from "./art/Particles"
@@ -68,6 +69,7 @@ export function ChallengeDialog({
   const checked = check !== "self"
   const ref = useModalDialog()
   const [result, setResult] = useState<ChallengeResult | null>(null)
+  const resultRef = useFocusResult(result !== null)
   // Guards against a second answer before React re-renders.
   const answered = useRef(false)
 
@@ -151,6 +153,8 @@ export function ChallengeDialog({
       )}
 
       <p
+        ref={resultRef}
+        tabIndex={-1}
         role="status"
         className="sd-result"
         data-result={result === null ? undefined : result.ok ? "resurrected" : "stays-dead"}
@@ -177,7 +181,7 @@ export function ChallengeDialog({
             )}
           </>
         ) : (
-          <button type="button" className="sd-button sd-button-primary" autoFocus onClick={onClose}>
+          <button type="button" className="sd-button sd-button-primary" onClick={onClose}>
             {challengeText.close}
           </button>
         )}

@@ -18,6 +18,7 @@ import type { ModelName } from "../policy-select"
 import { Sparks } from "./art/Particles"
 import { hauntText } from "../wording"
 import { useModalDialog } from "./useModalDialog"
+import { useFocusResult } from "./useFocusResult"
 import { DialogFoe } from "./DialogFoe"
 import { AnswerPanel } from "./AnswerPanel"
 import type { AnswerCheck } from "../answer-check"
@@ -135,6 +136,7 @@ export function FightDialog({
   }
 
   const done = step === "correct" || step === "incorrect" || step === "died"
+  const resultRef = useFocusResult(done)
   const resultText =
     step === "correct" ? results.correct : step === "incorrect" ? results.incorrect : fightText.diedFirst
 
@@ -192,7 +194,7 @@ export function FightDialog({
         </>
       )}
 
-      <p role="status" className="sd-result" data-result={done ? step : undefined}>
+      <p ref={resultRef} tabIndex={-1} role="status" className="sd-result" data-result={done ? step : undefined}>
         {done ? resultText : ""}
       </p>
       {step === "correct" && sleepLine !== null && <p className="sd-result-more">{sleepLine}</p>}
@@ -241,7 +243,7 @@ export function FightDialog({
           </>
         )}
         {done && (
-          <button type="button" className="sd-button sd-button-primary" autoFocus onClick={onClose}>
+          <button type="button" className="sd-button sd-button-primary" onClick={onClose}>
             {fightText.close}
           </button>
         )}

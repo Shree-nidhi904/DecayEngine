@@ -21,7 +21,7 @@ import "./test/dialog-polyfill"
 import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { makeAppKit } from "./test/app-kit"
+import { makeAppKit, openSettings } from "./test/app-kit"
 import { T0, day } from "./test/fixtures"
 import { loadSampleData } from "./sample-data"
 import { announced, announcer } from "./test/round7-helpers"
@@ -51,9 +51,9 @@ function open(opener: HTMLElement): HTMLElement {
   return opener
 }
 
-/** Presses Escape inside the open dialog. */
+/** Presses Escape inside the open dialog (the last in the page, when a confirmation is open over a sheet). */
 function escape() {
-  const dialog = screen.getByRole("dialog")
+  const dialog = screen.getAllByRole("dialog").at(-1)!
   fireEvent.keyDown(dialog, { key: "Escape" })
 }
 
@@ -79,7 +79,6 @@ describe("the Triage saves line (task P5, Req 21.9)", () => {
     loadSampleData(kit.engine, T0)
     kit.renderApp(T0)
     fireEvent.click(screen.getByRole("radio", { name: "20 min" }))
-    fireEvent.click(button("Triage"))
 
     const line = document.querySelector<HTMLElement>(".shell-triage-note")!
     expect(line.textContent).toBe("Answering these right saves 1 fact that would die in the next 7 days.")
@@ -138,7 +137,6 @@ describe("Escape closes each dialog and returns focus to its opener", () => {
     ["Fight on a card", () => cardButton("Fight"), "Fight"],
     ["Fight the weakest (hero)", () => button("Fight the weakest"), "Fight"],
     ["Remove on a card", () => cardButton("Remove"), "Remove this fact? This cannot be undone."],
-    ["Reset all data", () => button("Reset all data"), "Reset all data? This cannot be undone."],
   ]
 
   it.each(cases)("%s", (_label, findOpener, dialogName) => {
@@ -148,6 +146,26 @@ describe("Escape closes each dialog and returns focus to its opener", () => {
 
     escape()
 
+    expect(screen.queryAllByRole("dialog")).toEqual([])
+    expect(document.activeElement).toBe(opener)
+  })
+
+  it("Reset all data, inside the Settings sheet: Escape closes only the confirmation and returns focus to the button", () => {
+    setup()
+    openSettings()
+    const opener = open(button("Reset all data"))
+    expect(screen.getByRole("dialog", { name: "Reset all data? This cannot be undone." })).toBeTruthy()
+    escape()
+    expect(screen.queryByRole("dialog", { name: "Reset all data? This cannot be undone." })).toBeNull()
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeTruthy()
+    expect(document.activeElement).toBe(opener)
+  })
+
+  it("Escape closes the Settings sheet and returns focus to the Settings button", () => {
+    setup()
+    const opener = open(button("Settings"))
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeTruthy()
+    escape()
     expect(screen.queryAllByRole("dialog")).toEqual([])
     expect(document.activeElement).toBe(opener)
   })
@@ -291,7 +309,7 @@ describe("keyboard", () => {
       reached.add(document.activeElement!)
     }
     const names = [...reached].map((el) => el.getAttribute("aria-label") ?? el.textContent ?? "")
-    for (const expected of ["Add fact", "Fight the weakest", "+7 days", "Play", "Triage", "Reset all data"]) {
+    for (const expected of ["Add fact", "Fight the weakest", "+7 days", "Play", "Home", "Settings", "Sync"]) {
       expect(names).toContain(expected)
     }
     // The dock's toggle is reached too, named in words (its glyph is hidden from screen readers).
@@ -300,9 +318,20 @@ describe("keyboard", () => {
     toggleCopy.querySelectorAll('[aria-hidden="true"]').forEach((el) => el.remove())
     expect(toggleCopy.textContent).toBe("Coming up")
     expect(reached.has(screen.getByRole("slider", { name: "Days ahead" }))).toBe(true)
-    expect(reached.has(screen.getByRole("switch", { name: "Sound effects" }))).toBe(true)
+    // The sound switch and Reset all data are in the Settings sheet, tested below.
     // The selected tab is the one in the Tab order (arrow keys move between tabs).
     expect(reached.has(tab("Dungeon"))).toBe(true)
+  })
+
+  it("the Settings sheet holds the sound switch and Reset all data, both reachable by keyboard", () => {
+    setup()
+    openSettings()
+    const sheet = within(screen.getByRole("dialog", { name: "Settings" }))
+    for (const control of [sheet.getByRole("switch", { name: "Sound effects" }), sheet.getByRole("button", { name: "Reset all data" })]) {
+      expect(control.getAttribute("tabindex")).not.toBe("-1")
+      control.focus()
+      expect(document.activeElement).toBe(control)
+    }
   })
 
   it("Enter opens Add fact and Space opens Fight the weakest", async () => {

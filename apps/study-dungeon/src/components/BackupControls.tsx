@@ -15,6 +15,8 @@ export interface BackupControlsProps {
   reload: () => void
   /** Says something in the App's live region. */
   announce: (text: string, problem?: boolean) => void
+  /** Shows a short success message in the corner (feedback list, point 18). Falls back to `announce`. */
+  onSaved?: (text: string) => void
   /** Set while previewing: Restore is a write, so it is blocked. Back up still works. */
   restoreDisabledReason?: string
   /** Today, for the file name. */
@@ -57,7 +59,7 @@ function ConfirmRestore({ facts, onConfirm, onCancel }: { facts: number; onConfi
   )
 }
 
-export function BackupControls({ storage, reload, announce, restoreDisabledReason, today }: BackupControlsProps) {
+export function BackupControls({ storage, reload, announce, onSaved, restoreDisabledReason, today }: BackupControlsProps) {
   const file = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<{ snapshot: unknown; facts: number } | null>(null)
   const restoreDisabled = restoreDisabledReason !== undefined
@@ -75,7 +77,8 @@ export function BackupControls({ storage, reload, announce, restoreDisabledReaso
           }
           download(`study-dungeon-${today().toISOString().slice(0, 10)}.json`, text)
           markBackedUp(storage, today().getTime())
-          announce(backupText.saved)
+          if (onSaved === undefined) announce(backupText.saved)
+          else onSaved(backupText.saved)
         }}
       >
         {backupText.backUp}

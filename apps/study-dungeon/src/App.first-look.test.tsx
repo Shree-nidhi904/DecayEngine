@@ -190,19 +190,6 @@ describe("the first look starts only on the first sample load (Requirement 25.1,
     expect(announcer().textContent).not.toBe(ANNOUNCE)
   })
 
-  it("waits for the tour, and starts when it is skipped", () => {
-    const { frames } = setup({ storage: new MemoryStorage() })
-    loadSample()
-    expect(screen.getByRole("button", { name: /skip tour/i })).toBeTruthy()
-    expect(skipButton()).toBeNull()
-    expect(frames.pending()).toBe(0)
-    fireEvent.click(screen.getByRole("button", { name: /skip tour/i }))
-    expect(skipButton()).not.toBeNull()
-    expect(frames.pending()).toBe(1)
-    // The tour sent focus to <main>; the first look leaves it there.
-    expect(document.activeElement).toBe(screen.getByRole("main"))
-  })
-
   it("does nothing without the firstLook prop (Requirement 25.11)", () => {
     const { frames, storage } = setup({ firstLook: false })
     loadSample()
@@ -295,7 +282,7 @@ describe("Skip and the other ways out (Requirement 25.7, 25.8)", () => {
     expectStopped(ctx)
   })
 
-  it("Back to today in the top banner stops it", () => {
+  it("Back to today on the time bar stops it", () => {
     const ctx = playing()
     fireEvent.click(screen.getByRole("button", { name: /back to today/i }))
     expectStopped(ctx)

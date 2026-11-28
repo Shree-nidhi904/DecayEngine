@@ -143,8 +143,8 @@ describe("the compact time dock (task 21, Req 19.1-19.3, 19.7, 19.8, 19.13)", ()
     parsed.blocks.filter((b) => b.prelude === NARROW).flatMap((b) => b.rules)
   const allDockRules = [...dock.top, ...dock.blocks.flatMap((b) => b.rules)]
 
-  it("hides the shell's jumps and Play while collapsed at every width (a top-level rule)", () => {
-    expect(declarationsFor(dock.top, ".sd-dock:not([data-open]) .shell-time-machine-controls").display).toBe("none")
+  it("hides the shell's jumps while collapsed, and keeps Play on the bar (as in Ghosted)", () => {
+    expect(declarationsFor(dock.top, ".sd-dock:not([data-open]) .shell-time-machine-controls .shell-button-quiet").display).toBe("none")
   })
 
   it("never hides the slider, and no longer hides the timeline on narrow screens", () => {
@@ -187,10 +187,8 @@ describe("the compact time dock (task 21, Req 19.1-19.3, 19.7, 19.8, 19.13)", ()
   })
 
   it("keeps the collapsed title and date on rows of their own up to 520px, so neither is squeezed", () => {
-    const areas = declarationsFor(narrowRules(dock), ".sd-dock:not([data-open]) .shell-time-machine")[
-      "grid-template-areas"
-    ]
-    expect(areas?.replace(/\s+/g, " ")).toBe('"title title" "showing showing" "slider slider" "toggle hint"')
+    const areas = declarationsFor(dock.top, ".sd-dock .shell-time-machine")["grid-template-areas"]
+    expect(areas?.replace(/\s+/g, " ")).toContain('"title showing slider actions play"')
   })
 
   it("has no transition or animation in dock.css (any would go inside prefers-reduced-motion: no-preference)", () => {
@@ -352,9 +350,9 @@ describe("nothing is wider than a 320px screen", () => {
 })
 
 describe("room for Netlify's badge (live P2 pass)", () => {
-  it("lifts the dock above the injected 64px badge, with a 72px room", () => {
+  it("has no badge room now that the site is on Cloudflare", () => {
     const css = readFileSync(fileURLToPath(new URL("./dock.css", import.meta.url)), "utf8")
-    expect(css).toMatch(/:root\s*\{\s*--badge-room:\s*72px/)
+    expect(css).toMatch(/:root\s*\{\s*--badge-room:\s*0px/)
     expect(css).toMatch(/\.sd-dock\s*\{[^}]*bottom:\s*var\(--badge-room, 0px\)/)
   })
 })

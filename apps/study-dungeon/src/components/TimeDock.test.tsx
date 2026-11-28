@@ -107,13 +107,11 @@ describe("collapsed by default (Req 19.1, 19.2, 19.12)", () => {
     expect(within(dock).getByRole("slider", { name: "Days ahead" })).toBeTruthy()
   })
 
-  it('shows the hint "Drag to look ahead" only while collapsed', () => {
+  it('has no "Drag to look ahead" hint line, collapsed or open', () => {
     const { dock } = setup()
-    expect(within(dock).getByText("Drag to look ahead").classList.contains("sd-dock-hint")).toBe(true)
+    expect(within(dock).queryByText("Drag to look ahead")).toBeNull()
     expand(dock)
     expect(within(dock).queryByText("Drag to look ahead")).toBeNull()
-    fireEvent.click(toggleOf(dock))
-    expect(within(dock).getByText("Drag to look ahead")).toBeTruthy()
   })
 })
 
@@ -140,7 +138,8 @@ describe("the toggle (Req 19.3, 19.9)", () => {
   it('has the same visible name, "Coming up", in both states; its glyph is hidden from screen readers', () => {
     const { dock } = setup()
     const toggle = toggleOf(dock)
-    const name = () => controlOrder(dock)[1]
+    // The toggle's name as the Tab order lists it (it is last, or last but its markers, once expanded).
+    const name = () => controlOrder(dock).find((n) => n === "Coming up")
     expect(toggle.hasAttribute("aria-label")).toBe(false)
     expect(name()).toBe("Coming up")
     expect(toggle.querySelector('[aria-hidden="true"]')!.textContent).toBe("▴")
@@ -156,19 +155,19 @@ describe("the toggle (Req 19.3, 19.9)", () => {
     expect([...dock.querySelectorAll(".shell-button-primary")].map((b) => b.textContent)).toEqual(["Play"])
   })
 
-  it("comes right after the slider; once expanded, the markers, the jumps and Play follow", () => {
+  it("sits on the bar's line: the slider, Coming up, then the jumps, Play and the markers (feedback list, point 8)", () => {
     const { dock } = setup({ withFact: true })
     expand(dock)
     const name = creatureOf("s1").name
     expect(controlOrder(dock)).toEqual([
       "Days ahead",
       "Coming up",
-      `Day 8: ${name} weakens`,
-      `Day 34: ${name} dies`,
       "+7 days",
       "+14 days",
       "+30 days",
       "Play",
+      `Day 8: ${name} weakens`,
+      `Day 34: ${name} dies`,
     ])
   })
 })

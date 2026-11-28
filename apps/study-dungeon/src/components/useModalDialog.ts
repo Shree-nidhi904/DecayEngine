@@ -40,7 +40,8 @@ export function useReturnFocus(): void {
     return () => {
       const index = openDialogs.lastIndexOf(entry)
       if (index !== -1) openDialogs.splice(index, 1)
-      if (entry.opener !== null && entry.opener.isConnected) entry.opener.focus()
+      // preventScroll: giving focus back never moves the page (feedback list, point 10).
+      if (entry.opener !== null && entry.opener.isConnected) entry.opener.focus({ preventScroll: true })
     }
   }, [entry])
 }

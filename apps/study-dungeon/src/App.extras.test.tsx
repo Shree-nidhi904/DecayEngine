@@ -35,7 +35,7 @@ describe("today's raid", () => {
     kit.renderApp(day(8))
     fireEvent.click(button("Start today's 5-minute raid"))
     expect(screen.queryByRole("dialog")).toBeNull()
-    expect(screen.getByText("Nothing needs saving right now. Come back when a fact weakens.")).toBeTruthy()
+    expect(screen.getAllByText("Nothing needs saving right now. Come back when a fact weakens.").length).toBeGreaterThan(0)
   })
 
   it("is blocked while previewing", () => {
@@ -49,27 +49,6 @@ describe("today's raid", () => {
     expect(raid.getAttribute("title")).toBe(previewBlockedText)
     fireEvent.click(raid)
     expect(screen.queryByRole("dialog")).toBeNull()
-  })
-})
-
-describe("import facts", () => {
-  it("adds every good line as a new fact, says how many, and skips the rest", () => {
-    const kit = makeAppKit()
-    kit.renderApp(day(1))
-    fireEvent.click(button("Import facts"))
-    const dialog = screen.getByRole("dialog", { name: "Import facts" })
-    fireEvent.change(within(dialog).getByRole("textbox", { name: "Your facts" }), {
-      target: { value: "Capital of Peru? | Lima | Quiz\nno answer here\nPowerhouse of the cell? | Mitochondrion" },
-    })
-    expect(within(dialog).getByText("2 facts ready to add.")).toBeTruthy()
-    expect(within(dialog).getByText("Line 2 skipped: needs a question and an answer, split by |.")).toBeTruthy()
-    fireEvent.click(within(dialog).getByRole("button", { name: "Add 2 facts" }))
-    expect(screen.queryByRole("dialog")).toBeNull()
-    expect(kit.engine.view(day(1)).map((f) => [f.payload.question, f.payload.answer, f.payload.why])).toEqual([
-      ["Capital of Peru?", "Lima", "Quiz"],
-      ["Powerhouse of the cell?", "Mitochondrion", ""],
-    ])
-    expect(screen.getByText("2 facts imported into the Crypt.")).toBeTruthy()
   })
 })
 

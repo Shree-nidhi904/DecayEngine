@@ -3,6 +3,8 @@
 // Blob URL needs cleaning up and no timer is needed. Nothing leaves the device.
 
 import { useId } from "react"
+import { snapshotElements } from "@decay-engine/shell"
+import { studyDungeonTheme } from "../theme"
 import { CARD_HEIGHT, CARD_WIDTH, shareCardSvg, type CardCounts } from "../share-card"
 import { hauntText } from "../wording"
 
@@ -24,6 +26,29 @@ const svgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeUR
 export function ShareCard({ counts, announce, download = clickDownload }: ShareCardProps) {
   const privacyId = useId()
   const make = () => {
+    // A picture of the page's own counters (Crypt, Dungeon, Graveyard, souls, streak, rank), as they look
+    // now. Counts only: no fact is on them. If the browser cannot draw it, the drawn card below is used.
+    const target = document.querySelector<HTMLElement>(".sd-hero-stats")
+    if (target !== null && !navigator.userAgent.includes("jsdom")) {
+      snapshotElements([target], {
+        background: studyDungeonTheme.colors.bg,
+        title: hauntText.share.title,
+        titleColor: studyDungeonTheme.colors.pumpkin,
+        titleFont: "40px 'Pirata One', serif",
+        accent: studyDungeonTheme.colors.pumpkin,
+        padding: 32,
+        gap: 20,
+        footer: hauntText.share.footer,
+        footerColor: studyDungeonTheme.colors.boneDim,
+      })
+        .then((href) => download("study-dungeon.png", href))
+        .catch(() => drawn())
+      announce(hauntText.share.made)
+      return
+    }
+    drawn()
+  }
+  const drawn = () => {
     const svg = shareCardSvg(counts())
     const fallback = () => download("study-dungeon.svg", svgDataUrl(svg))
     try {

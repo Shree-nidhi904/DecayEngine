@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import type { SyncController, Viewable } from "@decay-engine/cloud"
 import { cloudConfigured, hasStoredSession, returnedFromSignInLink, startCloud, type CloudHandle } from "../cloud-link"
 import type { FlagStorage } from "../first-run"
+import { topBarText } from "../wording"
 import "../styles/sync.css"
 
 /**
@@ -67,6 +68,15 @@ export interface SyncPanelProps {
   signedInBefore?: () => boolean
   /** Whether this load is the return from a sign-in link. Tests pass a fake. */
   returnedFromLink?: () => boolean
+  /**
+   * Inside the Profile sheet (feedback list, points 7 and 17): no "Sync across devices" fold,
+   * the body is always shown, and the sync code is loaded when `active` turns true.
+   */
+  bare?: boolean
+  /** Whether the sheet is open. Only read when `bare`. */
+  active?: boolean
+  /** Told who is signed in (null when nobody is), so the top right button can read "Profile". */
+  onAccount?: (email: string | null) => void
 }
 
 export function SyncPanel({
@@ -77,6 +87,9 @@ export function SyncPanel({
   start = startCloud,
   signedInBefore = () => hasStoredSession(window.localStorage),
   returnedFromLink = () => returnedFromSignInLink(window.location),
+  bare = false,
+  active = false,
+  onAccount,
 }: SyncPanelProps) {
   const configured = cloudConfigured(env)
   const [handle, setHandle] = useState<CloudHandle | null>(null)
@@ -106,6 +119,22 @@ export function SyncPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // In the sheet: load when it is first opened (a sign-in from before loads at startup, above).
+  useEffect(() => {
+    if (bare && active && configured) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bare, active, configured])
+
+  if (bare) {
+    if (!configured) return <p className="sd-sync-small">{topBarText.syncOff}</p>
+    return (
+      <div className="sd-sync sd-sync-bare">
+        {state === "loading" && <p>{syncText.loading}</p>}
+        {state === "failed" && <p role="alert">{syncText.failed}</p>}
+        {handle !== null && <SyncBody controller={handle.controller} onAccount={onAccount} />}
+      </div>
+    )
+  }
   if (!configured) return null
   return (
     <details className="sd-sync" open={open}
@@ -117,13 +146,17 @@ export function SyncPanel({
       <summary>{syncText.summary}</summary>
       {state === "loading" && <p>{syncText.loading}</p>}
       {state === "failed" && <p role="alert">{syncText.failed}</p>}
-      {handle !== null && <SyncBody controller={handle.controller} />}
+      {handle !== null && <SyncBody controller={handle.controller} onAccount={onAccount} />}
     </details>
   )
 }
 
-function SyncBody({ controller }: { controller: SyncController }) {
+function SyncBody({ controller, onAccount }: { controller: SyncController; onAccount?: (email: string | null) => void }) {
   const s = useSyncExternalStore(controller.subscribe, controller.getState)
+  const who = s.phase === "signed-in" ? (s.email ?? "") : null
+  useEffect(() => {
+    onAccount?.(who)
+  }, [who, onAccount])
   const [email, setEmail] = useState("")
   const [passphrase, setPassphrase] = useState("")
   const [confirmingDelete, setConfirmingDelete] = useState(false)

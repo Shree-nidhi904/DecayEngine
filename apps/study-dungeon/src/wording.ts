@@ -263,7 +263,25 @@ export const landmarkText = {
 /** The memory-model setting (MemoryModelToggle; extensions spec, Requirements 3 and 4). */
 export const memoryModelText = {
   toggle: "Memory model",
-  help: "Off: each right answer doubles a fact's half-life. On: a right answer helps more the later it comes, and hard facts gain less. The numbers are hand-picked. This is not FSRS and is not fitted to anyone's data. Your facts are kept; the page reloads.",
+  help: "Changes how much a right answer helps. Off is the standard rule; on is the memory model. Your facts are kept; the page reloads.",
+  standardTitle: "Off: standard",
+  standard: [
+    "A right answer makes a fact last twice as long.",
+    "A wrong answer makes it last half as long.",
+    "When you review makes no difference.",
+  ],
+  memoryTitle: "On: memory model",
+  memory: [
+    "A right answer helps most when the fact was nearly forgotten. Review it again straight away and it barely grows.",
+    "A wrong answer cuts how long it lasts to less than half, and marks the fact as harder.",
+    "Harder facts grow more slowly, until you get them right again.",
+  ],
+  /** A worked example (feedback list, point 15): the same fact and the same right answer under each rule. */
+  exampleTitle: "Example: a fact that lasts about 10 days",
+  exampleStandard: (days: number) => `Standard: after a right answer, it lasts about ${days} days.`,
+  exampleLate: (days: number) => `Memory model, answered when it was nearly forgotten: about ${days} days.`,
+  exampleEarly: (days: number) => `Memory model, answered straight away: about ${days} days.`,
+  honest: "The numbers are hand-picked. This is not FSRS and is not fitted to anyone's data.",
   /** Said when the choice cannot be saved (extensions Requirement 3.5). */
   notSaved: "This choice could not be saved in this browser, so nothing changed.",
 } as const
@@ -546,6 +564,57 @@ export const notifyText = {
   privacy: "A notification shows only what is already on this page, and nothing is sent anywhere.",
 } as const
 
+/** The top-right buttons, the Settings sheet and the Profile sheet (feedback list, points 7, 17 and 20). */
+export const topBarText = {
+  label: "Menu",
+  home: "Home",
+  settings: "Settings",
+  sync: "Sync",
+  syncHint: "Sync across devices",
+  profile: "Profile",
+  signedInAs: (email: string) => `Signed in as ${email}`,
+  settingsTitle: "Settings",
+  profileTitle: "Profile",
+  syncSection: "Sync across devices",
+  syncOff: "Sync is not set up for this copy of Study Dungeon. Everything stays in this browser.",
+  activityTitle: "Activity",
+  activityNote: "Every change, newest first. Once you sync, this includes your other devices.",
+  activityEmpty: "Nothing has happened yet.",
+} as const
+
+/** The activity history (feedback list, point 17). One line per history entry. */
+export const activityText = {
+  created: (q: string) => `Added “${q}”`,
+  right: (q: string) => `Fought “${q}”: right answer`,
+  wrong: (q: string) => `Fought “${q}”: wrong answer`,
+  woke: (q: string) => `“${q}” woke in the Dungeon`,
+  slept: (q: string) => `“${q}” went back to sleep in the Crypt`,
+  died: (q: string) => `“${q}” died and went to the Graveyard`,
+  resurrected: (q: string) => `Brought “${q}” back from the Graveyard`,
+  resurrectFailed: (q: string) => `A challenge to bring “${q}” back failed`,
+  edited: (q: string) => `Edited “${q}”`,
+  removedFact: "a removed fact",
+} as const
+
+/** The small toast for messages like "Backup downloaded" (feedback list, point 18). */
+export const toastText = {
+  dismiss: "Dismiss",
+} as const
+
+/** The (i) notes beside the form's fields (feedback list, point 13). */
+export const fieldHelpText = {
+  importance:
+    "How much this fact matters to you: 1 a little, 3 a lot. When time is short, Triage saves the important ones first.",
+  cost: "About how many minutes one review takes. Triage uses it to fit reviews into the time you have.",
+  show: (field: string) => `What is ${field.toLowerCase()}?`,
+} as const
+
+/** Opening a fact from a Life Triage link, `?tend=<id>` (feedback list, point 6). */
+export const tendLinkText = {
+  missing: "That fact is not on this device.",
+  dead: "That fact is in the Graveyard. Challenge it to bring it back.",
+} as const
+
 /** The first ten seconds (task L6, Requirement 25, design "The First Ten Seconds", Wording). */
 export const firstLookText = {
   /** The one button while the first look plays. */
@@ -614,4 +683,23 @@ export const hauntText = {
     dead: "in the Graveyard",
     souls: "souls banished",
   },
+} as const
+
+/** The "?" help tour (Nov 28): one part of the page lit at a time, with what to do there. */
+export const helpTourText = {
+  wording: {
+    open: "Show me around",
+    next: "Next",
+    back: "Back",
+    done: "Done",
+    progress: "Step {n} of {total}",
+  },
+  steps: [
+    { selector: ".sd-topbar", title: "The top bar", text: "Home goes to the landing page. Settings holds sound, backup, restore, the memory model and reset. Sync keeps your facts on all your devices." },
+    { selector: ".sd-hero", title: "Your memory today", text: "This says how many facts are weakening and who will die next. Press the fight button to answer the weakest ones first." },
+    { selector: ".sd-toolbar", title: "Add a fact", text: "Type a question and its answer. Each fact becomes a monster that grows weak as you forget it." },
+    { selector: ".shell-triage", title: "Short on time?", text: "Pick how many minutes you have. The facts most worth saving are chosen for you; press Start to fight them one by one." },
+    { selector: ".sd-lists", title: "Crypt, Dungeon, Graveyard", text: "Crypt facts are safe, Dungeon facts are weakening, Graveyard facts are lost. Open a card to answer it or edit it." },
+    { selector: ".sd-dock", title: "Time machine", text: "Drag the slider or press Play to see what will weaken in the next 60 days. Nothing is saved while you look. Use Back to today to return." },
+  ],
 } as const

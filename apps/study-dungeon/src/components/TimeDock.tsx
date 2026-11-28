@@ -18,6 +18,7 @@
 // Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 // Changed by Kiro for task L2 (tasks 21.2 and 21.3), as the spec names it; see docs/KIRO_LOG.md.
 // Changed by Kiro for task L3 (task 25.4): the optional `notice` slot, first in the dock.
+// Changed by Kiro for the feedback list (points 8 and 16): "Back to today" on the dock, and "Coming up" with its timeline after the time machine in the markup (dock.css).
 // Changed by Kiro for task L6 (task 27.3): the optional `firstLook` prop (first-look-dock.ts); the onChange prop is wrapped by its hook.
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type RefObject } from "react"
@@ -85,6 +86,12 @@ export interface TimeDockProps {
    * jump, a marker or Play ends it. Omitted: the dock behaves as before.
    */
   firstLook?: FirstLookDockControl
+  /**
+   * Feedback list, point 16 (added by Kiro): while previewing, the dock shows
+   * "Future preview · nothing is saved" and this "Back to today" button on its own
+   * bar, instead of a banner at the top of the page. No icons.
+   */
+  onBackToToday?: () => void
 }
 
 export function TimeDock({
@@ -100,6 +107,7 @@ export function TimeDock({
   session = null,
   notice,
   firstLook,
+  onBackToToday,
 }: TimeDockProps) {
   const events = useMemo(
     () =>
@@ -184,10 +192,11 @@ export function TimeDock({
     </div>
   )
 
-  // Right under the slider, so the toggle comes straight after it in the Tab
-  // order, before the markers, the jumps and Play (Req 19.9).
+  // Everything on one line, inside the time machine's bar: the toggle ("Coming up") right after the
+  // slider, and while previewing "Back to today" beside it. Only the timeline (markers, ticks, "Next:")
+  // opens below the bar. No hint line, no icons.
   const belowSlider = (
-    <>
+    <div className="sd-dock-actions">
       <button
         type="button"
         className="sd-dock-toggle"
@@ -200,11 +209,19 @@ export function TimeDock({
         </span>
         <span>{timelineText.toggle}</span>
       </button>
-      {!expanded && <p className="sd-dock-hint">{timelineText.hint}</p>}
+      {offsetMs > 0 && onBackToToday !== undefined && (
+        <button type="button" className="sd-button sd-dock-back" onClick={onBackToToday}>
+          {studyDungeonWording.preview.backToToday}
+        </button>
+      )}
+    </div>
+  )
+  const comingUp = (
+    <div className="sd-dock-bottom">
       <div id={panelId} className="sd-dock-panel">
         {expanded && timeline}
       </div>
-    </>
+    </div>
   )
 
   return (
@@ -230,6 +247,12 @@ export function TimeDock({
           prefersReducedMotion={prefersReducedMotion}
           belowSlider={belowSlider}
         />
+        {comingUp}
+        {offsetMs > 0 && onBackToToday !== undefined && (
+          <p className="sd-visually-hidden" role="status">
+            {studyDungeonWording.preview.banner}
+          </p>
+        )}
       </div>
     </div>
   )

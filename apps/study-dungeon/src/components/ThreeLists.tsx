@@ -4,7 +4,7 @@
 // Reads everything through engine.view(now); grouping and sorting live in
 // ../lists.ts so they can be tested without a browser.
 
-import { useMemo, useRef, useState, type KeyboardEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import type { StudyDungeonEngine } from "../engine-instance"
 import type { Fact } from "../policy"
 import { buildLists, lastReviewHealth, type FactState } from "../lists"
@@ -48,6 +48,11 @@ export interface ThreeListsProps {
   justChanged?: ReadonlySet<string>
   /** Called when a card's reaction ends. */
   onReacted?: (id: string) => void
+  /**
+   * Feedback list, point 11: asks for a list to be shown. Each new `n` selects `state`
+   * ("Fight the weakest" shows the Dungeon).
+   */
+  show?: { state: FactState; n: number }
 }
 
 const TABS: readonly FactState[] = ["alive", "weak", "dead"]
@@ -64,9 +69,13 @@ export function ThreeLists({
   writesDisabledReason,
   justChanged,
   onReacted,
+  show,
 }: ThreeListsProps) {
   const writesDisabled = writesDisabledReason !== undefined
   const [selected, setSelected] = useState<FactState>("weak")
+  useEffect(() => {
+    if (show !== undefined && show.n > 0) setSelected(show.state)
+  }, [show?.n]) // eslint-disable-line react-hooks/exhaustive-deps
   const [removing, setRemoving] = useState<Fact | null>(null)
   const tabRefs = useRef<Record<FactState, HTMLButtonElement | null>>({ alive: null, weak: null, dead: null })
 
