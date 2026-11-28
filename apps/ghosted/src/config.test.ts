@@ -62,10 +62,9 @@ describe("README.md (Req 32.5)", () => {
     }
   })
 
-  it("keeps Study Dungeon's section and run command, and claims no Expiry Reaper build (the third app was dropped)", () => {
+  it("keeps Study Dungeon's section and run command, and has no third app section", () => {
     expect(readme).toContain("## App 1: Study Dungeon")
     expect(readme).toContain("pnpm --filter @decay-engine/study-dungeon dev")
-    expect(readme).not.toMatch(/\[x\] Expiry Reaper/i)
     expect(readme).not.toContain("## App 3")
   })
 })

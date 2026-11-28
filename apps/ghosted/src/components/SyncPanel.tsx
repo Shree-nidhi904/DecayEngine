@@ -67,6 +67,20 @@ export interface SyncPanelProps {
   signedInBefore?: () => boolean
   /** Whether this load is the return from a sign-in link. Tests pass a fake. */
   returnedFromLink?: () => boolean
+  /**
+   * Inside the Profile sheet (feedback list, points 7, 17 and 21): no fold, the
+   * body is always shown, and the sync code loads when `active` first turns
+   * true (or at startup after an earlier sign-in, as before).
+   */
+  bare?: boolean
+  /** Whether the Profile sheet is open. Only read when `bare`. */
+  active?: boolean
+  /** Told who is signed in (null when nobody is), so the top-right button can read "Profile". */
+  onAccount?: (email: string | null) => void
+  /** Called once at startup when this load is the return from a sign-in link, so the Profile can open. */
+  onReturnedFromLink?: () => void
+  /** Shown instead of nothing when the build has no sync server (bare only). */
+  notConfigured?: string
 }
 
 export function SyncPanel({
@@ -77,6 +91,11 @@ export function SyncPanel({
   start = startCloud,
   signedInBefore = () => hasStoredSession(window.localStorage),
   returnedFromLink = () => returnedFromSignInLink(window.location),
+  bare = false,
+  active = false,
+  onAccount,
+  onReturnedFromLink,
+  notConfigured,
 }: SyncPanelProps) {
   const configured = cloudConfigured(env)
   const [handle, setHandle] = useState<CloudHandle | null>(null)
@@ -102,11 +121,27 @@ export function SyncPanel({
 
   useEffect(() => {
     if (configured && (fromLink || signedInBefore())) load()
+    if (configured && fromLink) onReturnedFromLink?.()
     return () => handle?.stop()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!configured) return null
+  // In the sheet: load when it is first opened.
+  useEffect(() => {
+    if (bare && active && configured) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bare, active, configured])
+
+  if (!configured) return bare && notConfigured !== undefined ? <p className="gh-sheet-note">{notConfigured}</p> : null
+  if (bare) {
+    return (
+      <div className="gh-sync gh-sync-bare">
+        {state === "loading" && <p>{syncText.loading}</p>}
+        {state === "failed" && <p role="alert">{syncText.failed}</p>}
+        {handle !== null && <SyncBody controller={handle.controller} onAccount={onAccount} />}
+      </div>
+    )
+  }
   return (
     <details className="gh-sync" open={open}
       onToggle={(event) => {
@@ -117,13 +152,17 @@ export function SyncPanel({
       <summary>{syncText.summary}</summary>
       {state === "loading" && <p>{syncText.loading}</p>}
       {state === "failed" && <p role="alert">{syncText.failed}</p>}
-      {handle !== null && <SyncBody controller={handle.controller} />}
+      {handle !== null && <SyncBody controller={handle.controller} onAccount={onAccount} />}
     </details>
   )
 }
 
-function SyncBody({ controller }: { controller: SyncController }) {
+function SyncBody({ controller, onAccount }: { controller: SyncController; onAccount?: (email: string | null) => void }) {
   const s = useSyncExternalStore(controller.subscribe, controller.getState)
+  const signedInEmail = s.phase === "signed-out" ? null : (s.email ?? "")
+  useEffect(() => {
+    onAccount?.(signedInEmail)
+  }, [onAccount, signedInEmail])
   const [email, setEmail] = useState("")
   const [passphrase, setPassphrase] = useState("")
   const [confirmingDelete, setConfirmingDelete] = useState(false)

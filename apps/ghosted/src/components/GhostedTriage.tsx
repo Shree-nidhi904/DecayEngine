@@ -122,6 +122,7 @@ export function GhostedTriage({ engine, now, version, blocked, onStartSession, o
         budgets={GHOSTED_BUDGETS}
         defaultBudget={GHOSTED_DEFAULT_BUDGET}
         picksNote={picksNote}
+        autoRun
       />
       {action !== undefined && (
         <div className="gh-triage-five">

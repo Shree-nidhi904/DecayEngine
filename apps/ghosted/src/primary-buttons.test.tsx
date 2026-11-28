@@ -19,6 +19,7 @@ import { loadSampleData } from "./sample-data"
 import type { Scheduler } from "./ticking"
 import { FakeStorage } from "./test/fake-storage"
 import { T0, day, makeEngine } from "./test/fixtures"
+import { regionOrList, openSettings } from "./test/ui"
 
 afterEach(cleanup)
 
@@ -56,14 +57,14 @@ function expectRegions() {
 
   const triage = document.querySelector<HTMLElement>(".gh-triage")
   if (triage !== null) {
-    // The shell's Plan (always) and Start reaching out (with picks) are the region's primary actions.
+    // The panel runs by itself (feedback list, point 12), so Start reaching out, shown with picks, is its one primary action.
     expect(count(triage, APP_FILLED), "triage").toBe(0)
     const shell = [...triage.querySelectorAll(SHELL_FILLED)].map((b) => b.textContent)
-    expect(shell.length, "triage").toBeGreaterThanOrEqual(1)
-    for (const label of shell) expect(["Plan", "Start reaching out"]).toContain(label)
+    expect(shell.length, "triage").toBeLessThanOrEqual(1)
+    for (const label of shell) expect(label).toBe("Start reaching out")
   }
 
-  for (const selector of [".gh-section-nav", ".gh-street", ".gh-forecast", ".gh-toolbar", ".gh-privacy"]) {
+  for (const selector of [".gh-tabs", ".gh-street", ".gh-forecast", ".gh-toolbar", ".gh-privacy"]) {
     for (const region of document.querySelectorAll(selector)) {
       expect(count(region, `${APP_FILLED}, ${SHELL_FILLED}`), selector).toBe(0)
     }
@@ -145,17 +146,21 @@ describe("every card state has one primary (Req 13.3)", () => {
     renderApp(engine)
     const states = new Set<string>()
     for (const name of ["Priya Raman", "Nia Bello"]) {
-      fireEvent.click(screen.getByRole("button", { name: `Open ${name}` }))
+      fireEvent.click(within(regionOrList("Still lit")).getByRole("button", { name: `Open ${name}` }))
       const dialog = screen.getByRole("dialog", { name })
       const card = dialog.querySelector<HTMLElement>("article.gh-card")!
       states.add(card.getAttribute("data-state")!)
       expect([...card.querySelectorAll(APP_FILLED)].map((b) => b.textContent)).toEqual(["Reach out"])
       fireEvent.click(within(dialog).getByRole("button", { name: "Close" }))
     }
-    for (const card of outsideDialogs("article.gh-card")) {
-      states.add(card.getAttribute("data-state")!)
-      const expected = card.getAttribute("data-state") === "dead" ? "Reconnect" : "Reach out"
-      expect([...card.querySelectorAll(APP_FILLED)].map((b) => b.textContent)).toEqual([expected])
+    // The lists show one at a time (feedback list, point 23): look at the cards of Fading, then Empty windows.
+    for (const list of ["Fading", "Empty windows"]) {
+      regionOrList(list)
+      for (const card of outsideDialogs("article.gh-card")) {
+        states.add(card.getAttribute("data-state")!)
+        const expected = card.getAttribute("data-state") === "dead" ? "Reconnect" : "Reach out"
+        expect([...card.querySelectorAll(APP_FILLED)].map((b) => b.textContent)).toEqual([expected])
+      }
     }
     expect([...states].sort()).toEqual(["alive", "dead", "litAgain", "weak"])
   })
@@ -171,7 +176,7 @@ describe("each dialog has at most one filled button (Req 30.4)", () => {
     renderApp(engine)
   }
   const card = (list: string, name: string) =>
-    within(screen.getByRole("region", { name: list })).getByRole("article", { name })
+    within(regionOrList(list)).getByRole("article", { name })
 
   it("Reach out: none before the pick (the choices are outlined), Done after it", () => {
     sample()
@@ -197,7 +202,7 @@ describe("each dialog has at most one filled button (Req 30.4)", () => {
     expect(filledIn(screen.getByRole("dialog", { name: "How the window went dark" }))).toEqual(["Reconnect"])
   })
 
-  it("add, edit and import: Save or Import; Remove and Reset confirmations: none (outlined in --rust)", () => {
+  it("add and edit: Save; Remove and Reset confirmations: none (outlined in --rust). Import people is gone (point 24)", () => {
     sample()
     fireEvent.click(screen.getByRole("button", { name: "Add a person" }))
     expect(filledIn(screen.getByRole("dialog", { name: "Add a person" }))).toEqual(["Save"])
@@ -207,21 +212,20 @@ describe("each dialog has at most one filled button (Req 30.4)", () => {
     expect(filledIn(screen.getByRole("dialog", { name: "Edit Grace Liu" }))).toEqual(["Save"])
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }))
 
-    fireEvent.click(screen.getByRole("button", { name: "Import people" }))
-    expect(filledIn(screen.getByRole("dialog", { name: "Import people" }))).toEqual(["Import"])
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }))
+    expect(screen.queryByRole("button", { name: "Import people" })).toBeNull()
 
     fireEvent.click(within(card("Fading", "Grace Liu")).getByRole("button", { name: "Remove" }))
     expect(filledIn(screen.getByRole("dialog", { name: "Remove Grace Liu? This cannot be undone." }))).toEqual([])
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }))
 
+    openSettings()
     fireEvent.click(screen.getByRole("button", { name: "Reset all data" }))
     expect(filledIn(screen.getByRole("dialog", { name: "Reset all data? This cannot be undone." }))).toEqual([])
   })
 
   it("the person dialog: the card's one primary, and a quiet Close", () => {
     sample()
-    fireEvent.click(screen.getByRole("button", { name: "Open Sunita Rao" }))
+    fireEvent.click(within(regionOrList("Still lit")).getByRole("button", { name: "Open Sunita Rao" }))
     expect(filledIn(screen.getByRole("dialog", { name: "Sunita Rao" }))).toEqual(["Reach out"])
   })
 

@@ -15,6 +15,7 @@ import type { Scheduler } from "./ticking"
 import { FakeStorage } from "./test/fake-storage"
 import { DAY_MS, T0, makeEngine } from "./test/fixtures"
 import { RecordingAdapter } from "./test/recording-adapter"
+import { listPanel } from "./test/ui"
 
 afterEach(cleanup)
 
@@ -113,12 +114,12 @@ describe("the first look starts only on the first sample load (Req 40.1, 40.2, 4
     frames.at(2_000)
     expect(offset()).toBe(15 * DAY_MS)
     expect(previewing(container)).toBe(true)
-    expect(screen.getByRole("button", { name: /back to today/i })).toBeTruthy()
+    expect(screen.getByRole("button", { name: /back to now/i })).toBeTruthy()
 
     frames.at(4_500)
     expect(offset()).toBe(30 * DAY_MS)
     // The street is shown 30 days ahead: Sunita, Meera and Dan have gone dark.
-    expect(screen.getByRole("region", { name: "Empty windows" }).querySelectorAll(".gh-card-name")).toHaveLength(7)
+    expect(listPanel("Empty windows").querySelectorAll(".gh-card-name")).toHaveLength(7)
 
     frames.at(5_000)
     expect(offset()).toBe(0)
@@ -157,11 +158,12 @@ describe("the first look starts only on the first sample load (Req 40.1, 40.2, 4
 
   it("does not move focus when it starts", () => {
     const { container } = setup()
-    const importButton = container.querySelector<HTMLButtonElement>('[data-action="import"]')!
-    importButton.focus()
+    const addButton = container.querySelector<HTMLButtonElement>('[data-action="add"]')!
+    addButton.focus()
     loadSample()
     expect(skipButton()).not.toBeNull()
-    expect(document.activeElement).toBe(importButton)
+    // The toolbar moves between the triage and the lists once there are people, so the button is a new element.
+    expect(document.activeElement).not.toBe(skipButton())
   })
 
   it("does not start with the flag set, as after a reload or a reset", () => {
@@ -211,8 +213,9 @@ describe("the first look starts only on the first sample load (Req 40.1, 40.2, 4
 
   it("waits for an open dialog to close", () => {
     const { container, frames } = setup()
-    fireEvent.click(container.querySelector('[data-action="import"]')!)
-    const dialog = container.querySelector("dialog")!
+    fireEvent.click(container.querySelector('[data-action="add"]')!)
+    // The Settings sheet stays mounted but closed; the open one is the dialog this click opened.
+    const dialog = container.querySelector<HTMLDialogElement>("dialog[open]")!
     loadSample()
     expect(skipButton()).toBeNull()
     expect(frames.pending()).toBe(0)
@@ -220,7 +223,7 @@ describe("the first look starts only on the first sample load (Req 40.1, 40.2, 4
       .getAllByRole("button")
       .find((b) => /cancel|close/i.test(b.textContent ?? ""))!
     fireEvent.click(close)
-    expect(container.querySelector("dialog")).toBeNull()
+    expect(container.querySelector("dialog[open]")).toBeNull()
     expect(skipButton()).not.toBeNull()
   })
 
@@ -320,9 +323,9 @@ describe("Skip and the other ways out (Req 40.7, 40.8)", () => {
     expectStopped(ctx)
   })
 
-  it("Back to today stops it", () => {
+  it("Back to now stops it", () => {
     const ctx = playing()
-    fireEvent.click(screen.getByRole("button", { name: /back to today/i }))
+    fireEvent.click(screen.getByRole("button", { name: /back to now/i }))
     expectStopped(ctx)
   })
 

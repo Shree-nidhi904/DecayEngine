@@ -11,6 +11,7 @@ import type { PersonPayload } from "../policy"
 import type { Scheduler } from "../ticking"
 import { FakeStorage } from "../test/fake-storage"
 import { T0, day, makeEngine } from "../test/fixtures"
+import { listPanel } from "../test/ui"
 
 afterEach(cleanup)
 
@@ -70,7 +71,7 @@ describe("PersonDialog", () => {
 
   it("Close closes it and focus returns to the Still lit row's Open button", () => {
     renderApp()
-    const still = screen.getByRole("region", { name: "Still lit" })
+    const still = listPanel("Still lit")
     const open = within(still).getByRole("button", { name: "Open Priya Raman" })
     activate(open)
     const dialog = screen.getByRole("dialog", { name: "Priya Raman" })

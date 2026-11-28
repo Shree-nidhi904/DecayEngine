@@ -145,34 +145,42 @@ describe("the time machine in the dock (Req 12.1, 26)", () => {
   })
 })
 
-describe("the preview banner (Req 12.5, 12.6)", () => {
+describe("the preview line and Back to now (Req 12.5, 12.6; feedback list, points 16 and 22)", () => {
   it("is not shown today", () => {
     const { dock } = setup()
     expect(within(dock).queryByRole("status")).toBeNull()
-    expect(within(dock).queryByRole("button", { name: "Back to today" })).toBeNull()
+    expect(within(dock).queryByRole("button", { name: "Back to now" })).toBeNull()
     expect(dock.hasAttribute("data-previewing")).toBe(false)
   })
 
-  it('says "Future preview · nothing is saved" while previewing, and Back to today sets the offset to 0', () => {
+  it('says "Future preview · nothing is saved" while previewing, and Back to now sets the offset to 0', () => {
     const { dock, onChange } = setup({ offsetMs: 30 * DAY_MS })
     expect(within(dock).getByRole("status").textContent).toContain("Future preview · nothing is saved")
     expect(dock.hasAttribute("data-previewing")).toBe(true)
-    fireEvent.click(within(dock).getByRole("button", { name: "Back to today" }))
+    fireEvent.click(within(dock).getByRole("button", { name: "Back to now" }))
     expect(onChange.mock.calls).toEqual([[0]])
   })
 
-  it("Back to today comes after the slider, the toggle, the markers, the jumps and Play in the Tab order", () => {
+  it("the Tab order follows the screen: slider, Coming up, Back to now, the jumps, Play, then the markers (Req 34.9, feedback list, point 8)", () => {
     const { dock } = setup({ offsetMs: 30 * DAY_MS, markers: sampleMarkers() })
     expand(dock)
     const order = [...dock.querySelectorAll<HTMLElement>("input, button")].map(
       (el) => el.getAttribute("aria-label") ?? el.textContent
     )
-    expect(order[0]).toBe("Days ahead")
-    // The toggle comes right after the slider (Req 34.9).
-    expect(order[1]).toBe("Coming up")
-    expect(order[order.length - 2]).toBe("Play the year")
-    expect(order[order.length - 1]).toBe("Back to today")
-    expect(order.indexOf("+30 days")).toBeGreaterThan(order.indexOf("Sunita Rao starts fading on 17 November"))
+    expect(order.slice(0, 8)).toEqual([
+      "Days ahead",
+      "Coming up",
+      "Back to now",
+      "+30 days",
+      "+90 days",
+      "+180 days",
+      "+1 year",
+      "Play the year",
+    ])
+    // Everything after the toggle is one of its markers.
+    const markers = order.slice(8)
+    expect(markers.length).toBe(sampleMarkers().length)
+    expect(markers.every((name) => /starts fading on|goes dark on/.test(name ?? ""))).toBe(true)
   })
 
   it("adds no filled button of its own: Play is the dock's one primary", () => {
@@ -271,13 +279,11 @@ describe("the collapsed dock (task L2; Req 34.1-34.5, 34.9, 34.11)", () => {
     expect(within(dock).getByRole("slider", { name: "Days ahead" })).toBeTruthy()
   })
 
-  it('shows the hint "Drag to look ahead" only while collapsed', () => {
+  it('has no "Drag to look ahead" hint line, collapsed or open', () => {
     const { dock } = setup()
-    expect(within(dock).getByText("Drag to look ahead")).toBeTruthy()
+    expect(within(dock).queryByText("Drag to look ahead")).toBeNull()
     expand(dock)
     expect(within(dock).queryByText("Drag to look ahead")).toBeNull()
-    fireEvent.click(toggleOf(dock))
-    expect(within(dock).getByText("Drag to look ahead")).toBeTruthy()
   })
 
   it("the toggle expands and collapses the dock, keeps its name, and points at the panel it opens", () => {
@@ -316,7 +322,7 @@ describe("the collapsed dock (task L2; Req 34.1-34.5, 34.9, 34.11)", () => {
     expect(within(dock).getByRole("status").textContent).toContain("Future preview · nothing is saved")
     fireEvent.click(toggleOf(dock))
     expect(within(dock).getByRole("status").textContent).toContain("Future preview · nothing is saved")
-    expect(within(dock).getByRole("button", { name: "Back to today" })).toBeTruthy()
+    expect(within(dock).getByRole("button", { name: "Back to now" })).toBeTruthy()
     expect(onChange).not.toHaveBeenCalled()
     expect((within(dock).getByRole("slider") as HTMLInputElement).value).toBe(String(30 * DAY_MS))
   })
@@ -352,10 +358,12 @@ describe("the collapsed dock (task L2; Req 34.1-34.5, 34.9, 34.11)", () => {
     expect(dock.hasAttribute("data-expanded")).toBe(false)
   })
 
-  it("the CSS hides the shell's jumps and Play while collapsed (source check: jsdom applies no CSS)", () => {
+  it("the CSS hides the shell's jumps, not Play, while collapsed (source check: jsdom applies no CSS)", () => {
     const dockCss = readText(join(SRC_DIR, "styles/dock.css"))
+    expect(dockCss).toMatch(/\.gh-dock:not\(\[data-expanded\]\) \.gh-dock-panel\s*\{\s*display:\s*none;/)
+    // Feedback list, point 22: Play stays on the collapsed bar; only the quiet jump buttons are hidden.
     expect(dockCss).toMatch(
-      /\.gh-dock:not\(\[data-expanded\]\) \.shell-time-machine-controls,\s*\.gh-dock:not\(\[data-expanded\]\) \.gh-dock-panel\s*\{\s*display:\s*none;/
+      /\.gh-dock:not\(\[data-expanded\]\) \.shell-time-machine-controls \.shell-button-quiet\s*\{\s*display:\s*none;/
     )
     // The toggle: at least 44 × 44px.
     expect(dockCss).toMatch(/\.gh-dock-toggle\s*\{[^}]*min-inline-size:\s*44px;[^}]*min-block-size:\s*44px;/)

@@ -2,7 +2,7 @@
 // sample street on a real engine, a fixed clock and a tick scheduler that
 // never fires. Moving the dock 30 days ahead must show engine.view(today +
 // 30 days) everywhere, set --age to 30 / 365, show the banner and block every
-// write control with its reason; "Back to today" undoes all of it.
+// write control with its reason; "Back to now" undoes all of it.
 //
 // The expected views are read from the same engine at the previewed time
 // and put through the app's own ordering and naming helpers, so this checks
@@ -23,6 +23,7 @@ import { cardText, heroText, previewBlockedText } from "./wording"
 import { FakeStorage } from "./test/fake-storage"
 import { DAY_MS, T0, makeEngine } from "./test/fixtures"
 import { RecordingAdapter } from "./test/recording-adapter"
+import { regionOrList, listPanel, openSettings } from "./test/ui"
 
 afterEach(cleanup)
 
@@ -49,7 +50,7 @@ function renderSample() {
   return { engine, adapter, storage, app: container.querySelector<HTMLElement>(".gh-app")! }
 }
 
-const region = (name: string) => screen.getByRole("region", { name })
+const region = regionOrList
 
 /** Moves the dock 30 days ahead with its jump. The dock starts collapsed (task L2), so it is expanded first, as a user would. */
 function jumpAhead() {
@@ -72,22 +73,40 @@ const streetNames = () =>
 
 const cardNames = (list: string) => [...region(list).querySelectorAll(".gh-card-name")].map((h) => h.textContent)
 
-/** Every write control on the page outside dialogs (design section 4.2). */
-function writeControls(): HTMLElement[] {
-  const found = [
-    ...document.querySelectorAll<HTMLElement>(
-      '.gh-toolbar button[data-action="add"], .gh-toolbar button[data-action="import"], ' +
-        '.gh-toolbar button[data-action="restore"], .gh-toolbar button[data-action="reset"], ' +
-        '.gh-lists button[data-action="reach-out"], .gh-lists button[data-action="reconnect"], ' +
-        '.gh-lists button[data-action="edit"], .gh-lists button[data-action="remove"], ' +
-        "[data-hero-action], .gh-triage button[data-action=\"five-minute\"]"
-    ),
-  ]
+/**
+ * Runs `check` on every write control on the page outside dialogs (design section 4.2), and returns how many there
+ * were: the toolbar's Add a person, Restore and Reset all data (in the Settings sheet, feedback list point 7), the
+ * hero's, Triage's, and every card's buttons. The lists show one at a time (point 23), so the Fading and Empty
+ * windows cards are checked while their own tab is showing.
+ */
+function eachWriteControl(check: (control: HTMLElement) => void): number {
+  // Restore and Reset can only take focus while their sheet is open.
+  if (document.querySelector("#gh-settings[open]") === null) openSettings()
+  let count = 0
+  const run = (selector: string) =>
+    document.querySelectorAll<HTMLElement>(selector).forEach((control) => {
+      count += 1
+      check(control)
+    })
+  run(
+    '.gh-toolbar button[data-action="add"], #gh-settings button[data-action="restore"], ' +
+      '#gh-settings button[data-action="reset"], [data-hero-action], .gh-triage button[data-action="five-minute"]'
+  )
   const start = within(document.querySelector<HTMLElement>(".gh-triage")!).queryByRole("button", {
     name: "Start reaching out",
   })
-  if (start !== null) found.push(start)
-  return found
+  if (start !== null) {
+    count += 1
+    check(start)
+  }
+  for (const list of ["Fading", "Empty windows"]) {
+    listPanel(list)
+    run(
+      '.gh-lists button[data-action="reach-out"], .gh-lists button[data-action="reconnect"], ' +
+        '.gh-lists button[data-action="edit"], .gh-lists button[data-action="remove"]'
+    )
+  }
+  return count
 }
 
 describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
@@ -111,7 +130,8 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
     )
     // Each card's freshness is the previewed one.
     const byName = new Map(ahead.map((p) => [p.payload.name, p] as const))
-    const cards = [...document.querySelectorAll<HTMLElement>(".gh-lists article.gh-card")]
+    // One list shows at a time (feedback list, point 23): collect the cards of Fading, then Empty windows.
+    const cards = ["Fading", "Empty windows"].flatMap((list) => [...listPanel(list).querySelectorAll<HTMLElement>("article.gh-card")])
     expect(cards.length).toBe(sortFading(ahead).length + sortEmpty(ahead).length)
     for (const card of cards) {
       const person = byName.get(card.querySelector(".gh-card-name")!.textContent!)!
@@ -125,7 +145,7 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
     expect(app.style.getPropertyValue("--age")).toBe((30 / 365).toFixed(4))
     const dock = document.querySelector<HTMLElement>(".gh-dock")!
     expect(within(dock).getByRole("status").textContent).toContain(previewBlockedText)
-    expect(within(dock).getByRole("button", { name: "Back to today" })).toBeTruthy()
+    expect(within(dock).getByRole("button", { name: "Back to now" })).toBeTruthy()
   })
 
   it('every write control is aria-disabled with "Future preview · nothing is saved", and stays focusable', () => {
@@ -133,17 +153,16 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
     const saves = adapter.saves
     jumpAhead()
 
-    const controls = writeControls()
-    // Toolbar (4), hero (1), Triage's start, and every card's write buttons.
-    expect(controls.length).toBeGreaterThanOrEqual(4 + 1 + 1 + 3 * 4)
-    for (const control of controls) {
+    const count = eachWriteControl((control) => {
       const label = control.textContent ?? ""
       expect(control.getAttribute("aria-disabled"), label).toBe("true")
       expect(control.getAttribute("title"), label).toBe(previewBlockedText)
       expect(control.hasAttribute("disabled"), label).toBe(false)
       control.focus()
       expect(document.activeElement, label).toBe(control)
-    }
+    })
+    // Add a person, Restore and Reset (3), hero (1), Triage's start, and every card's write buttons.
+    expect(count).toBeGreaterThanOrEqual(3 + 1 + 1 + 3 * 4)
     expect(adapter.saves).toBe(saves)
   })
 
@@ -161,7 +180,7 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
     expect(screen.queryByRole("dialog", { name: /^Reconnect with / })).toBeNull()
   })
 
-  it("the loss forecast line is gone while previewing and back with the same words after Back to today (task P4, Req 35.7)", () => {
+  it("the loss forecast line is gone while previewing and back with the same words after Back to now (task P4, Req 35.7)", () => {
     renderSample()
     const line = () => document.querySelector<HTMLElement>(".gh-hero-loss")
     // Today's sample street: Sunita starts to flicker at +2.4 days (design section 12.5).
@@ -173,7 +192,7 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
     expect(line()).toBeNull()
     expect(screen.getByText(heroText.previewEyebrow("14 Dec 2023"))).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to today" }))
+    fireEvent.click(screen.getByRole("button", { name: "Back to now" }))
 
     expect(line()!.textContent).toBe(today)
     expect(heroHeading().nextElementSibling).toBe(line())
@@ -197,23 +216,21 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
 
     // 15 minutes: Dan and Sam, neither at risk.
     fireEvent.click(within(triage()).getByRole("radio", { name: "15 min" }))
-    fireEvent.click(within(triage()).getByRole("button", { name: "Plan" }))
     expect(line()).toBeNull()
     fireEvent.click(within(triage()).getByRole("radio", { name: "30 min" }))
-    fireEvent.click(within(triage()).getByRole("button", { name: "Plan" }))
     expect(line()!.textContent).toBe(ONE)
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to today" }))
+    fireEvent.click(screen.getByRole("button", { name: "Back to now" }))
     expect(line()).toBeNull()
   })
 
-  it("Back to today shows today's street again and re-enables every write control", () => {
+  it("Back to now shows today's street again and re-enables every write control", () => {
     const { engine, app } = renderSample()
     const today = engine.view(T0)
     jumpAhead()
     expect(document.querySelectorAll('[aria-disabled="true"]').length).toBeGreaterThan(0)
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to today" }))
+    fireEvent.click(screen.getByRole("button", { name: "Back to now" }))
 
     expect(app.style.getPropertyValue("--age")).toBe("0.0000")
     expect(app.hasAttribute("data-previewing")).toBe(false)
@@ -221,9 +238,10 @@ describe("App: a preview 30 days ahead (Req 12.2, 12.5, 12.6)", () => {
     expect(heroHeading().textContent).toBe(heroMessage(today))
     expect(streetNames()).toEqual(today.map(windowName).sort())
     expect(document.querySelectorAll('[aria-disabled="true"]')).toHaveLength(0)
-    for (const control of writeControls()) {
+    const count = eachWriteControl((control) => {
       expect(control.hasAttribute("title"), control.textContent ?? "").toBe(false)
-    }
+    })
+    expect(count).toBeGreaterThanOrEqual(3 + 1 + 1 + 3 * 4)
     // Writes work again: the toolbar's Add opens its form.
     fireEvent.click(screen.getByRole("button", { name: "Add a person" }))
     expect(screen.getByRole("dialog", { name: "Add a person" })).toBeTruthy()

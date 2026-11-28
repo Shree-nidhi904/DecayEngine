@@ -18,6 +18,7 @@ import { BackupControls } from "./BackupControls"
 import { FakeStorage } from "../test/fake-storage"
 import { DAY_MS, T0, day, makeEngine } from "../test/fixtures"
 import { RecordingAdapter } from "../test/recording-adapter"
+import { openSettings } from "../test/ui"
 
 afterEach(cleanup)
 
@@ -238,6 +239,8 @@ describe("Restore in the App: confirm before replacing (Req 21.3, design section
   it("during a preview Restore is blocked with the reason, and Back up is not", () => {
     renderApp()
     fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
+    // Back up and Restore are in the Settings sheet (feedback list, point 7).
+    openSettings()
     const toolbar = screen.getByRole("button", { name: "Back up" }).parentElement!
     const restore = within(toolbar).getByRole("button", { name: "Restore" })
     expect(restore.getAttribute("aria-disabled")).toBe("true")

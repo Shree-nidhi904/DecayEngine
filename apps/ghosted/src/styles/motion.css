@@ -834,4 +834,33 @@
       opacity: 1;
     }
   }
+
+  /* Feedback list: the toast's bar (point 18) and the far windows (point 9). */
+  .gh-corner-toast-bar {
+    animation: gh-toast-bar 5s linear forwards;
+  }
+  .gh-far-window:not([data-off]) {
+    animation: gh-far-flicker 7s steps(1, end) infinite;
+  }
+  .gh-far-window:nth-child(3n) {
+    animation-delay: -2.5s;
+  }
+  @keyframes gh-toast-bar {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0);
+    }
+  }
+  @keyframes gh-far-flicker {
+    0%,
+    80%,
+    100% {
+      opacity: 0.6;
+    }
+    84% {
+      opacity: 0.2;
+    }
+  }
 }

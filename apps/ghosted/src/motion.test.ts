@@ -140,7 +140,10 @@ describe("no JavaScript motion in src/ (Req 25.1, design section 5.3)", () => {
     expect(sources.filter((rel) => FRAME.test(code(rel)) || SMOOTH.test(code(rel)))).toEqual([])
   })
 
-  it("no timer outside the settle tick, except the backup download's URL clean-up", () => {
+  /** The corner toast's closing timer (feedback list, point 18): one setTimeout that is cleared on unmount. */
+  const TOAST_TIMER = /const id = setTimeout\(run, ms\)\s*return \(\) => clearTimeout\(id\)/
+
+  it("no timer outside the settle tick, except the backup download's URL clean-up and the toast's closing timer", () => {
     const found: string[] = []
     for (const rel of sources) {
       if (rel === "ticking.ts") continue
@@ -149,6 +152,11 @@ describe("no JavaScript motion in src/ (Req 25.1, design section 5.3)", () => {
       if (rel === "components/BackupControls.tsx") {
         expect(timers, rel).toBe(1)
         expect(text, rel).toMatch(REVOKE_TIMER)
+        continue
+      }
+      if (rel === "components/Toast.tsx") {
+        expect(timers, rel).toBe(1)
+        expect(text, rel).toMatch(TOAST_TIMER)
         continue
       }
       if (timers > 0) found.push(`${rel}: ${timers}`)

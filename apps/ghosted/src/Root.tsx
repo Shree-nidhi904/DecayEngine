@@ -26,7 +26,6 @@ import { quarantineSnapshot } from "@decay-engine/persist"
 import { useOtherTabChange } from "./cross-tab"
 import { TabChangedBanner } from "./components/TabChangedBanner"
 import { UpdateBanner } from "./components/UpdateBanner"
-import { PersistStatus } from "./components/PersistStatus"
 import { BackupNudge } from "./components/BackupNudge"
 import { SyncPanel } from "./components/SyncPanel"
 import { useUpdateReady } from "./pwa"
@@ -46,7 +45,7 @@ export interface RootProps {
   /** Where a crash is reported. Defaults to console.error (ErrorBoundary). */
   log?: ErrorBoundaryProps["log"]
   /** Passed on to the App: clocks, schedulers and the rest (tests). */
-  appProps?: Omit<AppProps, "engine" | "storage" | "session" | "reload">
+  appProps?: Omit<AppProps, "engine" | "storage" | "session" | "reload" | "account">
 }
 
 const browserReload = () => globalThis.location.reload()
@@ -114,11 +113,26 @@ function LoadedApp({
       {otherTabChanged && <TabChangedBanner reload={reload} />}
       {applyUpdate !== null && <UpdateBanner apply={applyUpdate} />}
       <BackupNudge storage={storage} hasData={result.engine.view(Date.now()).length > 0} />
-      <App {...appProps} engine={result.engine} storage={storage} session={session} reload={reload} />
-      <div className="gh-footer">
-        <PersistStatus />
-        <SyncPanel storage={storage} reload={reload} engine={result.engine} />
-      </div>
+      <App
+        {...appProps}
+        engine={result.engine}
+        storage={storage}
+        session={session}
+        reload={reload}
+        // Feedback list, points 7 and 17: sync lives in the Profile sheet, which stays mounted, so it keeps syncing by itself.
+        account={(ctx) => (
+          <SyncPanel
+            storage={storage}
+            reload={reload}
+            engine={result.engine}
+            bare
+            active={ctx.active}
+            onAccount={ctx.onAccount}
+            onReturnedFromLink={ctx.onReturnedFromLink}
+            notConfigured={ctx.notConfigured}
+          />
+        )}
+      />
     </>
   )
 }

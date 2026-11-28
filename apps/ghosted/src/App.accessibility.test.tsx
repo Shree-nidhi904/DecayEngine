@@ -28,6 +28,7 @@ import { stripComments } from "./test/css"
 import { FakeStorage } from "./test/fake-storage"
 import { DAY_MS, T0, makeEngine } from "./test/fixtures"
 import { listFiles, readText, SRC_DIR } from "./test/source-files"
+import { regionOrList, openSettings } from "./test/ui"
 
 afterEach(() => {
   cleanup()
@@ -63,7 +64,7 @@ function jumpAhead90Days() {
   fireEvent.click(screen.getByRole("button", { name: "+90 days" }))
 }
 const heroHeading = () => within(screen.getByRole("main")).getAllByRole("heading", { level: 2 })[0]!
-const region = (name: string) => screen.getByRole("region", { name })
+const region = regionOrList
 const card = (list: string, name: string) => within(region(list)).getByRole("article", { name })
 
 /** The restore input is hidden on purpose: the Restore button opens it. */
@@ -84,7 +85,12 @@ function accessibleName(el: HTMLElement): string {
 }
 
 /** Every control on the page now. */
-const controls = () => [...document.querySelectorAll<HTMLElement>(CONTROLS)].filter((el) => !isHiddenFileInput(el))
+// A sheet that is closed stays mounted but is not on the screen, so its controls are not reachable until it opens
+// (the tests below open each sheet and check its controls too).
+const controls = () =>
+  [...document.querySelectorAll<HTMLElement>(CONTROLS)].filter(
+    (el) => !isHiddenFileInput(el) && el.closest("dialog:not([open])") === null
+  )
 
 function expectReachable(where: string) {
   const all = controls()
@@ -94,16 +100,25 @@ function expectReachable(where: string) {
     expect(["BUTTON", "SUMMARY", "INPUT", "SELECT", "TEXTAREA", "A"], what).toContain(el.tagName)
     expect(el.hasAttribute("disabled"), what).toBe(false)
     const tabindex = el.getAttribute("tabindex")
-    expect(tabindex === null || Number(tabindex) === 0, `${what} tabindex ${tabindex}`).toBe(true)
+    if (el.getAttribute("role") === "tab") {
+      // The list tabs (feedback list, point 23) use WAI-ARIA's roving tabindex: the selected tab is in the Tab
+      // order, the others are reached with the arrow keys. They still take focus.
+      const selected = el.getAttribute("aria-selected") === "true"
+      expect(tabindex, `${what} (tab, selected: ${selected})`).toBe(selected ? "0" : "-1")
+    } else {
+      expect(tabindex === null || Number(tabindex) === 0, `${what} tabindex ${tabindex}`).toBe(true)
+    }
     el.focus()
     expect(document.activeElement, what).toBe(el)
   }
   // Nothing anywhere jumps the Tab order (design section 9.5).
   const positive = [...document.querySelectorAll("[tabindex]")].filter((el) => Number(el.getAttribute("tabindex")) > 0)
   expect(positive).toEqual([])
-  // tabindex -1 only on content that dialogs and the section navigation focus, never on a control.
+  // tabindex -1 only on content that dialogs and the lists' headings focus, and on the tabs that are not selected.
+  const selectedTabs = document.querySelectorAll("[role='tab'][aria-selected='true']")
+  if (document.querySelector("[role='tab']") !== null) expect(selectedTabs, `${where}: one selected tab`).toHaveLength(1)
   for (const el of document.querySelectorAll("[tabindex='-1']")) {
-    if (isHiddenFileInput(el)) continue
+    if (isHiddenFileInput(el) || el.getAttribute("role") === "tab") continue
     expect(["H1", "H2", "H3", "P"], `${where}: tabindex -1 on ${el.tagName}`).toContain(el.tagName)
   }
 }
@@ -122,6 +137,22 @@ function expectNamed(where: string) {
     expect(labelled, `${where}: ${field.outerHTML.slice(0, 80)} has no label`).toBe(true)
   }
 }
+
+describe("App: the Settings and Profile sheets work from the keyboard (feedback list, point 7)", () => {
+  it.each([
+    ["Settings", openSettings, 5],
+    // With no sync server in this build the Profile holds its Close button and the activity list.
+    ["Profile", () => fireEvent.click(screen.getByRole("button", { name: /^(Sync|Profile)$/ })), 1],
+  ] as const)("%s: open, every control in it is native, named, focusable and in the Tab order", (name, open, atLeast) => {
+    renderSample()
+    open()
+    const sheet = screen.getByRole("dialog", { name })
+    expect(sheet.hasAttribute("open")).toBe(true)
+    expect(controls().filter((el) => sheet.contains(el)).length).toBeGreaterThanOrEqual(atLeast)
+    expectReachable(`${name} open`)
+    expectNamed(`${name} open`)
+  })
+})
 
 describe("App: every control works from the keyboard (Req 24.1)", () => {
   it("on today's street: native controls, all focusable, none out of the Tab order", () => {
@@ -240,15 +271,13 @@ describe("App: dialogs (Req 24.2, 24.3)", () => {
   type Opener = { name: string; opener: () => HTMLElement }
   const OPENERS: readonly Opener[] = [
     { name: "a Street window → the person dialog", opener: () => screen.getByRole("button", { name: /^Dan Okafor, flickering/ }) },
-    { name: "a Still lit row's Open → the person dialog", opener: () => screen.getByRole("button", { name: "Open Sunita Rao" }) },
+    { name: "a Still lit row's Open → the person dialog", opener: () => within(region("Still lit")).getByRole("button", { name: "Open Sunita Rao" }) },
     { name: "Reach out", opener: () => within(card("Fading", "Dan Okafor")).getByRole("button", { name: "Reach out" }) },
     { name: "Reconnect", opener: () => within(card("Empty windows", "Leo Marchetti")).getByRole("button", { name: "Reconnect" }) },
     { name: "Autopsy", opener: () => within(card("Empty windows", "Leo Marchetti")).getByRole("button", { name: "Autopsy" }) },
     { name: "Edit", opener: () => within(card("Fading", "Grace Liu")).getByRole("button", { name: "Edit" }) },
     { name: "Remove", opener: () => within(card("Fading", "Grace Liu")).getByRole("button", { name: "Remove" }) },
     { name: "Add a person", opener: () => screen.getByRole("button", { name: "Add a person" }) },
-    { name: "Import people", opener: () => screen.getByRole("button", { name: "Import people" }) },
-    { name: "Reset all data", opener: () => screen.getByRole("button", { name: "Reset all data" }) },
   ]
 
   it.each(OPENERS)("$name: opens as a modal with focus on its content, Escape closes it, focus returns", ({ opener }) => {
@@ -274,6 +303,34 @@ describe("App: dialogs (Req 24.2, 24.3)", () => {
     expect(document.activeElement).toBe(button)
   })
 
+  it("Import people is gone from the page (feedback list, point 24)", () => {
+    renderSample()
+    expect(screen.queryByRole("button", { name: "Import people" })).toBeNull()
+  })
+
+  it("Reset all data, in the Settings sheet: its confirmation opens as a modal with focus on its content, Escape closes only it, focus returns", () => {
+    renderSample()
+    openSettings()
+    const showModal = vi.spyOn(HTMLDialogElement.prototype, "showModal")
+    const button = screen.getByRole("button", { name: "Reset all data" })
+    button.focus()
+    fireEvent.click(button)
+
+    expect(showModal).toHaveBeenCalledTimes(1)
+    const confirm = screen.getByRole("dialog", { name: "Reset all data? This cannot be undone." })
+    const focused = document.activeElement as HTMLElement
+    expect(confirm.contains(focused)).toBe(true)
+    expect(["H2", "P"]).toContain(focused.tagName)
+    expect(focused.getAttribute("tabindex")).toBe("-1")
+
+    fireEvent.keyDown(focused, { key: "Escape" })
+
+    expect(screen.queryByRole("dialog", { name: "Reset all data? This cannot be undone." })).toBeNull()
+    // The sheet under it stays open, and focus is back on the button that asked.
+    expect(document.getElementById("gh-settings")!.hasAttribute("open")).toBe(true)
+    expect(document.activeElement).toBe(button)
+  })
+
   it("a dialog that removes its opener's card gives focus to the hero heading", () => {
     const engine = renderSample()
     const reconnect = within(card("Empty windows", "Leo Marchetti")).getByRole("button", { name: "Reconnect" })
@@ -296,6 +353,8 @@ describe("App: blocked write controls during a preview (Req 12.5)", () => {
   it("stay focusable, say why in their description, and do nothing when activated", () => {
     renderSample()
     jumpAhead90Days()
+    // Restore and Reset all data are in the Settings sheet; they take focus only while it is open.
+    openSettings()
     const blocked = [...document.querySelectorAll<HTMLElement>('[aria-disabled="true"]')]
     expect(blocked.length).toBeGreaterThan(10)
     for (const el of blocked) {
@@ -305,7 +364,8 @@ describe("App: blocked write controls during a preview (Req 12.5)", () => {
       expect(document.activeElement, what).toBe(el)
       expect(el.getAttribute("title"), what).toBe(previewBlockedText)
       fireEvent.click(el)
-      expect(openDialog(), what).toBeNull()
+      // The blocked control opened nothing: the only open dialog is the Settings sheet the test opened.
+      expect([...document.querySelectorAll("dialog[open]")].map((d) => d.id), what).toEqual(["gh-settings"])
     }
   })
 })

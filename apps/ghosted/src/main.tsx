@@ -29,6 +29,11 @@ if (rootElement === null) {
   throw new Error('Ghosted: no element with id "root" found in index.html.')
 }
 
+// Feedback list, point 10: the street always opens at the top, not where the
+// last visit left off. The browser's own scroll restoring is turned off.
+if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual"
+window.scrollTo(0, 0)
+
 /** window.localStorage, or null when the browser blocks it (reading it can throw). */
 function browserStorage(): FlagStorage | null {
   try {

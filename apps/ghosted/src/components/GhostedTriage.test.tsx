@@ -111,12 +111,12 @@ describe("GhostedTriage: the picks (Req 9.3, 16.1)", () => {
     expect(onStartSession.mock.calls[0]![0].map((c) => c.item.payload.name)).toEqual(["Dan Okafor", "Meera Joshi"])
   })
 
-  it("the filled buttons are the shell's Run and Start; the 5-minute action is quiet (amended Req 30.4)", () => {
+  it("the one filled button is the shell's Start (the panel runs by itself); the 5-minute action is quiet (amended Req 30.4)", () => {
     const { container } = setup()
     expect([...container.querySelectorAll(".shell-button-primary")].map((b) => b.textContent)).toEqual([
-      "Plan",
       "Start reaching out",
     ])
+    expect(screen.queryByRole("button", { name: "Plan" })).toBeNull()
     expect(container.querySelectorAll(".gh-button-primary")).toHaveLength(0)
     expect(fiveMinuteButton()!.className).toBe("gh-button")
   })
@@ -216,7 +216,6 @@ describe("GhostedTriage: what this session saves (task P5; Req 36.1, 36.6, 36.8,
 
   function choose(minutes: number) {
     fireEvent.click(screen.getByRole("radio", { name: `${minutes} min` }))
-    fireEvent.click(screen.getByRole("button", { name: "Plan" }))
   }
 
   it("at 30 minutes (Ada and Cy) the line has the exact words, between the picks and Start reaching out", () => {

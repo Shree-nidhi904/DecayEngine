@@ -52,9 +52,20 @@
 // to its opener; when the opener is gone (a removed person's card), focus
 // goes to the hero heading (Req 24.3).
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react"
 import { MAX_FORECAST_HORIZON_MS } from "@decay-engine/engine"
-import type { FrameScheduler } from "@decay-engine/shell"
+import { GuidedTour, type FrameScheduler } from "@decay-engine/shell"
+import { ghostedShellTheme } from "./theme"
+import { helpTourText } from "./wording"
 import { applyBackup, type RestoreCheck } from "./backup"
 import { AddEditPersonDialog } from "./components/AddEditPersonDialog"
 import { BackupControls } from "./components/BackupControls"
@@ -62,8 +73,14 @@ import { ConfirmDialog } from "./components/ConfirmDialog"
 import { ForecastControl } from "./components/ForecastControl"
 import { GhostedTriage, type GhostedCandidate } from "./components/GhostedTriage"
 import { Hero } from "./components/Hero"
-import { ImportDialog } from "./components/ImportDialog"
 import { MoonDock } from "./components/MoonDock"
+import { TopBar } from "./components/TopBar"
+import { Sheet } from "./components/Sheet"
+import { ActivityLog } from "./components/ActivityLog"
+import { Toast } from "./components/Toast"
+import { FarTown } from "./components/FarTown"
+import "./styles/sheet.css"
+import { readTendId, clearTendId } from "./tend-link"
 import type { PersonActions } from "./components/PersonCard"
 import { NeonSign } from "./components/NeonSign"
 import { PersonAutopsy } from "./components/PersonAutopsy"
@@ -74,7 +91,7 @@ import { ReconnectDialog } from "./components/ReconnectDialog"
 import { ResetData } from "./components/ResetData"
 import { Street } from "./components/Street"
 import { Splash } from "./components/Splash"
-import { SectionNav, ThreeLists, type ListSection } from "./components/ThreeLists"
+import { ListTabs, ThreeLists, firstOpenTab, type ListSection } from "./components/ThreeLists"
 import type { GhostedEngine } from "./engine-instance"
 import { hasOwnPeople, markOwnPeople, markStarted, needsFirstRun, resetAllData, type FlagStorage } from "./first-run"
 import { lastLoggedContactAt, stateCounts, type SectionId, type StreetView } from "./lists"
@@ -91,12 +108,13 @@ import {
   appText,
   backupText,
   firstLookText,
-  importDialogText,
   personFormText,
   previewBlockedText,
   removeText,
   sessionText,
+  tendLinkText,
   toolbarText,
+  topBarText,
 } from "./wording"
 import { runGatedWrite, type WriteOutcome } from "./write-guard"
 import { LiveToast } from "./components/LiveToast"
@@ -167,6 +185,28 @@ export interface AppProps {
    * that load the sample are unchanged.
    */
   firstLook?: boolean
+  /**
+   * The Profile sheet's sync part (feedback list, points 7 and 17). Root passes
+   * the SyncPanel; omitted (tests), the Profile shows the activity history only.
+   */
+  account?: (ctx: AccountContext) => ReactNode
+  /**
+   * The person a Life Triage link asks for (`?tend=<id>`, feedback list, point 6).
+   * Defaults to the address; tests pass an id or null.
+   */
+  tendId?: string | null
+}
+
+/** What the App tells the sync part of the Profile. */
+export type AccountContext = {
+  /** Whether the Profile sheet is open. */
+  active: boolean
+  /** Who is signed in, or null. The top-right button reads "Profile" once someone is. */
+  onAccount: (email: string | null) => void
+  /** The page came back from a sign-in link: the Profile opens. */
+  onReturnedFromLink: () => void
+  /** Shown in the Profile when the build has no sync server. */
+  notConfigured: string
 }
 
 /** The one dialog open at a time, if any (design section 4.3). */
@@ -226,6 +266,8 @@ export function App({
   notifications,
   focusWindow = focusThisWindow,
   firstLook = false,
+  account,
+  tendId: tendIdProp,
 }: AppProps) {
   // The clock never runs behind the newest saved event (clock-guard.ts): the engine refuses a
   // write dated before one it holds, so a device clock that moved back would crash every tick.
@@ -296,6 +338,18 @@ export function App({
   const doomValue = useMemo(() => doom(people), [people])
   const band = doomBand(doomValue)
   const formatDate = useMemo(() => makeDateFormatter(timeZone), [timeZone])
+  // The activity history's times: "14 Nov 2023, 18:05".
+  const formatTime = useMemo(() => {
+    const format = new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      ...(timeZone === undefined ? {} : { timeZone }),
+    })
+    return (ms: number) => format.format(ms)
+  }, [timeZone])
   // The dock's markers mark days ahead of today, so they are read at the real
   // time and stay put while the slider moves (design section 4.2).
   const markers = useMemo(
@@ -327,13 +381,24 @@ export function App({
     () => ({ fading: fadingHeading, empty: emptyHeading, still: stillHeading }),
     []
   )
-  const goTo = useCallback(
-    (section: SectionId) => {
-      if (section === "street") streetHeading.current?.focus()
-      else headingRefs[section as ListSection].current?.focus()
-    },
-    [headingRefs]
-  )
+  // Feedback list, point 23: one list at a time, chosen by the tabs. It starts on
+  // the first list with someone in it (Fading, then Empty windows, then Still lit).
+  const [tab, setTab] = useState<ListSection>(() => firstOpenTab(counts))
+  // A list asked for by the hero ("See the empty windows") is shown first, then its heading takes focus.
+  const [focusTab, setFocusTab] = useState<ListSection | null>(null)
+  useEffect(() => {
+    if (focusTab === null) return
+    headingRefs[focusTab].current?.focus()
+    setFocusTab(null)
+  }, [focusTab, headingRefs])
+  const goTo = useCallback((section: SectionId) => {
+    if (section === "street") {
+      streetHeading.current?.focus()
+      return
+    }
+    setTab(section as ListSection)
+    setFocusTab(section as ListSection)
+  }, [])
 
   const actions: PersonActions = useMemo(
     () => ({
@@ -352,6 +417,22 @@ export function App({
     (text: string, problem = false, toast = false) =>
       setAnnouncement((a) => ({ id: (a?.id ?? 0) + 1, text, problem, toast })),
     []
+  )
+  // Feedback list, point 18: a message such as "Backup saved" shows as a small
+  // toast in the corner for 5 seconds, then goes (Toast.tsx). A storage problem
+  // stays until dismissed. The live region still reads every message.
+  const [cornerDismissed, setCornerDismissed] = useState<number | null>(null)
+  const corner =
+    announcement !== null && !announcement.toast && announcement.id !== cornerDismissed ? announcement : null
+
+  // The two sheets (feedback list, points 7, 17 and 21) and who is signed in.
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [signedInAs, setSignedInAs] = useState<string | null>(null)
+  const openProfile = useCallback(() => setProfileOpen(true), [])
+  const accountContext: AccountContext = useMemo(
+    () => ({ active: profileOpen, onAccount: setSignedInAs, onReturnedFromLink: openProfile, notConfigured: topBarText.syncOff }),
+    [profileOpen, openProfile]
   )
 
   /**
@@ -471,6 +552,24 @@ export function App({
     if (splashClosed) heroHeading.current?.focus()
   }, [splashClosed])
 
+  // A Life Triage link (`?tend=<id>`, feedback list, point 6): once the splash is
+  // gone, the person's list is shown and Reach out opens (Reconnect for an empty
+  // window). Someone not on this device is said so. The id leaves the address.
+  const [tendId] = useState(() => (tendIdProp !== undefined ? tendIdProp : readTendId(window.location.search)))
+  const tendHandled = useRef(false)
+  useEffect(() => {
+    if (tendId === null || tendHandled.current || showSplash) return
+    tendHandled.current = true
+    if (tendIdProp === undefined) clearTendId(window)
+    const person = engine.view(clock()).find((p) => p.id === tendId)
+    if (person === undefined) {
+      announce(tendLinkText.missing)
+      return
+    }
+    setTab(person.state === "dead" ? "empty" : person.state === "weak" ? "fading" : "still")
+    setOpenDialog(person.state === "dead" ? { kind: "reconnect", person } : { kind: "reach-out", person })
+  }, [tendId, tendIdProp, showSplash, engine, clock, announce])
+
   // Remove only after the confirmation, through the gate (Req 13.5, 12.5).
   const confirmRemove = useCallback(
     (person: Person) => {
@@ -540,22 +639,8 @@ export function App({
     [engine, editPerson, version]
   )
 
-  // Import (task 5.3, Req 21.5, 21.6). The dialog adds each person through its
-  // own gate and keeps a storage problem inside itself, with the lines not yet
-  // added. After any add the people are the user's own (Req 15.2). The flag
-  // goes through the gate too; a storage problem with it is only announced,
-  // so an import that stopped part-way keeps its dialog and text open.
-  const openImport = useCallback(() => setOpenDialog({ kind: "import" }), [])
-  const peopleImported = useCallback(
-    (added: number) => {
-      bumpVersion()
-      const outcome = runGatedWrite(previewingRef.current, () => markOwnPeople(storage), (problem) =>
-        announce(storageProblemText[problem], true)
-      )
-      if (outcome === "saved") announce(importDialogText.imported(added))
-    },
-    [bumpVersion, storage, announce]
-  )
+  // Feedback list, point 24: "Import people" is gone from the page; "Add a person" is the one way in.
+  // (ImportDialog.tsx and its tests stay in the repo, unused, in case the import comes back.)
 
   // Restore (task 5.3, Req 21.2, 21.3, design section 9.3): BackupControls
   // checked the file; this asks first, then replaces the stored street through
@@ -835,6 +920,23 @@ export function App({
   })
   const picked = useMemo(() => (session === null ? undefined : new Set(session.ids)), [session])
 
+  // "Add a person" sits between the triage and the lists (as "Add a fact" does in Study Dungeon).
+  const toolbar = (
+        <div className="gh-toolbar">
+          {/* Quiet: the hero holds the page's filled "Add a person" on an empty street. */}
+          <button
+            type="button"
+            className="gh-button"
+            data-action="add"
+            aria-disabled={blocked !== undefined ? "true" : undefined}
+            title={blocked}
+            onClick={blocked !== undefined ? undefined : openAdd}
+          >
+            {toolbarText.addPerson}
+          </button>
+        </div>
+  )
+
   return (
     <div
       ref={appRef}
@@ -847,6 +949,8 @@ export function App({
       data-seance={session !== null ? "" : undefined}
       onPointerMove={onPointerMove}
     >
+      {/* Feedback list, points 9 and 19: stars, and far houses in the side margins. */}
+      <FarTown />
       {/* The street dims as the dock looks ahead (dock.css reads --age). */}
       <div className="gh-age-dim" aria-hidden="true" />
       {/* Haunt pass: the edges darken with doom, and lightning strikes (haunt.css, motion.css). */}
@@ -854,6 +958,7 @@ export function App({
       <Lightning strike={strike} onDone={clearStrike} />
       {showSplash && <Splash onDone={closeSplash} />}
       <header className="gh-header">
+        <TopBar onSettings={() => setSettingsOpen(true)} onProfile={openProfile} signedInAs={signedInAs} />
         <NeonSign title={appText.name} tagline={appText.tagline} />
       </header>
       <main className="gh-main">
@@ -866,8 +971,9 @@ export function App({
           data-problem={announcement?.problem === true ? "" : undefined}
         >
           {announcement !== null && (
-            // A live-change message is shown by the toast in the dock, so here it is only read (task L3).
-            <p key={announcement.id} className={announcement.toast ? "gh-visually-hidden" : undefined}>
+            // Only read here: a live-change message shows in the dock's toast (task L3), and every
+            // other message in the corner toast (feedback list, point 18).
+            <p key={announcement.id} className="gh-visually-hidden">
               {announcement.text}
             </p>
           )}
@@ -897,7 +1003,6 @@ export function App({
               crossed={crossed}
               picked={picked}
             />
-            <SectionNav counts={counts} onGoTo={goTo} />
             <GhostedTriage
               engine={engine}
               now={now}
@@ -906,6 +1011,9 @@ export function App({
               onStartSession={startSession}
               onReachOut={actions.onReachOut}
             />
+            {toolbar}
+            {/* Feedback list, point 23: one list at a time, under its tab. */}
+            <ListTabs counts={counts} selected={tab} onSelect={setTab} />
             <ThreeLists
               view={view}
               engine={engine}
@@ -916,10 +1024,17 @@ export function App({
               formatDate={formatDate}
               justChanged={justChanged}
               onReacted={cardReacted}
+              selected={tab}
             />
             <ForecastControl engine={engine} now={now} version={version} formatDate={formatDate} />
           </>
         )}
+        {people.length === 0 && toolbar}
+        <PrivacyLine ownPeople={ownPeople} />
+      </main>
+
+      {/* Feedback list, points 7 and 21: every setting in one sheet, opened from the top right. */}
+      <Sheet id="gh-settings" open={settingsOpen} onClose={() => setSettingsOpen(false)} title={topBarText.settingsTitle}>
         <HauntSettings
           spooky={spooky}
           spookySaved={spookySaved}
@@ -928,28 +1043,15 @@ export function App({
           onSound={changeSound}
           share={people.length > 0 ? <ShareCard people={engine.view(realNow)} announce={announcePlain} /> : undefined}
         />
-        <div className="gh-toolbar">
-          {/* Quiet: the hero holds the page's filled "Add a person" on an empty street. */}
-          <button
-            type="button"
-            className="gh-button"
-            data-action="add"
-            aria-disabled={blocked !== undefined ? "true" : undefined}
-            title={blocked}
-            onClick={blocked !== undefined ? undefined : openAdd}
-          >
-            {toolbarText.addPerson}
-          </button>
-          <button
-            type="button"
-            className="gh-button"
-            data-action="import"
-            aria-disabled={blocked !== undefined ? "true" : undefined}
-            title={blocked}
-            onClick={blocked !== undefined ? undefined : openImport}
-          >
-            {importDialogText.open}
-          </button>
+        {/* Task L5: a preference, so it works in a preview too (Req 39.12). */}
+        <NotifySetting
+          api={notifyApi}
+          enabled={notifyOn}
+          saved={notifySaved}
+          onChange={changeNotify}
+          announce={announcePlain}
+        />
+        <div className="gh-sheet-row">
           <BackupControls
             storage={storage}
             announce={announce}
@@ -960,16 +1062,21 @@ export function App({
           />
           <ResetData onConfirm={confirmReset} blocked={blocked} />
         </div>
-        {/* Task L5: a preference, so it works in a preview too (Req 39.12). */}
-        <NotifySetting
-          api={notifyApi}
-          enabled={notifyOn}
-          saved={notifySaved}
-          onChange={changeNotify}
-          announce={announcePlain}
+      </Sheet>
+      {/* Feedback list, point 17: sync, then what changed when (every synced device's changes). */}
+      <Sheet id="gh-profile" open={profileOpen} onClose={() => setProfileOpen(false)} title={topBarText.profileTitle}>
+        {account?.(accountContext)}
+        {profileOpen && <ActivityLog engine={engine} now={realNow} formatTime={formatTime} />}
+      </Sheet>
+      {corner !== null && (
+        <Toast
+          key={corner.id}
+          text={corner.text}
+          problem={corner.problem}
+          onDone={() => setCornerDismissed(corner.id)}
         />
-        <PrivacyLine ownPeople={ownPeople} />
-      </main>
+      )}
+      <GuidedTour steps={helpTourText.steps} theme={ghostedShellTheme} wording={helpTourText.wording} />
       <MoonDock
         today={realNow}
         offsetMs={previewOffsetMs}
@@ -1000,16 +1107,6 @@ export function App({
         firstLook={firstLookControl}
       />
 
-      {openDialog?.kind === "import" && (
-        <ImportDialog
-          engine={engine}
-          clock={clock}
-          timeZone={timeZone}
-          previewing={isPreviewing}
-          onImported={peopleImported}
-          onClose={closeDialog}
-        />
-      )}
       {openDialog?.kind === "restore" && (
         <ConfirmDialog
           message={backupText.confirm(openDialog.check.people)}

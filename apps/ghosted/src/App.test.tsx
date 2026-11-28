@@ -16,6 +16,7 @@ import type { PersonPayload } from "./policy"
 import { FakeStorage } from "./test/fake-storage"
 import { DAY_MS, MINUTE_MS, T0, day, makeEngine } from "./test/fixtures"
 import { RecordingAdapter } from "./test/recording-adapter"
+import { listPanel } from "./test/ui"
 
 afterEach(cleanup)
 
@@ -37,57 +38,92 @@ function renderApp() {
   return engine
 }
 
-describe("App: section navigation", () => {
-  it("each list entry moves focus to that list's heading", () => {
+describe("App: the list tabs (feedback list, point 23)", () => {
+  const tabNamed = (list: string) => screen.getByRole("tab", { name: new RegExp(`^${list}`) })
+  const panels = () => screen.getAllByRole("tabpanel")
+
+  it("there is no section navigation and no Street button any more", () => {
     renderApp()
-    const nav = screen.getByRole("navigation", { name: "Sections" })
-    const cases = [
-      ["Fading1", "Fading"],
-      ["Empty windows1", "Empty windows"],
-      ["Still lit2", "Still lit"],
-    ] as const
-    for (const [entry, heading] of cases) {
-      const button = within(nav).getAllByRole("button").find((b) => b.textContent === entry)!
-      fireEvent.click(button)
-      expect(document.activeElement).toBe(screen.getByRole("heading", { level: 2, name: heading }))
-    }
+    expect(screen.queryByRole("navigation", { name: "Sections" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Street" })).toBeNull()
   })
 
-  it("the nav comes before the lists, and the lists show the engine's people at now", () => {
+  it("starts on the first list with someone in it, and shows that list alone", () => {
     renderApp()
-    const main = screen.getByRole("main")
-    const nav = within(main).getByRole("navigation", { name: "Sections" })
-    const fading = within(main).getByRole("region", { name: "Fading" })
-    expect(nav.compareDocumentPosition(fading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // The sample at T0: Dan is fading, so Fading is first.
+    expect(tabNamed("Fading").getAttribute("aria-selected")).toBe("true")
+    expect(tabNamed("Empty windows").getAttribute("aria-selected")).toBe("false")
+    expect(panels()).toHaveLength(1)
+    expect(panels()[0]!.getAttribute("aria-labelledby")).toBe(within(panels()[0]!).getByRole("heading", { level: 2 }).id)
+    expect(within(panels()[0]!).getByRole("heading", { level: 2, name: "Fading" })).toBeTruthy()
+  })
+
+  it("each tab shows its own list, with the engine's people at now, and nobody else's", () => {
+    renderApp()
+    const fading = listPanel("Fading")
     expect(within(fading).getByRole("heading", { level: 3, name: "Dan Okafor" })).toBeTruthy()
-    const empty = within(main).getByRole("region", { name: "Empty windows" })
+    const empty = listPanel("Empty windows")
     expect(within(empty).getByRole("heading", { level: 3, name: "Leo Marchetti" })).toBeTruthy()
-    const still = within(main).getByRole("region", { name: "Still lit" })
+    expect(screen.queryByRole("heading", { level: 3, name: "Dan Okafor" })).toBeNull()
+    const still = listPanel("Still lit")
     expect(within(still).getAllByRole("button", { name: /^Open / }).map((b) => b.textContent)).toEqual([
       "Open Sunita Rao",
       "Open Priya Raman",
     ])
+    expect(screen.queryByRole("heading", { level: 3, name: "Leo Marchetti" })).toBeNull()
   })
 
-  it("main shows the hero, then the Street, the nav, Triage and the lists (task L1, Req 33.1)", () => {
+  it("each tab says how many people are in its list", () => {
+    renderApp()
+    expect(tabNamed("Fading").textContent).toContain("1")
+    expect(tabNamed("Empty windows").textContent).toContain("1")
+    expect(tabNamed("Still lit").textContent).toContain("2")
+  })
+
+  it("arrow keys move between the tabs and select them", () => {
+    renderApp()
+    fireEvent.keyDown(tabNamed("Fading"), { key: "ArrowRight" })
+    expect(tabNamed("Empty windows").getAttribute("aria-selected")).toBe("true")
+    expect(document.activeElement).toBe(tabNamed("Empty windows"))
+    fireEvent.keyDown(tabNamed("Empty windows"), { key: "End" })
+    expect(tabNamed("Still lit").getAttribute("aria-selected")).toBe("true")
+    fireEvent.keyDown(tabNamed("Still lit"), { key: "ArrowRight" })
+    expect(tabNamed("Fading").getAttribute("aria-selected")).toBe("true")
+  })
+
+  it("main shows the hero, then the Street, Triage, the tabs and the list (task L1, Req 33.1)", () => {
     renderApp()
     const main = screen.getByRole("main")
     const hero = main.querySelector(".gh-hero")!
     const street = within(main).getByRole("region", { name: "The Street" })
-    const nav = within(main).getByRole("navigation", { name: "Sections" })
     const triage = main.querySelector(".gh-triage")!
-    const fading = within(main).getByRole("region", { name: "Fading" })
-    const parts = [hero, street, nav, triage, fading]
+    const tabs = within(main).getByRole("tablist")
+    const fading = listPanel("Fading")
+    const parts = [hero, street, triage, tabs, fading]
     for (const part of parts) expect(part).not.toBeNull()
     // The Street is the hero's next sibling: nothing sits between them.
     expect(hero.nextElementSibling).toBe(street)
     for (let i = 1; i < parts.length; i++) {
       expect(parts[i - 1]!.compareDocumentPosition(parts[i]!) & Node.DOCUMENT_POSITION_FOLLOWING, `part ${i}`).toBeTruthy()
     }
-    // "Street" in the nav still moves focus to the Street's heading, now above it.
-    fireEvent.click(within(nav).getAllByRole("button").find((b) => b.textContent === "Street")!)
-    expect(document.activeElement).toBe(within(street).getByRole("heading", { level: 2, name: "The Street" }))
   })
+
+  it("the hero's \"See the empty windows\" switches to that tab and focuses its heading", () => {
+    const engine = makeEngine()
+    for (const [name, last] of [["Leo Marchetti", day(-90)], ["Priya Raman", day(-12)]] as const) {
+      engine.addItem({ payload: { name, relationship: "", rhythmDays: 30, lastContactAt: last }, importance: 2, costMinutes: 10 }, T0)
+    }
+    render(
+      <App engine={engine} storage={new FakeStorage()} session={null} clock={() => T0} tickScheduler={idleScheduler} timeZone="UTC" />
+    )
+    // Nobody is fading, so the first open list is Empty windows; show another, then ask the hero for it.
+    fireEvent.click(tabNamed("Still lit"))
+    expect(tabNamed("Still lit").getAttribute("aria-selected")).toBe("true")
+    fireEvent.click(screen.getByRole("button", { name: "See the empty windows" }))
+    expect(tabNamed("Empty windows").getAttribute("aria-selected")).toBe("true")
+    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 2, name: "Empty windows" }))
+  })
+
   it("keeps the page's one h1", () => {
     renderApp()
     expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["Ghosted"])
@@ -101,7 +137,7 @@ describe("App: removing a person (task 4.6; Req 13.5, 24.2, 24.3)", () => {
 
   /** Focuses and activates Dan's Remove button in the Fading list. */
   function openRemove() {
-    const fading = screen.getByRole("region", { name: "Fading" })
+    const fading = listPanel("Fading")
     const remove = within(fading).getByRole("button", { name: "Remove" })
     remove.focus()
     fireEvent.click(remove)
@@ -153,7 +189,7 @@ describe("App: editing a person (task 4.10; Req 17.4, 17.6)", () => {
     // Priya: last contact 12 days ago with a 30-day rhythm, freshness 86.67.
     expect(screen.getByRole("button", { name: "Priya Raman, lit, freshness 86" })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Open Priya Raman" }))
+    fireEvent.click(within(listPanel("Still lit")).getByRole("button", { name: "Open Priya Raman" }))
     const card = screen.getByRole("dialog", { name: "Priya Raman" })
     fireEvent.click(within(card).getByRole("button", { name: "Edit" }))
     const form = screen.getByRole("dialog", { name: "Edit Priya Raman" })
@@ -181,7 +217,7 @@ describe("App: editing a person (task 4.10; Req 17.4, 17.6)", () => {
 describe("App: autopsy, then reconnect (task 4.11; Req 19.1, 19.5, 24.3)", () => {
   it("Autopsy on a dark card opens the autopsy; Reconnect replaces it with the reconnect dialog", () => {
     const engine = renderApp()
-    const empty = screen.getByRole("region", { name: "Empty windows" })
+    const empty = listPanel("Empty windows")
     const autopsy = within(empty).getByRole("button", { name: "Autopsy" })
     autopsy.focus()
     fireEvent.click(autopsy)
@@ -208,7 +244,7 @@ describe("App: autopsy, then reconnect (task 4.11; Req 19.1, 19.5, 24.3)", () =>
 
   it("Escape closes the autopsy and gives focus back to the Autopsy button", () => {
     renderApp()
-    const autopsy = within(screen.getByRole("region", { name: "Empty windows" })).getByRole("button", { name: "Autopsy" })
+    const autopsy = within(listPanel("Empty windows")).getByRole("button", { name: "Autopsy" })
     autopsy.focus()
     fireEvent.click(autopsy)
     fireEvent.keyDown(document.activeElement!, { key: "Escape" })
@@ -235,7 +271,7 @@ describe("App: the moon-clock dock (task 5.1; Req 12.1, 12.2, 12.5, 12.6)", () =
     expect(main.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it("a jump previews that day: --age is D / 365, the banner shows, writes are blocked; Back to today undoes it", () => {
+  it("a jump previews that day: --age is D / 365, the banner shows, writes are blocked; Back to now undoes it", () => {
     const engine = renderApp()
     const tick = vi.spyOn(engine, "tick")
     expect(appRoot().style.getPropertyValue("--age")).toBe("0.0000")
@@ -252,18 +288,17 @@ describe("App: the moon-clock dock (task 5.1; Req 12.1, 12.2, 12.5, 12.6)", () =
     expect(screen.getByText("Future preview · 12 Feb 2024")).toBeTruthy()
     expect(screen.getByRole("button", { name: /^Priya Raman, boarded up/ })).toBeTruthy()
     expect(toolbarAdd().getAttribute("aria-disabled")).toBe("true")
-    expect(screen.getByRole("button", { name: "Import people" }).getAttribute("aria-disabled")).toBe("true")
     // No settle tick while previewing.
     expect(tick).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to today" }))
+    fireEvent.click(screen.getByRole("button", { name: "Back to now" }))
 
     expect(appRoot().style.getPropertyValue("--age")).toBe("0.0000")
     expect(appRoot().hasAttribute("data-previewing")).toBe(false)
-    expect(screen.queryByRole("button", { name: "Back to today" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Back to now" })).toBeNull()
     expect(toolbarAdd().hasAttribute("aria-disabled")).toBe(false)
     expect(screen.getByRole("button", { name: "Priya Raman, lit, freshness 86" })).toBeTruthy()
-    // Back to today ticks straight away, at the real time.
+    // Back to now ticks straight away, at the real time.
     expect(tick).toHaveBeenCalledWith(T0)
   })
 
@@ -309,7 +344,7 @@ describe("App: the moon-clock dock (task 5.1; Req 12.1, 12.2, 12.5, 12.6)", () =
     expect(appRoot().hasAttribute("data-previewing")).toBe(true)
     const dock = document.querySelector<HTMLElement>(".gh-dock")!
     expect(within(dock).getByRole("status").textContent).toContain("Future preview · nothing is saved")
-    expect(within(dock).getByRole("button", { name: "Back to today" })).toBeTruthy()
+    expect(within(dock).getByRole("button", { name: "Back to now" })).toBeTruthy()
     expect(toolbarAdd().getAttribute("aria-disabled")).toBe("true")
     expect(tick).not.toHaveBeenCalled()
 
@@ -350,7 +385,7 @@ describe("App: the hero's loss forecast line (task P4; Req 35.1, 35.9, design se
     expect(heroTitle().nextElementSibling).toBe(line())
 
     // A call at T0 sets her last contact to T0: she starts to flicker at +8.4 days, outside the 7 days.
-    fireEvent.click(screen.getByRole("button", { name: "Open Sunita Rao" }))
+    fireEvent.click(within(listPanel("Still lit")).getByRole("button", { name: "Open Sunita Rao" }))
     fireEvent.click(within(screen.getByRole("dialog", { name: "Sunita Rao" })).getByRole("button", { name: "Reach out" }))
     // The person dialog hands over to the Reach out dialog, so it is the only one open.
     const reachOut = screen.getByRole("dialog")
@@ -458,25 +493,10 @@ describe("App: the privacy line after the user's own people (task 5.3; Req 15.2)
     expect(screen.queryByText(SAMPLE)).toBeNull()
   })
 
-  it("after an import", () => {
-    const { engine, storage } = renderEmptyStreet()
-    fireEvent.click(screen.getByRole("button", { name: "Import people" }))
-    const dialog = screen.getByRole("dialog", { name: "Import people" })
-    fireEvent.change(within(dialog).getByLabelText("People, one per line"), {
-      target: { value: "Mira Castell | Cousin | 30\nAna Ruiz | Work | 14" },
-    })
-    fireEvent.click(within(dialog).getByRole("button", { name: "Import" }))
-
-    expect(screen.queryByRole("dialog")).toBeNull()
-    const people = engine.view(T0)
-    expect(people.map((p) => [p.payload.name, p.importance, p.costMinutes])).toEqual([
-      ["Mira Castell", 2, 10],
-      ["Ana Ruiz", 2, 10],
-    ])
-    expect(storage.getItem(OWN_PEOPLE_FLAG)).not.toBeNull()
-    expect(screen.getByText(OWN)).toBeTruthy()
-    expect(screen.queryByText(SAMPLE)).toBeNull()
-    expect(document.getElementById(ANNOUNCER_ID)!.textContent).toBe("2 people were added to the street.")
+  it("there is no Import people button any more (feedback list, point 24): Add a person is the one way in", () => {
+    renderEmptyStreet()
+    expect(screen.queryByRole("button", { name: "Import people" })).toBeNull()
+    expect(within(screen.getByRole("main")).getAllByRole("button", { name: "Add a person" }).length).toBeGreaterThan(0)
   })
 
   it("after a restore", async () => {
@@ -509,7 +529,6 @@ describe("App: what this session saves, under the Triage picks (task P5; Req 36.
   const line = () => triage().querySelector<HTMLElement>(".shell-triage-note")
   function choose(minutes: number) {
     fireEvent.click(within(triage()).getByRole("radio", { name: `${minutes} min` }))
-    fireEvent.click(within(triage()).getByRole("button", { name: "Plan" }))
   }
 
   /**
@@ -554,7 +573,7 @@ describe("App: what this session saves, under the Triage picks (task P5; Req 36.
     const engine = renderAdaAndCy()
     expect(line()!.textContent).toBe(ONE)
 
-    const fading = screen.getByRole("region", { name: "Fading" })
+    const fading = listPanel("Fading")
     fireEvent.click(within(within(fading).getByRole("article", { name: "Ada Fenn" })).getByRole("button", { name: "Reach out" }))
     const reachOut = screen.getByRole("dialog", { name: "Reach out to Ada Fenn" })
     fireEvent.click(reachOut.querySelector<HTMLElement>('.gh-choice[data-kind="call"]')!)

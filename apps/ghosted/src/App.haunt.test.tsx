@@ -2,7 +2,7 @@
 // outside Kiro, from .kiro/specs/haunt-pass. The sample street on a real
 // engine with a fixed clock: looking 30 days ahead marks exactly the windows
 // that cross, sets --doom and its band, and Wisp says the dark-preview line;
-// "Back to today" clears it all. The Spooky level is kept.
+// "Back to now" clears it all. The Spooky level is kept.
 
 import "./test/dialog-polyfill"
 import { afterEach, describe, expect, it } from "vitest"
@@ -17,6 +17,7 @@ import type { Scheduler } from "./ticking"
 import { hauntText, wispText } from "./wording"
 import { FakeStorage } from "./test/fake-storage"
 import { DAY_MS, T0, makeEngine } from "./test/fixtures"
+import { openSettings } from "./test/ui"
 
 afterEach(cleanup)
 
@@ -56,7 +57,7 @@ describe("haunt pass: the App (Req 1, 2, 5)", () => {
     expect(app.dataset.doom).toBe(doomBand(doom(engine.view(T0))))
   })
 
-  it("30 days ahead: exactly the crossing windows are marked, and Back to today clears them", () => {
+  it("30 days ahead: exactly the crossing windows are marked, and Back to now clears them", () => {
     const { engine, app } = renderSample()
     const expected = previewCrossings(engine.view(T0), engine.view(AHEAD))
     expect(expected.size).toBeGreaterThan(0)
@@ -69,7 +70,7 @@ describe("haunt pass: the App (Req 1, 2, 5)", () => {
     // The state is still said in words on every marked window.
     for (const b of shown) expect(b.querySelector(".gh-win-meta")!.textContent).not.toBe("")
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Back to today" })[0]!)
+    fireEvent.click(screen.getAllByRole("button", { name: "Back to now" })[0]!)
     expect(marked(app).size).toBe(0)
   })
 
@@ -94,6 +95,7 @@ describe("haunt pass: the Spooky level (Req 6)", () => {
   it("starts haunted, turns calm with one press and keeps the choice", () => {
     const storage = new FakeStorage({ [STARTED_FLAG]: "1" })
     const { app } = renderSample(storage)
+    openSettings()
     expect(app.dataset.spooky).toBe("haunted")
     const toggle = screen.getByRole("button", { name: hauntText.spooky.label })
     expect(toggle.getAttribute("aria-pressed")).toBe("true")
@@ -106,6 +108,7 @@ describe("haunt pass: the Spooky level (Req 6)", () => {
   it("works while previewing: a preference, not a write", () => {
     const { app } = renderSample()
     jumpAhead()
+    openSettings()
     fireEvent.click(screen.getByRole("button", { name: hauntText.spooky.label }))
     expect(app.dataset.spooky).toBe("calm")
   })

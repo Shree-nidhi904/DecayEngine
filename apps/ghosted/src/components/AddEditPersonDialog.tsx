@@ -33,8 +33,9 @@ import { isoDateAt, parseWholeNumber, startsDark, validatePerson, type FieldErro
 import type { Person, PersonPayload } from "../policy"
 import { storageProblemText } from "../storage-errors"
 import { dayStartOf } from "../time"
-import { dialogText, personFormText, previewBlockedText } from "../wording"
+import { dialogText, fieldHelpText, personFormText, previewBlockedText } from "../wording"
 import { runGatedWrite } from "../write-guard"
+import { useFieldHelp } from "./FieldHelp"
 import { StateGlyph } from "./icons"
 import { useModalDialog } from "./useModalDialog"
 import "../styles/layout.css"
@@ -199,6 +200,11 @@ export function AddEditPersonDialog({
     fieldRefs.current[field] = el
   }
 
+  // Feedback list, point 13: an (i) beside importance, the minutes and the rhythm.
+  const importanceHelp = useFieldHelp(personFormText.importance, fieldHelpText.importance)
+  const costHelp = useFieldHelp(personFormText.costMinutes, fieldHelpText.cost)
+  const rhythmHelp = useFieldHelp(personFormText.rhythm, fieldHelpText.rhythm)
+
   const titleId = `${id}-title`
   const lockedHintId = `${id}-locked`
   const tagListId = `${id}-tags`
@@ -259,6 +265,8 @@ export function AddEditPersonDialog({
         <div className="gh-field-row">
           <div className="gh-field">
             <label htmlFor={fieldId("rhythmDays")}>{personFormText.rhythm}</label>
+            {rhythmHelp.button}
+            {rhythmHelp.text}
             <input
               ref={register("rhythmDays")}
               id={fieldId("rhythmDays")}
@@ -322,6 +330,9 @@ export function AddEditPersonDialog({
         <div className="gh-field-row">
           <fieldset className="gh-field" aria-describedby={describedBy("importance")}>
             <legend>{personFormText.importance}</legend>
+            {/* After the legend, so the group's name stays "Importance". */}
+            {importanceHelp.button}
+            {importanceHelp.text}
             <div className="gh-radios">
               {[1, 2, 3].map((level) => (
                 <label key={level} className="gh-radio">
@@ -342,6 +353,8 @@ export function AddEditPersonDialog({
 
           <div className="gh-field">
             <label htmlFor={fieldId("costMinutes")}>{personFormText.costMinutes}</label>
+            {costHelp.button}
+            {costHelp.text}
             <input
               ref={register("costMinutes")}
               id={fieldId("costMinutes")}

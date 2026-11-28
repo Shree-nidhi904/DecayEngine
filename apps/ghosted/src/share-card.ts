@@ -6,7 +6,7 @@
 import { firstName, shownState, stateCounts } from "./lists"
 import type { Person } from "./policy"
 import { ghostedTheme } from "./theme"
-import { hauntText, stateWords } from "./wording"
+import { hauntText, listNames, stateWords } from "./wording"
 
 const c = ghostedTheme.colors
 export const CARD_WIDTH = 640
@@ -27,7 +27,8 @@ export function shareCardSvg(people: readonly Person[], options: { names: boolea
   const gap = 14
   const rowWidth = perRow * w + (perRow - 1) * gap
   const left = (CARD_WIDTH - rowWidth) / 2
-  const top = 112
+  // Under the three counters (feedback list, point 14).
+  const top = 156
 
   const windows = shown
     .map((person, i) => {
@@ -52,14 +53,44 @@ export function shareCardSvg(people: readonly Person[], options: { names: boolea
 
   const summary = `${counts.alive} ${stateWords.alive} · ${counts.weak} ${stateWords.weak} · ${counts.dead} ${stateWords.dead}`
 
+  // The page's three tabs, in the page's order (Fading, Empty windows, Still lit), each with its shape,
+  // its list name and its count, as one row (feedback list, point 14; Nov 28: same as the web app).
+  const boxGap = 12
+  const boxW = (CARD_WIDTH - 64 - 2 * boxGap) / 3
+  const shape = (state: "alive" | "weak" | "dead", cx: number, cy: number, colour: string) =>
+    state === "alive"
+      ? `<circle cx="${cx}" cy="${cy}" r="9" fill="none" stroke="${colour}" stroke-width="3"/>`
+      : state === "weak"
+        ? `<path d="M${cx} ${cy - 10}L${cx + 11} ${cy + 9}H${cx - 11}Z" fill="none" stroke="${colour}" stroke-width="3" stroke-linejoin="round"/>`
+        : `<path d="M${cx - 9} ${cy - 9}L${cx + 9} ${cy + 9}M${cx + 9} ${cy - 9}L${cx - 9} ${cy + 9}" stroke="${colour}" stroke-width="3" stroke-linecap="round"/>`
+  const counters = (
+    [
+      { state: "weak", name: listNames.weak, n: counts.weak, color: c.flick },
+      { state: "dead", name: listNames.dead, n: counts.dead, color: c.dark },
+      { state: "alive", name: listNames.alive, n: counts.alive, color: c.glow },
+    ] as const
+  )
+    .map((box, i) => {
+      const x = 32 + i * (boxW + boxGap)
+      return (
+        `<rect x="${x}" y="76" width="${boxW}" height="64" rx="10" fill="${c["panel-hi"]}" stroke="${c.border}" stroke-width="1"/>` +
+        `<rect x="${x}" y="76" width="${boxW}" height="4" rx="2" fill="${box.color}"/>` +
+        shape(box.state, x + 26, 110, box.color) +
+        `<text x="${x + 46}" y="115" font-family="sans-serif" font-size="15" fill="${c.bone}">${esc(box.name)}</text>` +
+        `<text x="${x + boxW - 16}" y="119" text-anchor="end" font-family="sans-serif" font-size="30" font-weight="700" fill="${box.color}">${box.n}</text>`
+      )
+    })
+    .join("")
+
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_WIDTH}" height="${CARD_HEIGHT}" viewBox="0 0 ${CARD_WIDTH} ${CARD_HEIGHT}">` +
     `<rect width="${CARD_WIDTH}" height="${CARD_HEIGHT}" fill="${c.bg}"/>` +
     `<rect y="${CARD_HEIGHT - 70}" width="${CARD_WIDTH}" height="70" fill="${c.wall}"/>` +
     `<circle cx="${CARD_WIDTH - 70}" cy="56" r="26" fill="${c.moon}"/>` +
     `<circle cx="${CARD_WIDTH - 58}" cy="50" r="24" fill="${c.bg}"/>` +
-    `<text x="32" y="58" font-family="sans-serif" font-size="30" font-weight="700" fill="${c.sign}">${esc(hauntText.share.title)}</text>` +
-    `<text x="32" y="86" font-family="monospace" font-size="14" fill="${c.dim}">${esc(summary)}</text>` +
+    `<desc>${esc(summary)}</desc>` +
+    `<text x="32" y="52" font-family="sans-serif" font-size="30" font-weight="700" fill="${c.sign}">${esc(hauntText.share.title)}</text>` +
+    counters +
     windows +
     `<text x="32" y="${CARD_HEIGHT - 26}" font-family="monospace" font-size="13" fill="${c.dim}">${esc(hauntText.share.footer)}</text>` +
     `</svg>`

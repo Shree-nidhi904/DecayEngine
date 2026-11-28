@@ -30,9 +30,9 @@
   opacity: calc(var(--age) * 0.4);
 }
 
-/* Netlify injects a fixed "Powered by Netlify" badge (194×64 px, bottom right) on the live site that takes clicks. The dock sits above it (found in the live P2 pass). */
+/* The site moved from Netlify to Cloudflare, which injects no badge, so the dock sits on the bottom edge. */
 :root {
-  --badge-room: 72px;
+  --badge-room: 0px;
 }
 
 .gh-dock {
@@ -42,9 +42,8 @@
   z-index: 6;
   max-block-size: var(--dock-max);
   overflow-y: auto;
-  padding-block: 8px calc(8px + env(safe-area-inset-bottom, 0px));
-  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
-  background: linear-gradient(180deg, transparent, var(--bg) 24%);
+  padding: 0;
+  background: transparent;
 }
 
 .gh-dock-in {
@@ -52,11 +51,12 @@
   grid-template-columns: 64px minmax(0, 1fr);
   gap: 4px 16px;
   align-items: start;
-  max-inline-size: 1080px;
-  margin-inline: auto;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  max-inline-size: none;
+  margin-inline: 0;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  border: 0;
+  border-block-start: 1px solid var(--border);
+  border-radius: 0;
   background: linear-gradient(180deg, var(--panel-hi), var(--panel));
 }
 
@@ -269,45 +269,74 @@
  * Tab order too (Req 34.2). The app's own parts (markers, ticks, the marker
  * list) are not rendered at all, so the panel is empty.
  */
-.gh-dock:not([data-expanded]) .shell-time-machine-controls,
 .gh-dock:not([data-expanded]) .gh-dock-panel {
   display: none;
 }
+/*
+ * Feedback list, point 22: Play stays on the collapsed bar; only the jumps are
+ * folded away (they are out of the Tab order too, as display: none).
+ */
+.gh-dock:not([data-expanded]) .shell-time-machine-controls .shell-button-quiet {
+  display: none;
+}
 
-/* Collapsed: one row of title, date, slider, hint and toggle. */
-.gh-dock:not([data-expanded]) .shell-time-machine {
+/* One line, collapsed or open: title, date, slider, "Coming up" (and "Back to now"), Play. Open adds a row for the jumps. */
+.gh-dock .shell-time-machine {
   display: grid;
   grid-template-columns: auto auto minmax(120px, 1fr) auto auto;
-  grid-template-areas: "title showing slider hint toggle";
+  grid-template-areas:
+    "title showing slider actions play"
+    "jumps jumps jumps jumps jumps";
   align-items: center;
   gap: 8px 16px;
 }
-.gh-dock:not([data-expanded]) .shell-time-machine-title {
+/* Open: the jumps and Play on a row of their own. Collapsed: only Play, on the bar's line. */
+.gh-dock[data-expanded] .shell-time-machine-controls {
+  grid-area: jumps;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.gh-dock:not([data-expanded]) .shell-time-machine-controls {
+  display: contents;
+}
+.gh-dock:not([data-expanded]) .shell-time-machine-controls .shell-button-primary {
+  grid-area: play;
+}
+.gh-dock:not([data-expanded]) .shell-time-machine-controls .shell-button-quiet {
+  display: none;
+}
+.gh-dock-actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* "Back to now": a quiet button on the bar, in the glow colour so it is easy to find. */
+.gh-dock-now {
+  min-block-size: 44px;
+  border-color: var(--glow);
+  color: var(--glow);
+}
+.gh-dock .shell-time-machine-title {
   grid-area: title;
 }
-.gh-dock:not([data-expanded]) .shell-time-machine-showing {
+.gh-dock .shell-time-machine-showing {
   grid-area: showing;
 }
-.gh-dock:not([data-expanded]) .shell-time-machine-slider {
+.gh-dock .shell-time-machine-slider {
   grid-area: slider;
 }
-.gh-dock:not([data-expanded]) .gh-dock-hint {
-  grid-area: hint;
-}
-.gh-dock:not([data-expanded]) .gh-dock-toggle {
-  grid-area: toggle;
-  align-self: center;
-}
 
-/* Up to 760px the one row does not fit: title and date beside the toggle, then the slider and the hint. */
+/* Up to 760px the one row does not fit: title and date, the buttons beside them, then the slider. */
 @media (max-width: 760px) {
-  .gh-dock:not([data-expanded]) .shell-time-machine {
+  .gh-dock .shell-time-machine {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      "title toggle"
-      "showing toggle"
+      "title actions"
+      "showing play"
       "slider slider"
-      "hint hint";
+      "jumps jumps";
     gap: 4px 12px;
   }
 }

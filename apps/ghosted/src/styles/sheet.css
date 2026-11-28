@@ -1,0 +1,399 @@
+/*
+ * Feedback list, Session 86 (IDE): the top-right buttons, the Settings and
+ * Profile sheets, the corner toast, the list tabs, the activity history and
+ * the (i) notes. Ghosted tokens only (design-tokens.md). Every animation sits
+ * inside prefers-reduced-motion: no-preference.
+ */
+
+/* ----- Top right: Home, Settings, Sync or Profile ----- */
+.gh-header {
+  position: relative;
+}
+.gh-topbar {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-inline-size: 1080px;
+  margin-inline: auto;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
+}
+.gh-topbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 44px;
+  min-inline-size: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-button);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  color: var(--bone);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.gh-topbar-button:hover,
+.gh-topbar-button:focus-visible {
+  border-color: var(--glow);
+  color: var(--glow);
+}
+.gh-topbar-button:focus-visible {
+  outline: 2px solid var(--glow);
+  outline-offset: 2px;
+}
+.gh-topbar-account[data-signed-in] {
+  border-color: var(--mint);
+  color: var(--mint);
+}
+@media (max-width: 420px) {
+  .gh-topbar-button span {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* ----- The sheets: a panel on the right, full height ----- */
+.gh-sheet {
+  inline-size: 100%;
+  max-inline-size: min(440px, 100vw);
+  block-size: 100dvh;
+  max-block-size: 100dvh;
+  margin: 0 0 0 auto;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-inline-start: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  color: var(--bone);
+}
+.gh-sheet::backdrop {
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+}
+.gh-sheet-head {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-block-end: 1px solid var(--line);
+  background: var(--panel-hi);
+}
+.gh-sheet-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 24px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.gh-sheet-body {
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+}
+.gh-sheet-subtitle {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--glow);
+}
+.gh-sheet-note {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font-size: 15px;
+}
+.gh-sheet-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+/* The settings and the sync panel keep their own looks; inside the sheet they sit flat, one per row. */
+.gh-sheet-body > * {
+  margin: 0;
+}
+.gh-sync-bare {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/*
+ * Feedback list, point 10: no page scroll behind an open dialog or sheet, so
+ * nothing moves under it, and a dialog never grows past the screen: anything
+ * taller scrolls inside the dialog.
+ */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+.gh-dialog {
+  max-block-size: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ----- The activity history ----- */
+.gh-activity-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gh-activity-list li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 0;
+  border-block-end: 1px solid var(--line);
+}
+.gh-activity-list time {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+/* ----- The corner toast (feedback list, point 18) ----- */
+.gh-corner-toast {
+  position: fixed;
+  inset-block-start: auto;
+  inset-inline-start: auto;
+  margin: 0;
+  inset-inline-end: max(16px, env(safe-area-inset-right, 0px));
+  inset-block-end: calc(var(--dock-h, 140px) + var(--badge-room, 0px) + 12px);
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  inline-size: calc(100vw - 32px);
+  max-inline-size: 360px;
+  overflow: hidden;
+  padding: 12px 12px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-hi);
+  color: var(--bone);
+  box-shadow: 0 6px 0 var(--frame);
+}
+.gh-corner-toast[data-problem] {
+  border-color: var(--rust);
+}
+.gh-corner-toast-text {
+  margin: 0;
+  font-size: 15px;
+}
+.gh-corner-toast-bar {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 4px;
+  background: var(--glow);
+  transform-origin: left center;
+}
+
+/* ----- The list tabs (feedback list, point 23) ----- */
+.gh-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 24px 0;
+  border-block-end: 1px solid var(--line);
+}
+.gh-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-block-end: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--panel);
+  color: var(--dim);
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.gh-tab[aria-selected="true"] {
+  background: var(--panel-hi);
+  color: var(--bone);
+  border-color: var(--border);
+  box-shadow: inset 0 3px 0 var(--tab-light, var(--glow));
+}
+.gh-tab[data-state="weak"] {
+  --tab-light: var(--flick);
+}
+.gh-tab[data-state="dead"] {
+  --tab-light: var(--dark);
+}
+.gh-tab[data-state="alive"] {
+  --tab-light: var(--glow);
+}
+.gh-tab:focus-visible {
+  outline: 2px solid var(--glow);
+  outline-offset: 2px;
+}
+.gh-lists[data-tabbed] > .gh-plot {
+  border-start-start-radius: 0;
+}
+
+/* ----- The (i) notes beside a field (feedback list, point 13) ----- */
+.gh-field-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  margin-inline-start: 8px;
+  padding: 0;
+  border: 1px solid var(--border-button);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dim);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  font-style: italic;
+  vertical-align: middle;
+  cursor: pointer;
+}
+/* The visible box is 24px; the click area is 44px. */
+.gh-field-help {
+  position: relative;
+}
+.gh-field-help::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+.gh-field-help[aria-expanded="true"],
+.gh-field-help:focus-visible {
+  border-color: var(--glow);
+  color: var(--glow);
+}
+.gh-field-help-text {
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border-inline-start: 3px solid var(--glow);
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 14px;
+}
+
+/* ----- Side margins and the far background (feedback list, points 9 and 19) ----- */
+/* Behind everything on the page: z-index -1 paints it under the content and over the page's own background. */
+.gh-far-town {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.gh-far-town::before {
+  /* Stars, high up, thinning towards the street. */
+  content: "";
+  position: absolute;
+  inset: 0 0 40% 0;
+  background:
+    radial-gradient(1.5px 1.5px at 6% 12%, var(--moon), transparent),
+    radial-gradient(1px 1px at 14% 30%, var(--moon), transparent),
+    radial-gradient(1.5px 1.5px at 22% 8%, var(--moon), transparent),
+    radial-gradient(1px 1px at 78% 18%, var(--moon), transparent),
+    radial-gradient(1.5px 1.5px at 86% 6%, var(--moon), transparent),
+    radial-gradient(1px 1px at 93% 26%, var(--moon), transparent),
+    radial-gradient(1px 1px at 70% 34%, var(--moon), transparent),
+    radial-gradient(1px 1px at 30% 40%, var(--moon), transparent);
+  opacity: 0.55;
+}
+/* Far houses and trees in the side margins, only where the page leaves room for them. */
+.gh-far-side {
+  position: absolute;
+  inset-block-end: 0;
+  display: none;
+  block-size: 60vh;
+  opacity: 0.5;
+}
+/* The width is what the 1080px page leaves on each side, less 24px: the far edge is set by an inset, not a width. */
+.gh-far-side[data-side="left"] {
+  inset-inline-start: 0;
+  inset-inline-end: calc(50% + 540px + 24px);
+}
+.gh-far-side[data-side="right"] {
+  inset-inline-end: 0;
+  inset-inline-start: calc(50% + 540px + 24px);
+  transform: scaleX(-1);
+}
+@media (width >= 1280px) {
+  .gh-far-side {
+    display: block;
+  }
+}
+.gh-far-side svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+.gh-far-house {
+  fill: var(--wall-lo);
+  stroke: var(--wall-edge);
+  stroke-width: 1;
+}
+.gh-far-window {
+  fill: var(--glow);
+  opacity: 0.6;
+}
+.gh-far-window[data-off] {
+  fill: var(--frame);
+  opacity: 1;
+}
+.gh-far-tree {
+  fill: var(--frame);
+}
+/* The toast's bar and the far windows' flicker are in motion.css, with every other movement. */
+
+/* Nov 28: the (i) sits at the right end of its field's label line, and its note floats over the form
+   instead of taking a row of its own. */
+.gh-field:has(> .gh-field-help) {
+  position: relative;
+}
+.gh-field > .gh-field-help {
+  position: absolute;
+  inset-block-start: -2px;
+  inset-inline-end: 0;
+  margin: 0;
+}
+.gh-field > .gh-field-help-text {
+  position: absolute;
+  inset-block-start: 26px;
+  inset-inline: 0;
+  z-index: 3;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--glow);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--frame) 70%, transparent);
+  background: var(--panel-hi);
+}
+
+/* Settings as a pop-up in the middle of the page, like VS Code's settings (Nov 28). */
+#gh-settings {
+  inline-size: min(44rem, 94vw);
+  max-inline-size: 94vw;
+  block-size: auto;
+  max-block-size: min(86dvh, 50rem);
+  margin: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 24px 80px color-mix(in srgb, var(--frame) 80%, transparent);
+}

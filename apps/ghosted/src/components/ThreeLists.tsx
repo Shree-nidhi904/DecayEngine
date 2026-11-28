@@ -19,7 +19,7 @@ import {
   type StreetView,
 } from "../lists"
 import type { Person } from "../policy"
-import { listNames, listsText, stateWords } from "../wording"
+import { listNames, listsText, stateWords, tabsText } from "../wording"
 import { StateGlyph } from "./icons"
 import { PersonCard, type PersonActions } from "./PersonCard"
 import { Window } from "./Window"
@@ -43,6 +43,81 @@ export interface ThreeListsProps {
   justChanged?: ReadonlySet<string>
   /** Called when a card's reaction ends. */
   onReacted?: (id: string) => void
+  /**
+   * Feedback list, point 23: show only this list, as the panel of ListTabs.
+   * Omitted: all three lists, stacked (as before).
+   */
+  selected?: ListSection
+}
+
+/** The tab order, as the lists were stacked: Fading, Empty windows, Still lit. */
+export const TAB_ORDER: readonly ListSection[] = ["fading", "empty", "still"]
+
+/** The first list with someone in it; Fading when every list is empty. */
+export function firstOpenTab(counts: Record<ItemState, number>): ListSection {
+  if (counts.weak > 0) return "fading"
+  if (counts.dead > 0) return "empty"
+  if (counts.alive > 0) return "still"
+  return "fading"
+}
+
+/** The tab's id and its panel's id, so each names the other. */
+export const tabId = (section: ListSection) => `gh-tab-${section}`
+export const panelId = (section: ListSection) => `gh-tabpanel-${section}`
+
+export interface ListTabsProps {
+  counts: Record<ItemState, number>
+  selected: ListSection
+  onSelect: (section: ListSection) => void
+}
+
+/**
+ * The three lists as tabs (feedback list, point 23; WAI-ARIA tabs): one list at a
+ * time. Each tab shows the state's glyph, its name and its count. Arrow keys,
+ * Home and End move between tabs and select them.
+ */
+export function ListTabs({ counts, selected, onSelect }: ListTabsProps) {
+  const entries: { section: ListSection; state: ItemState; label: string; count: number }[] = [
+    { section: "fading", state: "weak", label: listNames.weak, count: counts.weak },
+    { section: "empty", state: "dead", label: listNames.dead, count: counts.dead },
+    { section: "still", state: "alive", label: listNames.alive, count: counts.alive },
+  ]
+  const move = (from: ListSection, key: string) => {
+    const i = TAB_ORDER.indexOf(from)
+    const next =
+      key === "ArrowRight" ? TAB_ORDER[(i + 1) % 3] : key === "ArrowLeft" ? TAB_ORDER[(i + 2) % 3] : key === "Home" ? TAB_ORDER[0] : key === "End" ? TAB_ORDER[2] : undefined
+    if (next === undefined) return false
+    onSelect(next)
+    document.getElementById(tabId(next))?.focus()
+    return true
+  }
+  return (
+    <div className="gh-tabs" role="tablist" aria-label={tabsText.label}>
+      {entries.map(({ section, state, label, count }) => (
+        <button
+          key={section}
+          id={tabId(section)}
+          type="button"
+          role="tab"
+          className="gh-tab"
+          data-section={section}
+          data-state={state}
+          aria-selected={selected === section}
+          aria-controls={panelId(section)}
+          tabIndex={selected === section ? 0 : -1}
+          onClick={() => onSelect(section)}
+          onKeyDown={(event) => {
+            if (move(section, event.key)) event.preventDefault()
+          }}
+        >
+          <StateGlyph state={state} />
+          <span>{label}</span>
+          <span className="gh-nav-count gh-number">{count}</span>
+          <span className="gh-visually-hidden">, {listsText.count(count)}</span>
+        </button>
+      ))}
+    </div>
+  )
 }
 
 export interface SectionNavProps {
@@ -85,7 +160,10 @@ export function ThreeLists({
   formatDate,
   justChanged,
   onReacted,
+  selected,
 }: ThreeListsProps) {
+  /** Whether a list is shown: every list without tabs, only the chosen one with them. */
+  const shows = (section: ListSection) => selected === undefined || selected === section
   const { people, now, darkAt, version } = view
 
   // Each person's history, read once per version (a write changes it without changing `people`).
@@ -116,8 +194,10 @@ export function ThreeLists({
   )
 
   return (
-    <div className="gh-lists">
+    <div className="gh-lists" data-tabbed={selected === undefined ? undefined : ""}>
+      {shows("fading") && (
       <Plot
+        tabbed={selected !== undefined}
         section="fading"
         className="gh-plot-fading"
         title={listNames.weak}
@@ -128,8 +208,11 @@ export function ThreeLists({
       >
         <ul className="gh-cards">{fading.map(card)}</ul>
       </Plot>
+      )}
 
+      {shows("empty") && (
       <Plot
+        tabbed={selected !== undefined}
         section="empty"
         className="gh-plot-empty-windows"
         title={listNames.dead}
@@ -140,8 +223,11 @@ export function ThreeLists({
       >
         <ul className="gh-cards">{empty.map(card)}</ul>
       </Plot>
+      )}
 
+      {shows("still") && (
       <Plot
+        tabbed={selected !== undefined}
         section="still"
         className="gh-plot-still"
         title={listNames.alive}
@@ -179,11 +265,14 @@ export function ThreeLists({
           })}
         </ul>
       </Plot>
+      )}
     </div>
   )
 }
 
 interface PlotProps {
+  /** Shown as the panel of its tab (ListTabs). */
+  tabbed?: boolean
   section: ListSection
   className: string
   title: string
@@ -196,10 +285,15 @@ interface PlotProps {
 }
 
 /** One list: a focusable heading with its count badge, a line about it, then the list or its empty line. */
-function Plot({ section, className, title, count, headingRef, sub, emptyText, children }: PlotProps) {
+function Plot({ tabbed = false, section, className, title, count, headingRef, sub, emptyText, children }: PlotProps) {
   const headingId = useId()
   return (
-    <section className={`gh-plot ${className}`} data-section={section} aria-labelledby={headingId}>
+    <section
+      className={`gh-plot ${className}`}
+      data-section={section}
+      aria-labelledby={headingId}
+      {...(tabbed ? { id: panelId(section), role: "tabpanel" } : {})}
+    >
       <div className="gh-plot-head">
         <h2 id={headingId} ref={headingRef} tabIndex={-1} className="gh-plot-title">
           {title}

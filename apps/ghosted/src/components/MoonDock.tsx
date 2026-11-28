@@ -54,14 +54,14 @@ import {
   type ReactNode,
   type RefObject,
 } from "react"
-import { PreviewBanner, TimeMachine, type FrameScheduler } from "@decay-engine/shell"
+import { TimeMachine, type FrameScheduler } from "@decay-engine/shell"
 import { readDockExpanded, writeDockExpanded } from "../dock-state"
 import { useFirstLookDock, type FirstLookDockControl } from "../first-look-dock"
 import type { SessionFlagStorage } from "../splash"
 import { ghostedShellTheme } from "../theme"
 import { DAY_MS } from "../time"
 import { DOCK_DAYS, makeDayFormatter, markerLabel, markerRows, markerSoonLabel, type DockMarker } from "../timeline"
-import { dockText, ghostedWording } from "../wording"
+import { barText, dockText, ghostedWording, previewBlockedText } from "../wording"
 import { StateGlyph } from "./icons"
 import "../styles/dock.css"
 
@@ -241,10 +241,10 @@ export function MoonDock({
     </div>
   )
 
-  // Right under the slider, so the toggle comes straight after it in the Tab order (Req 34.9).
+  // On the bar's own line, right after the slider: "Coming up" and, while previewing, "Back to now"
+  // (feedback list, points 16 and 22; Nov 28: no hint line, no separate row for the toggle).
   const belowSlider = (
-    <>
-      {!expanded && <p className="gh-dock-hint">{dockText.hint}</p>}
+    <div className="gh-dock-actions">
       <button
         type="button"
         className="gh-button gh-dock-toggle"
@@ -255,10 +255,25 @@ export function MoonDock({
         <Chevron />
         <span>{dockText.toggle}</span>
       </button>
-      <div id={panelId} className="gh-dock-panel">
-        {expanded && track}
-      </div>
-    </>
+      {previewing && (
+        <button
+          type="button"
+          className="gh-button gh-dock-now"
+          data-action="back-to-now"
+          onClick={() => {
+            look.interrupt()
+            onChange(0)
+          }}
+        >
+          {barText.backToNow}
+        </button>
+      )}
+    </div>
+  )
+  const comingUp = (
+    <div id={panelId} className="gh-dock-panel">
+      {expanded && track}
+    </div>
   )
 
   return (
@@ -288,13 +303,9 @@ export function MoonDock({
             maxDays={DOCK_DAYS}
             jumpDays={DOCK_JUMP_DAYS}
           />
-          {previewing && (
-            <PreviewBanner theme={ghostedShellTheme} wording={ghostedWording} onBackToToday={() => {
-                look.interrupt()
-                onChange(0)
-              }}
-            />
-          )}
+          {/* Feedback list, point 16: no banner with icons; the preview is said in words for screen readers only. */}
+          {previewing && <p className="gh-sr-only" role="status">{previewBlockedText}</p>}
+          {comingUp}
         </div>
       </div>
     </div>

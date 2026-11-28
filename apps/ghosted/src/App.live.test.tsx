@@ -17,6 +17,7 @@ import { badgeIcon } from "./tab-signal"
 import type { Scheduler } from "./ticking"
 import { FakeStorage } from "./test/fake-storage"
 import { DAY_MS, MINUTE_MS, T0, day, makeEngine } from "./test/fixtures"
+import { listPanel, regionOrList } from "./test/ui"
 
 const BASE_HREF = "data:image/svg+xml,base"
 const FLICKER = "Mira Castell's window started to flicker."
@@ -88,9 +89,9 @@ const toasts = () => [...document.querySelectorAll<HTMLElement>(".gh-toast")]
 const toastText = () => toasts()[0]?.querySelector(".gh-toast-text")?.textContent ?? null
 /** A card in Fading or Empty windows (Still lit has rows, not cards). */
 const card = (list: "Fading" | "Empty windows", name: string) =>
-  within(screen.getByRole("region", { name: list })).getByRole("article", { name })
+  within(regionOrList(list)).getByRole("article", { name })
 const stillLit = (name: string) =>
-  within(screen.getByRole("region", { name: "Still lit" })).getByRole("button", { name: `Open ${name}` })
+  within(listPanel("Still lit")).getByRole("button", { name: `Open ${name}` })
 const marked = () => [...document.querySelectorAll<HTMLElement>(".gh-card.gh-just-changed")]
 const LIVE = '[aria-live], [role="status"], [role="alert"], [role="log"]'
 const FOCUSABLE = "button, a[href], input, select, textarea, summary, [tabindex]"
@@ -148,6 +149,8 @@ describe("App: a minute tick that moves a window (Req 38.1-38.4)", () => {
 
   it("lit to dark in one step (the tab slept through the flicker)", () => {
     const { tickAt } = renderLive({ start: day(12) - MINUTE_MS })
+    // One list shows at a time (feedback list, point 23): look at Empty windows, where the card will land.
+    listPanel("Empty windows")
     tickAt(day(28))
     expect(toastText()).toBe("Mira Castell's window went from lit to dark.")
     expect(marked()).toEqual([card("Empty windows", "Mira Castell")])
@@ -162,6 +165,8 @@ describe("App: a minute tick that moves a window (Req 38.1-38.4)", () => {
         ["Dan Okafor", 10, 1],
       ],
     })
+    // The cards react where they are shown: look at Fading, where all three will land.
+    listPanel("Fading")
     tickAt(day(12) + MINUTE_MS)
     expect(toasts()).toHaveLength(1)
     expect(toastText()).toBe("3 windows started to flicker, Ana Ruiz's among them.")
@@ -190,7 +195,7 @@ describe("App: when there is no toast (Req 38.1)", () => {
     expect(document.title).toBe("Ghosted")
   })
 
-  it("never while previewing, never on the first tick after Back to today; the next real change still shows", () => {
+  it("never while previewing, never on the first tick after Back to now; the next real change still shows", () => {
     const { time, tickAt, ticking } = renderLive({ start: day(12) - MINUTE_MS })
     expandDock()
     fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
@@ -200,9 +205,9 @@ describe("App: when there is no toast (Req 38.1)", () => {
     expect(toasts()).toHaveLength(0)
     expect(marked()).toHaveLength(0)
 
-    // Meanwhile the real clock passes the flicker. Back to today ticks at once; that tick only records.
+    // Meanwhile the real clock passes the flicker. Back to now ticks at once; that tick only records.
     time.at = day(12) + MINUTE_MS
-    fireEvent.click(screen.getByRole("button", { name: "Back to today" }))
+    fireEvent.click(screen.getByRole("button", { name: "Back to now" }))
     expect(ticking()).toBe(true)
     expect(card("Fading", "Mira Castell")).toBeTruthy()
     expect(toasts()).toHaveLength(0)

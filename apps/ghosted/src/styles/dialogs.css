@@ -299,3 +299,8 @@
   font-size: 15px;
   color: var(--rust);
 }
+
+/* "Add a person" now sits between the triage and the lists. */
+.gh-toolbar {
+  margin-block: 20px 0;
+}

@@ -626,3 +626,82 @@ export const hauntText = {
     failed: "This browser could not make the card.",
   },
 } as const
+
+/** The top-right buttons and the two sheets (feedback list, points 7, 17, 20 and 21). */
+export const topBarText = {
+  label: "Menu",
+  home: "Home",
+  settings: "Settings",
+  sync: "Sync",
+  syncHint: "Sync across devices",
+  profile: "Profile",
+  signedInAs: (email: string) => `Signed in as ${email}`,
+  settingsTitle: "Settings",
+  profileTitle: "Profile",
+  close: "Close",
+  syncOff: "Sync is not set up for this copy of Ghosted. Everything stays in this browser.",
+  activityTitle: "Activity",
+  activityNote: "Every change, newest first. Once you sync, this includes your other devices.",
+  activityEmpty: "Nothing has happened yet.",
+} as const
+
+/**
+ * The activity history (feedback list, point 17): one line per history entry.
+ * A window flickers, goes dark or is lit again; never "die" or "dead", and
+ * nothing that blames either person.
+ */
+export const activityText = {
+  created: (name: string) => `Added ${name}`,
+  contact: (name: string, kind: ContactKind | undefined) =>
+    kind === "call" ? `Had a call with ${name}` : kind === "meetup" ? `Met up with ${name}` : `Sent ${name} a message`,
+  flicker: (name: string) => `${name}'s window started to flicker`,
+  lit: (name: string) => `${name}'s window is lit again`,
+  dark: (name: string) => `${name}'s window went dark`,
+  reconnected: (name: string) => `Reconnected with ${name}`,
+  reconnectFailed: (name: string) => `A reconnect with ${name} did not go through`,
+  edited: (name: string) => `Edited ${name}`,
+  removedPerson: "someone since removed",
+} as const
+
+/** The (i) notes beside the person form's fields (feedback list, point 13). */
+export const fieldHelpText = {
+  importance:
+    "How much keeping in touch with this person matters to you: 1 a little, 3 a lot. When time is short, Triage suggests the important ones first.",
+  cost: "About how many minutes reaching out usually takes: a quick message, or a long call. Triage uses it to fit people into the time you have.",
+  rhythm: "How often you are usually in touch. The window starts to flicker a little after this many days with no contact.",
+  show: (field: string) => `What is ${field.toLowerCase()}?`,
+} as const
+
+/** The tabs over the three lists (feedback list, point 23). */
+export const tabsText = {
+  label: "Lists",
+} as const
+
+/** The moon-clock bar's own buttons (feedback list, points 16 and 22). */
+export const barText = {
+  backToNow: "Back to now",
+} as const
+
+/** Opening a person from a Life Triage link, `?tend=<id>` (feedback list, point 6). */
+export const tendLinkText = {
+  missing: "That person is not on this device.",
+} as const
+
+/** The "?" help tour (Nov 28): one part of the page lit at a time, with what to do there. */
+export const helpTourText = {
+  wording: {
+    open: "Show me around",
+    next: "Next",
+    back: "Back",
+    done: "Done",
+    progress: "Step {n} of {total}",
+  },
+  steps: [
+    { selector: ".gh-topbar", title: "The top bar", text: "Home goes to the landing page. Settings holds notifications, backup, restore and reset. Sync keeps your people on all your devices." },
+    { selector: ".gh-hero", title: "Who needs you first", text: "This names the window that is fading fastest. Press the button to reach out to them." },
+    { selector: ".gh-street", title: "Your street", text: "Each house is a person. A lit window is someone you have kept in touch with; a dark one is fading." },
+    { selector: ".gh-toolbar", title: "Add a person", text: "Add someone, say how often you want to be in touch, and Ghosted tells you when they start to fade." },
+    { selector: ".gh-tabs", title: "Three lists", text: "Fading, Empty windows and Still lit: switch between them to see who is where." },
+    { selector: ".gh-dock", title: "Moon clock", text: "Drag the slider or press Play to see who will fade in the next year. Nothing is saved while you look. Use Back to now to return." },
+  ],
+} as const

@@ -28,6 +28,7 @@ import type { Scheduler } from "./ticking"
 import { problemScreenText } from "./wording"
 import { FakeStorage } from "./test/fake-storage"
 import { DAY_MS, MINUTE_MS, T0, makeEngine } from "./test/fixtures"
+import { regionOrList } from "./test/ui"
 
 afterEach(cleanup)
 
@@ -84,7 +85,7 @@ function renderApp(options: { sample?: boolean; storage?: FakeStorage; reload?: 
 const announcer = () => document.getElementById(ANNOUNCER_ID)!
 const openDialog = () => document.querySelector("dialog[open]")
 const card = (list: string, name: string) =>
-  within(screen.getByRole("region", { name: list })).getByRole("article", { name })
+  within(regionOrList(list)).getByRole("article", { name })
 const streetNames = () => [...document.querySelectorAll("button.gh-win")].map((b) => b.getAttribute("aria-label")).sort()
 
 /** The engine's people and their histories, as JSON: what must not change. */

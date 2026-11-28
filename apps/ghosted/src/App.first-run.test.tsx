@@ -19,6 +19,7 @@ import { ENGINE_STORAGE_KEY, OWN_PEOPLE_FLAG, RESET_KEYS, STARTED_FLAG, type Fla
 import type { Scheduler } from "./ticking"
 import { FakeStorage } from "./test/fake-storage"
 import { T0, makeEngine } from "./test/fixtures"
+import { listPanel, openSettings } from "./test/ui"
 
 afterEach(cleanup)
 
@@ -75,7 +76,7 @@ describe("first run", () => {
     expect(screen.getByRole("button", { name: "Reach out to Dan" })).toBeTruthy()
     const street = screen.getByRole("region", { name: "The Street" })
     expect(street.querySelectorAll("button.gh-win")).toHaveLength(12)
-    const fading = screen.getByRole("region", { name: "Fading" })
+    const fading = listPanel("Fading")
     expect([...fading.querySelectorAll(".gh-card-name")].map((h) => h.textContent)).toEqual([
       "Dan Okafor",
       "Grace Liu",
@@ -292,9 +293,9 @@ describe("Reset all data (task 4.6; Req 20.7)", () => {
   const OTHER_APP = { "decay-engine:study-dungeon": '{"kept":true}', "study-dungeon:started": "1" }
 
   function openReset() {
-    const toolbarButton = screen
-      .getAllByRole("button", { name: "Reset all data" })
-      .find((b) => b.closest("dialog") === null)!
+    // Reset all data is in the Settings sheet (feedback list, point 7); the confirmation opens over it.
+    if (document.querySelector("#gh-settings[open]") === null) openSettings()
+    const toolbarButton = within(document.getElementById("gh-settings")!).getByRole("button", { name: "Reset all data" })
     expect(toolbarButton.className).toBe("gh-button")
     fireEvent.click(toolbarButton)
     return screen.getByRole("dialog", { name: CONFIRM })
@@ -313,7 +314,7 @@ describe("Reset all data (task 4.6; Req 20.7)", () => {
     openReset()
     fireEvent.keyDown(document.activeElement!, { key: "Escape" })
 
-    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.queryByRole("dialog", { name: CONFIRM })).toBeNull()
     expect(storage.removed).toEqual([])
     expect(storage.snapshot()).toEqual(before)
     expect(reload).not.toHaveBeenCalled()

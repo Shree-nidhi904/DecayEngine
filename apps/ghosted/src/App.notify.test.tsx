@@ -17,6 +17,7 @@ import { FakeStorage } from "./test/fake-storage"
 import { fakeNotifications, throwingStorage, type FakeNotifications } from "./test/fake-notification"
 import { MINUTE_MS, T0, day, makeEngine } from "./test/fixtures"
 import { notifyText } from "./wording"
+import { openSettings } from "./test/ui"
 
 const LABEL = "Notify me about changes while this tab is open"
 const FLICKER = "Mira Castell's window started to flicker."
@@ -77,6 +78,8 @@ function renderApp(options: {
     ...(options.focusWindow === undefined ? {} : { focusWindow: options.focusWindow }),
   }
   const view = render(<App {...props} />)
+  // The setting is in the Settings sheet (feedback list, point 7).
+  openSettings()
   const tickAt = (at: number) => {
     time.at = at
     expect(callback, "the minute tick is running").not.toBeNull()
@@ -169,7 +172,7 @@ describe("App: when no notification is shown (Req 39.5)", () => {
     expect(fake.shown).toHaveLength(0)
   })
 
-  it("in a preview, and on the first tick after Back to today", () => {
+  it("in a preview, and on the first tick after Back to now", () => {
     const fake = fakeNotifications("granted")
     const { time, tickAt } = renderApp({ start: day(12) - MINUTE_MS, fake, storage: onStorage() })
     act(() => setVisibility("hidden"))
@@ -177,7 +180,7 @@ describe("App: when no notification is shown (Req 39.5)", () => {
     fireEvent.click(screen.getByRole("button", { name: "+30 days" }))
     expect(fake.shown).toHaveLength(0)
     time.at = day(12) + MINUTE_MS
-    fireEvent.click(screen.getByRole("button", { name: "Back to today" }))
+    fireEvent.click(screen.getByRole("button", { name: "Back to now" }))
     expect(fake.shown).toHaveLength(0)
     // The next real change is notified.
     tickAt(day(27) + MINUTE_MS)
@@ -250,6 +253,7 @@ describe("App: the setting is stored (Req 39.4)", () => {
     expect(storage.getItem(NOTIFY_SETTING_KEY)).toBe("on")
     view.unmount()
     render(<App {...props} />)
+    openSettings()
     expect(theSwitch().getAttribute("aria-checked")).toBe("true")
     // Off again, and stored.
     fireEvent.click(theSwitch())
@@ -293,12 +297,13 @@ describe("App: a click on a notification (Req 39.7)", () => {
     expect(focused).toBe(1)
     expect(fake.shown[0]!.closed).toBe(true)
     expect(JSON.stringify([engine.view(day(12) + MINUTE_MS), engine.history(engine.view(day(12))[0]!.id)])).toBe(before)
-    expect(document.querySelector("dialog[open]")).toBeNull()
+    // Only the Settings sheet, which the test opened, is open: the click opened no dialog of its own.
+    expect([...document.querySelectorAll("dialog[open]")].map((d) => d.id)).toEqual(["gh-settings"])
   })
 })
 
 describe("App: accessibility of the setting (Req 39.1, 39.9)", () => {
-  it("a real labelled switch in the Tab order, quiet, under the toolbar; one live region; a tick moves no focus", () => {
+  it("a real labelled switch in the Tab order, quiet, in the Settings sheet; one live region; a tick moves no focus", () => {
     const fake = fakeNotifications("granted")
     const { tickAt } = renderApp({ start: day(12) - MINUTE_MS, fake, storage: onStorage() })
     const liveElementsBefore = [...document.querySelectorAll(LIVE)]
@@ -308,10 +313,10 @@ describe("App: accessibility of the setting (Req 39.1, 39.9)", () => {
     expect(sw.hasAttribute("tabindex")).toBe(false)
     expect(sw.hasAttribute("disabled")).toBe(false)
     expect(sw.matches(".gh-button-primary, .shell-button-primary")).toBe(false)
-    // Right after the toolbar, before the privacy line.
-    const box = sw.closest(".gh-notify")!
-    expect(box.previousElementSibling!.classList.contains("gh-toolbar")).toBe(true)
-    expect(box.nextElementSibling!.classList.contains("gh-privacy")).toBe(true)
+    // In the Settings sheet (feedback list, point 7), no longer under the toolbar.
+    expect(sw.closest("#gh-settings")).not.toBeNull()
+    expect(sw.closest(".gh-notify")).not.toBeNull()
+    expect(document.querySelector(".gh-toolbar")!.nextElementSibling?.classList.contains("gh-notify")).not.toBe(true)
 
     sw.focus()
     act(() => setVisibility("hidden"))

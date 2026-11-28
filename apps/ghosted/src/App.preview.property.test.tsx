@@ -10,12 +10,12 @@
 //
 // Two kinds of action are tried:
 // - the control itself during the preview (Add a person, Edit, Remove, Reach
-//   out, Reconnect, Restore, Import, Reset all data, Triage's start, today's
+//   out, Reconnect, Restore, Reset all data, Triage's start, today's
 //   5-minute action, the hero's primary button, and on a first run Load
 //   sample street and Start empty);
 // - a dialog or form opened at today, before the dock moved, then confirmed
 //   during the preview (each contact kind in Reach out and in Reconnect, Save
-//   in the add and edit forms, Import, and the confirmations of Remove,
+//   in the add and edit forms, and the confirmations of Remove,
 //   Restore and Reset). This is the case runGatedWrite exists for (design
 //   open issue 2.3): the App reads `previewing` at the moment of the write.
 //   Confirm and Save buttons are not aria-disabled, so for these the check is
@@ -36,10 +36,11 @@ import { makeBackup } from "./backup"
 import { ENGINE_STORAGE_KEY, STARTED_FLAG } from "./first-run"
 import { loadSampleData } from "./sample-data"
 import type { Scheduler } from "./ticking"
-import { backupText, ghostedWording, importDialogText, personFormText, previewBlockedText } from "./wording"
+import { backupText, ghostedWording, personFormText, previewBlockedText } from "./wording"
 import { FakeStorage } from "./test/fake-storage"
 import { T0, counterIds, makeEngine } from "./test/fixtures"
 import { RecordingAdapter } from "./test/recording-adapter"
+import { listPanel } from "./test/ui"
 
 afterEach(cleanup)
 
@@ -83,6 +84,8 @@ type WriteAction = {
 
 const lists = () => document.querySelector<HTMLElement>(".gh-lists")!
 const toolbar = () => document.querySelector<HTMLElement>(".gh-toolbar")!
+/** The Settings sheet (feedback list, point 7): Restore and Reset all data are in it. It stays mounted while closed. */
+const settings = () => document.getElementById("gh-settings")!
 const openDialog = () => document.querySelector<HTMLDialogElement>("dialog[open]")
 const announcer = () => document.getElementById(ANNOUNCER_ID)!.textContent
 
@@ -97,6 +100,28 @@ function pick<T>(list: readonly T[], target: number, what: string): T {
   return list[target % list.length]!
 }
 
+/**
+ * One card button for `action`, chosen by the generated target from the Fading and Empty windows lists.
+ * The lists show one at a time (feedback list, point 23), so each is shown in turn, and the chosen one's tab is selected.
+ */
+function cardButton(action: string, target: number, what: string): HTMLElement {
+  const lists_ = ["Fading", "Empty windows"].map((name) => {
+    listPanel(name)
+    return { name, count: buttons(lists(), action).length }
+  })
+  const total = lists_.reduce((sum, l) => sum + l.count, 0)
+  expect(total, `there is at least one ${what}`).toBeGreaterThan(0)
+  let index = target % total
+  for (const { name, count } of lists_) {
+    if (index < count) {
+      listPanel(name)
+      return buttons(lists(), action)[index]!
+    }
+    index -= count
+  }
+  throw new Error(`no ${what}`)
+}
+
 /** Clicks the control and returns it. */
 function press(el: HTMLElement): HTMLElement[] {
   fireEvent.click(el)
@@ -105,7 +130,7 @@ function press(el: HTMLElement): HTMLElement[] {
 
 /** Opens a card's dialog at today: Reach out, Reconnect, Edit or Remove. */
 function openFromCard(action: string, ctx: Ctx): void {
-  fireEvent.click(pick(buttons(lists(), action), ctx.target, `${action} button`))
+  fireEvent.click(cardButton(action, ctx.target, `${action} button`))
   expect(openDialog(), `${action} opened a dialog at today`).not.toBeNull()
 }
 
@@ -149,7 +174,7 @@ const WRITE_ACTIONS: readonly WriteAction[] = [
   {
     name: "Edit (card)",
     start: "sample",
-    attempt: ({ target }) => press(pick(buttons(lists(), "edit"), target, "Edit button")),
+    attempt: ({ target }) => press(cardButton("edit", target, "Edit button")),
     opensNothing: true,
   },
   {
@@ -169,7 +194,7 @@ const WRITE_ACTIONS: readonly WriteAction[] = [
   {
     name: "Remove (card)",
     start: "sample",
-    attempt: ({ target }) => press(pick(buttons(lists(), "remove"), target, "Remove button")),
+    attempt: ({ target }) => press(cardButton("remove", target, "Remove button")),
     opensNothing: true,
   },
   {
@@ -187,7 +212,7 @@ const WRITE_ACTIONS: readonly WriteAction[] = [
     name: "Reach out (card)",
     start: "sample",
     maxDays: 100,
-    attempt: ({ target }) => press(pick(buttons(lists(), "reach-out"), target, "Reach out button")),
+    attempt: ({ target }) => press(cardButton("reach-out", target, "Reach out button")),
     opensNothing: true,
   },
   ...KINDS.map(
@@ -201,7 +226,7 @@ const WRITE_ACTIONS: readonly WriteAction[] = [
   {
     name: "Reconnect (card)",
     start: "sample",
-    attempt: ({ target }) => press(pick(buttons(lists(), "reconnect"), target, "Reconnect button")),
+    attempt: ({ target }) => press(cardButton("reconnect", target, "Reconnect button")),
     opensNothing: true,
   },
   ...KINDS.map(
@@ -216,7 +241,7 @@ const WRITE_ACTIONS: readonly WriteAction[] = [
     name: "Restore (button, and a valid file chosen anyway)",
     start: "sample",
     attempt: async () => {
-      const controls = press(buttons(toolbar(), "restore")[0]!)
+      const controls = press(buttons(settings(), "restore")[0]!)
       chooseBackupFile()
       await settleFileReads()
       return controls
@@ -238,38 +263,16 @@ const WRITE_ACTIONS: readonly WriteAction[] = [
     refusal: "announced",
   },
   {
-    name: "Import people (toolbar)",
-    start: "sample",
-    attempt: () => press(buttons(toolbar(), "import")[0]!),
-    opensNothing: true,
-  },
-  {
-    name: "Import, submitted in a dialog opened at today",
-    start: "sample",
-    before: () => {
-      fireEvent.click(buttons(toolbar(), "import")[0]!)
-      const dialog = screen.getByRole("dialog", { name: importDialogText.title })
-      fireEvent.change(within(dialog).getByLabelText(importDialogText.label), {
-        target: { value: "Mira Castell | Cousin | 30\nAna Ruiz | Work | 14" },
-      })
-    },
-    attempt: () => {
-      fireEvent.click(within(openDialog()!).getByRole("button", { name: importDialogText.submit }))
-      return []
-    },
-    refusal: "in-dialog",
-  },
-  {
     name: "Reset all data (toolbar)",
     start: "sample",
-    attempt: () => press(buttons(toolbar(), "reset")[0]!),
+    attempt: () => press(buttons(settings(), "reset")[0]!),
     opensNothing: true,
   },
   {
     name: "Reset all data, confirmed after the dock moved",
     start: "sample",
     before: () => {
-      fireEvent.click(buttons(toolbar(), "reset")[0]!)
+      fireEvent.click(buttons(settings(), "reset")[0]!)
       expect(openDialog()).not.toBeNull()
     },
     attempt: () => {
@@ -328,7 +331,7 @@ function offsetFor(action: WriteAction, hours: number): number {
 describe("Property 12 at the app level: a preview never writes", () => {
   it("lists every write control of Req 12.5 and design section 4.2", () => {
     const names = WRITE_ACTIONS.map((a) => a.name)
-    for (const word of ["Add", "Edit", "Remove", "Reach out", "Reconnect", "Restore", "Import", "Load sample", "Start empty", "Reset", "start session", "5-minute", "hero"]) {
+    for (const word of ["Add", "Edit", "Remove", "Reach out", "Reconnect", "Restore", "Load sample", "Start empty", "Reset", "start session", "5-minute", "hero"]) {
       expect(names.some((n) => n.includes(word)), word).toBe(true)
     }
   })

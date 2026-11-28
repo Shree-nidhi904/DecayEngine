@@ -6,6 +6,8 @@
 // device.
 
 import { useId, useState } from "react"
+import { snapshotElements } from "@decay-engine/shell"
+import { ghostedTheme } from "../theme"
 import type { Person } from "../policy"
 import { CARD_HEIGHT, CARD_WIDTH, shareCardSvg } from "../share-card"
 import { hauntText } from "../wording"
@@ -34,6 +36,32 @@ export function ShareCard({ people, announce, download = clickDownload }: ShareC
   const privacyId = useId()
 
   const make = () => {
+    // A picture of the page's own counters, as they look now.
+    // If the browser cannot draw it, the drawn card below is used.
+    // With names on, the drawn card is used: it lists first names cleanly. Without, only the counters are pictured.
+    const parts = (names ? [] : [".gh-hero-stats"])
+      .map((selector) => document.querySelector<HTMLElement>(selector))
+      .filter((el): el is HTMLElement => el !== null)
+    if (parts.length > 0 && !navigator.userAgent.includes("jsdom")) {
+      snapshotElements(parts, {
+        background: ghostedTheme.colors.bg,
+        title: hauntText.share.title,
+        titleColor: ghostedTheme.colors.sign,
+        titleFont: "700 34px sans-serif",
+        accent: ghostedTheme.colors.sign,
+        padding: 32,
+        gap: 20,
+        footer: hauntText.share.footer,
+        footerColor: ghostedTheme.colors.dim,
+      })
+        .then((href) => download("ghosted-street.png", href))
+        .catch(() => drawn())
+      announce(hauntText.share.made)
+      return
+    }
+    drawn()
+  }
+  const drawn = () => {
     const svg = shareCardSvg(people, { names })
     const fallback = () => download("ghosted-street.svg", svgDataUrl(svg))
     try {

@@ -120,6 +120,16 @@ const SAMPLE_CALLS: Readonly<Record<string, readonly unknown[][]>> = {
   ],
   "liveText.many": [[3, 0, NAME], [0, 3, NAME], [2, 1, NAME], [1, 2, NAME]],
   "liveText.title": [[0, "Ghosted"], [2, "Ghosted"], [10, "Ghosted"]],
+  "topBarText.signedInAs": [["mira@example.test"]],
+  "activityText.created": [[NAME]],
+  "activityText.contact": [[NAME, "call"], [NAME, "meetup"], [NAME, "message"], [NAME, undefined]],
+  "activityText.flicker": [[NAME]],
+  "activityText.lit": [[NAME]],
+  "activityText.dark": [[NAME]],
+  "activityText.reconnected": [[NAME]],
+  "activityText.reconnectFailed": [[NAME]],
+  "activityText.edited": [[NAME]],
+  "fieldHelpText.show": [["Importance"], ["Minutes"]],
 }
 
 type Found = { strings: { path: string; text: string }[]; functions: string[] }
