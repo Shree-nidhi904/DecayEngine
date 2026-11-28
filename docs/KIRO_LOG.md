@@ -43,7 +43,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
 - **Goal**: give Kiro the project rules before any spec or code exists.
 - **Kiro feature used**: steering, created through one chat prompt in the Kiro IDE. The built-in steering generator was not used, because it reads existing code and there was none.
 - **What Kiro produced**: six files in `.kiro/steering/`: `product.md`, `tech.md`, `structure.md`, `engine-boundary.md`, `theme-and-wording.md`, `testing.md`. No code.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: nothing went wrong. The files matched the prompt closely, with no rules added or dropped. One follow-up: `structure.md` mentions the private `reports/` folder, and that section should be removed once the folder is deleted.
 - **Credits used**: 0.31 (free plan, 50 credits). Took 29 seconds.
 - **Screenshot**: two screenshots of the prompt and Kiro's reply (to be saved in `docs/screenshots/`).
@@ -67,7 +66,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
     - Two rules were missing: settle an item's health before acting on it, and allow only one resurrect at a time per item.
   - Takeaway so far: the spec made the contradictions visible on the page before any code existed. In free-form prompting these would have surfaced later as bugs.
 - **Credits used**: 0.27 for the mistaken chat attempt (21 seconds). 12.39 for the requirements (16 minutes 34 seconds), most of it on the automatic refinement. About 37 of the free 50 left.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Corrections, round 1**: 14 changes sent to Kiro as one prompt, with an instruction to edit the file directly and not re-run the refinement. All 14 were applied correctly. 2.35 credits, 3 minutes 58 seconds.
 - **Corrections, round 2**: a second review found one real bug risk and eight smaller gaps. The bug risk: `tick` saved a new health without saying what happens to `lastEventAt`, which would make a time-based policy decay an item twice. Fixed by a rule that stored health and `lastEventAt` always move together, plus a property test ("splitting time makes no difference") that would catch it. Also added: resurrect settles the item first, the engine loads its snapshot on creation, and the storage namespace. All 9 were applied correctly. 2.17 credits, 2 minutes 33 seconds.
 - **Result**: 18 requirements, reviewed and ready to approve. Asking Kiro for targeted edits cost about a fifth of the original generation each time.
@@ -91,7 +89,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - Two conflicting definitions of the stored snapshot, one of which would lose data when saved as text.
   - An item removed while its resurrect was waiting would be silently re-added.
 - **Credits used**: 5.86 (12 minutes). About 23.5 of the free 50 used in total.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Corrections, round 1**: 12 changes sent to Kiro as one prompt. All 12 were applied: synchronous saving, two clearly named snapshot types, one shared `applyHealth` function used by both `settle` and `tend`, the removed-during-resurrect case, deep copies in the in-memory adapter, and test items built by running real engine operations. 11.21 credits, 15 minutes 7 seconds. This was almost twice the cost of generating the design, because the test section was largely rewritten.
 - **Second review**: the engine design itself is now sound. Four problems remain, all in the test plan:
   - The resurrect property uses an async test body inside a synchronous property, so its checks would not be evaluated correctly.
@@ -133,7 +130,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - Added workspace root setup and the coverage tool to task 1.
   - Added task 24.3: boundary tests that read the engine source and fail on any clock read, any browser access outside the local storage file, any import from an app or UI library, or any runtime dependency. This turns the engine-boundary steering rules into something the test run enforces.
 - **Credits used**: 3.01 (3 minutes 53 seconds). About 37.7 of the free 50 used in total, about 12.3 left.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: the engine spec is complete: requirements, design and tasks. No code yet. Running the tasks waits for the hackathon credits and for Node.js and pnpm to be installed.
 
 ---
@@ -159,7 +155,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
     - `authorship.md` sets a table format for this log, which clashes with the session format used here.
   - The prompt was followed in outline, but Kiro filled gaps with its own API instead of reading `.kiro/specs/engine/`. Next time, prompts should name the files that are the source of truth.
 - **Credits used**: 3.33 (5 minutes 32 seconds).
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Corrections, round 1**: one prompt with five fixes.
   - Steps 1 to 4 were applied correctly:
     - The policy contract in steering now points to the spec's Type Contract, and costMinutes is described as an item field.
@@ -236,7 +231,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - Fixed the scaffold hook. When it was created in the form, the pattern `scaffold.*policy` went into the instructions box and the matcher was left empty. So the hook fired on every prompt, and the only instruction it passed to Kiro was "scaffold.*policy". That explains why Kiro asked "which app?" during the hook test. The matcher and the full instructions are now set in the hook file.
 - **Credits used**: 2.88 for requirements (5 minutes 29 seconds), 2.99 for the correction round (3 minutes 29 seconds), 20.62 for design and tasks (20 minutes 13 seconds). About 26.5 in total.
 - **Lesson**: the design and tasks step cost seven times as much as the requirements and needed the most fixing. Kiro was most reliable at small, specific edits to one file, and least reliable when asked to carry a change through 2,000 lines on its own. That step is also where the most important bug hid: a feature fully described in one section and never used in the code that matters.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: engine spec complete and consistent. The engine can now be built (Nov 21 onward). Next: one short spec per app, starting with Study Dungeon.
 
 ---
@@ -313,7 +307,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **Tasks:** added task 11.5 for the first-run tour, and gave the autopsy-sentence tests exact expected outputs.
 - **Credits used**: 2.62 for requirements (3 minutes 38 seconds), 2.05 for corrections (1 minute 50 seconds), 5.59 for design and tasks (8 minutes 16 seconds). About 10.3 in total.
 - **Lesson**: the same pattern as the engine spec. The requirements were close and needed small fixes. The design and tasks contained the bugs that would have cost the most later. The preview-mode check alone would have made the app unusable, and a requirement (the shared shell) was quietly reinterpreted away in the task list.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: Study Dungeon spec complete. Code next: engine tasks first, then Study Dungeon.
 
 ---
@@ -344,7 +337,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - Fixed the stale task reference "19.1" → "20.1" in task 4.2.
   - Clarified Requirement 8a.7.
 - **Credits used**: about 17.3 for tasks 1-3: 5.56 for the shell attempts, the rest of task 1 and task 2, and 11.71 for task 3 (7 minutes 37 seconds). The first, cancelled task 1 run is not counted.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: tasks 1-3 done (81 tests). Next: the fake policy (20.1), bisection (5), then settle (4).
 
 ---
@@ -372,7 +364,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **Working in parallel** only worked because Kiro and I never edited the same file in the same round.
   - **Smaller choices left to confirm:** a bad `nextDueAt` value throws `INVALID_TIMESTAMP`; a malformed `resurrect` result counts as a failure; `edit` lists every field passed, even if unchanged.
 - **Credits used**: 15.11 for the 17.5 fix and tasks 8.1-8.3 (7 minutes 21 seconds); 14.81 for task 24 (7 minutes 47 seconds); about 47.7 for tasks 20, 4-6 and 8.4-8.5 together. That last figure is worked out, not read: the running total after task 24 (157.82) minus Sessions 1-9 (80.18 logged) and the two rounds above. The per-round figures were in an earlier chat that was lost. At the end of the day: 38.34 of the 50 plan credits used, 157.82 of 4000 in total. My implementation work used no Kiro credits.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: tasks 1-22 and 24 done, 555 tests. Next: forecast and the property tests.
 
 ---
@@ -399,13 +390,11 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
     - `MAX_TIMESTAMP` is now exported, for the time machine.
     - The scaffold-policy hook is disabled until a new app needs it.
     - 701 tests in 29 files.
-- **What I changed by hand**: no code.
 - **What went wrong or surprised me**:
   - **The test command broke overnight.** The WSL shell started picking up the Windows Node (`/mnt/c/nvm4w`) instead of the Linux one, so `npx` failed with `ERR_INVALID_URL` and `tsc` looked for `typescript-win32-x64`. Fix: put `~/.nvm/versions/node/v26.13.1/bin` first on the PATH, or run `source ~/.nvm/nvm.sh`.
   - **Kiro ran stray shell commands twice** despite the no-shell rule (`ls`/`grep`, then `true`). Both failed or did nothing, and it reported them.
   - **Everything passed on the first run** except that one bisection gap. That is why the deliberate code-breaking checks mattered: they showed the properties were real.
 - **Credits used**: 8.39 for tasks 23 and 25 (4 minutes 18 seconds); 15.15 for task 37 (5 minutes 50 seconds); about 5.4 for the task 24 follow-up (worked out from the running total: 186.8 after task 37, minus 157.82, 8.39 and 15.15). About 29 for the session; 186.8 of 4000 in total.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: engine spec complete: 37 of 37 tasks, 701 tests in 29 files, coverage 95% of lines, 90% of branches, 100% of functions. Next: Study Dungeon (my policy and cause-of-death sentences by hand, Kiro for the UI).
 
 ---
@@ -446,7 +435,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - Recorded the policy's authorship in `authorship.md` and `tasks.md`.
   - Reworded the top of `authorship.md`, which said decay rules are "never generated". It now says: I decide every rule in the specs, Kiro never writes decay-rule code, and the code for the cases listed was written by Claude Code outside Kiro.
 - **Credits used**: about 0.5 for the Linux Kiro shell test.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: engine complete (701 tests). The Study Dungeon policy is written and verified. Next: Kiro builds the Study Dungeon app (tasks 1, 2.2-2.3, 3-4).
 
 ---
@@ -490,7 +478,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **Round 2** (tasks 2.2, 2.3, 10.2): 104/104 on the first run. I then broke the policy and the autopsy sentences on purpose 12 times (wrong-answer health 50, each clamp, the "shaky" start, decay from creation, no weak branch in `nextDueAt`, a resurrect that resets the half-life, and five changes to the sentences). 11 were caught. Not caught: the "missed answers" cause needing 3 misses instead of 2, because the only scenario had exactly 3. Kiro added a 2-miss scenario; 105/105, and that change now fails a test.
   - **Cause-of-death sentences** (`autopsy-sentences.ts`, task 10.1) were written by Claude Code in this session too; see Session 12.
 - **Credits used**: 26.13 for round 1 (12 minutes 3 seconds); 12.89 for round 2 (7 minutes 36 seconds); the 2-miss follow-up was small and not recorded.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: tasks 1, 2.2, 2.3, 3, 4, 10.2 and 15 done and ticked (105 app tests).
 
 ---
@@ -545,7 +532,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **One failure: the shell typecheck.** `boundary.test.ts` could not find `node:fs` although `@types/node` was installed. TypeScript 7 no longer adds installed `@types` packages by itself, so Kiro's note ("no `types` field, so every installed `@types` package is picked up") no longer holds. The app only passed because `vite-env.d.ts` pulls Node's types in through Vite. I fixed it in Session 15: `"types": ["node"]` in both tsconfigs.
   - **Deliberate breaks:** 9 of 9 caught (each sort reversed, health rounded instead of floored, an empty epitaph shown, the Fight/Challenge label swapped, the state label and "Remove" hard-coded in the shell, the theme variables dropped).
 - **Credits used**: 39.72 (15 minutes 48 seconds).
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: tasks 6.1, 6.2, 6.3, 13 and 14 done and ticked.
 
 ---
@@ -589,7 +575,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
 - **Verification (in WSL)**: `pnpm install` added the test packages (with `@testing-library/dom` as a peer, no warning). After the tsconfig fix: shell and app typecheck clean, shell 35/35, app 166/166, build OK, engine 701/701.
   - **Deliberate breaks:** 7 changes. Caught: fight answers swapped, "Walk away" calling `tend`, a challenge that always counts as right, "I forgot" on a grave recording nothing, the question limit off by one, the epitaph limit raised to 100. Not caught on its own: editing reads knowledge from the form instead of the stored fact. That one has no effect, because the edit form is also pre-filled with the stored knowledge; breaking both places at once fails the edit test. So the rule is guarded twice.
 - **Credits used**: 43.85 (14 minutes 51 seconds).
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: tasks 5.1, 5.2, 7.1 and 7.2 done and ticked. Study Dungeon: 22 of 58 tasks and subtasks ticked (166 app tests, 35 shell tests). Kiro's three choices (Challenge "Walk away", "1 day", "half-life doubled" kept at the 180 clamp) are kept unless I change them. Next: round 5, the time machine (task 8).
 
 ---
@@ -645,7 +630,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **Two got past the App's own check:** remove and "Start the session" while previewing. Both are blocked twice: the App ignores them, and the shell's ItemCard and TriagePanel never call back while disabled. Breaking both layers fails a test in each case, so they are covered.
   - **One made no difference:** writes using the preview time. Writes cannot happen while previewing, so the offset is always 0 when one does.
 - **Credits used**: 58.77 (20 minutes 20 seconds), the most for one round so far.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: tasks 8.1, 8.2, 8.3, 9.1 and 9.2 done and ticked.
 
 ---
@@ -668,7 +652,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
     - `allHistory(engine, now)` collects every fact's history.
     - 14 tests, including 23:30 and 00:30 counting as two days, the Kolkata time zone, the New York daylight-saving change, and reviews after now being ignored.
   - **Contrast check** (`src/contrast.test.ts`, task 16.3): computes the WCAG ratio for every text colour on bg, panel and panelHi, and for the filled buttons. All pass AA; the lowest is blood on stoneHi at 6.0:1. Task 16.3's "bone on bg 14.6:1" is wrong: it is 16.35:1. 30 tests.
-- **What I changed by hand**: no code.
 - **What went wrong or surprised me**:
   - **Deliberate breaks:** 10 changes. 7 were caught. Two made no difference (a review moved within its safety margin, a date step off by an hour that still lands on the same day). One was a real gap: a review later on the same day, after now, was counted toward the streak, because the test only had a future review on a later day. A same-day case was added, and that change now fails a test.
 - **Verification (in WSL)**: app typecheck clean, app 221/221 (239/239 with round 5).
@@ -713,7 +696,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **Deliberate breaks:** 7 changes. Caught: a resurrection restarting the chart's half-life from the knowledge level (the trap this round's prompt warned about), a resurrected life starting at 45 instead of 100, first run shown over existing facts (14 tests failed), reset keeping the "started" flag.
   - **Three got through, and none is a gap.** The streak reading the preview time survived only because the `useMemo` dependency list does not include `now`; the realistic form of that bug (adding `now` to the list too) fails the test. Souls reading the preview time makes no difference, because the history is the same whatever time is passed. A reset that also removes other keys could not run against the test's fake storage, which has no `key()`; the test does check that other apps' keys survive a reset.
 - **Credits used**: 74.74 (24 minutes 5 seconds), the most for one round so far.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: tasks 10.3, 11.3, 11.4, 12.1 and 12.2 done and ticked. Next: round 7, the last build round.
 
 ---
@@ -734,7 +716,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
     - 5 tests. The selectors are read from the CSS and run against the real icons from `icons.tsx`, so renaming a `data-icon` attribute breaks a test instead of silently stopping the animation.
   - **Sound** (`src/sound.ts`, task 20): a slash for a right answer, a low growl for a wrong one and a rising C major chime for a resurrection, generated with Web Audio in code: no audio files, nothing to license (Requirement 18.2). Off by default and saved under `study-dungeon:sound`. `play` never throws, does nothing when sound is off, and gives up quietly when the browser has no Web Audio. 14 tests with a fake audio context that records every tone's wave, pitch, timing and fade.
   - **`scripts/check.sh`**: install, both typechecks, the engine, shell and app tests, and the build, with a one-line result per step. It picks the Linux Node from nvm (the Session 11 problem). Its first run caught a real failure in Kiro's round 6, then in progress: `actions.autopsy` had been added to the wording but not to `theme.test.ts`.
-- **What I changed by hand**: no code.
 - **What went wrong or surprised me**:
   - **Reading a CSS file in a jsdom test** took three tries. Vitest blanks CSS imports, even `?raw`, and jsdom replaces the global `URL`, so `fileURLToPath(new URL(...))` fails. `import.meta.dirname` works.
   - **Deliberate breaks:** 15 changes across the four pieces. 14 were caught, among them a quota error only recognised under Chrome's name, a bug reported as corrupt data, a reset without confirmation, a monster shaking forever, animation left on under reduced motion, no shake for keyboard users, sound playing while off and sound on by default. The one not caught makes no difference: without `autoFocus`, focus still lands on Cancel, because React reuses the "Reset all data" button for it. `autoFocus` stays as a safeguard.
@@ -789,7 +770,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **Wiring checked by reading:** the engine is built through `createEngineSafely` in `Root.tsx`, so a bad snapshot shows the problem screen; reset everywhere goes through `resetAllData` and `RESET_KEYS`, which now includes the tour flag; writes are classified or rethrown; one sound player, used by both dialogs.
   - **Deliberate breaks:** 10 changes, all caught: reset keeping the tour flag, the tour shown every time or never marked done, Escape not skipping the tour, focus not returned to a dialog's opener, a wrong answer playing the slash, no chime on a resurrection, the lists' nav landmark removed, no reset offered for corrupt data, the wrong storage message. (The nav check first looked caught only because the change was a syntax error; done properly, the accessibility test fails.)
 - **Credits used**: 105.44 (31 minutes 54 seconds), the most for one round. Rounds 1-7 together: about 362 credits.
-- **Screenshot**: (add file names from `docs/screenshots/`)
 - **Status**: all round 7 tasks done and ticked. With the final checkpoint (next entry), Study Dungeon's spec is complete: 58 of 58.
 
 ---
@@ -804,7 +784,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **design.md** updated for both.
   - Removing any of the four fixes fails a test.
 - **Task 19, final checkpoint**: `scripts/check.sh`: install OK, typechecks clean, engine 701/701, shell 103/103, app 404/404 (1,208 tests in all), build OK. The dev server and the production preview were started and served the page and the built script.
-- **What I changed by hand**: no code.
 - **Status**: Study Dungeon's spec is complete: 58 of 58. Still to do outside the spec: a manual pass in a browser (keyboard only, a phone width, sound on), screenshots for this log, and deployment.
 
 
@@ -823,7 +802,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
 - **Small shell change**: `TimeMachine` gained an optional `belowSlider` slot for the timeline. Shell tests 103/103.
 - **Steering**: `theme-and-wording.md` said "not as a health bar"; it now allows a bar beside the world, always with the weak and dead marks.
 - **Tests**: new `creatures.test.ts` (mood rule, urgency, stable identity), `components/art/art.test.tsx` (every creature in every mood, HealthBar marks and lost part, the candle melting), `timeline.test.ts`; `styles/animations-css.test.tsx` rewritten for the new motion rules. One real bug found on the way: a card read the history of a fact removed mid-session; the base health is now read with the lists.
-- **What I changed by hand**: no code.
 
 ---
 
@@ -837,7 +815,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - **Answer checking** (`answer-check.ts`, `AnswerPanel.tsx`): a fight or challenge now asks you to pick from four options (the wrong ones are your other facts' answers, the most alike first) or to type the answer (checked with slack for case, punctuation, articles and small typos). The old "Show answer / I knew it" stays as a third choice. Setting "Answer by" beside Sound; default is picking. Tests written before this select the old mode through `defaultAnswerCheck` / the app-kit's `answerCheck`.
   - **Features**: hunter ranks from souls banished with progress to the next (`ranks.ts`); a combo counter in Triage sessions; sparks on a win, "Miss!" on a wrong answer; after a right answer the fight says when the fact wakes again.
 - **Tests**: new `answer-check.test.ts`, `ranks.test.ts`, `components/FightDialog.checked.test.tsx`, `App.answers.test.tsx`; `layout-css.test.ts` now expects one column and checks the new CSS files fit a 320px screen. App 451/451, shell 103/103, typechecks clean.
-- **What I changed by hand**: no code.
 
 ---
 
@@ -856,7 +833,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
 - **Kept on purpose**: local-first. No accounts and no database, as `tech.md` says; backup and restore cover moving or losing a browser. Cloud sync is the next step the storage adapter allows.
 - **Briefs for the next apps**: `docs/design/ghosted-visual-brief.md` (with `ghosted-wireframe.html`) and `docs/design/expiry-reaper-visual-brief.md`, written before Kiro builds them, so the look is in their specs from day one.
 - **Tests**: app 465/465, shell 104/104, typechecks clean.
-- **What I changed by hand**: no code.
 
 ---
 
@@ -891,7 +867,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - Kiro's shell printed nothing for long chained commands. Saving the output to a file in one command and reading it in a second worked.
   - The hook cannot be triggered by Kiro itself. To see it fire, send a prompt such as "scaffold the expiry-reaper policy".
 - **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
-- **Screenshot**: (add file names: the agent's report, the hook panel showing it enabled)
 
 ---
 
@@ -915,7 +890,6 @@ Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is
   - Kiro's shell printed nothing again. Saving the typecheck output to a file and reading it back worked: `tsc --noEmit`, exit 0.
 - **Verification (in WSL)**: Ghosted typecheck clean (Kiro, through the file). Tests (mine, in WSL): 5 `it.todo` and nothing else at the time, as expected. After that I tested the policy through the real engine with a temporary test (since deleted): `checkPolicy` passes, exactly 60 on day 36, weak on day 37, exactly 10 and still weak on day 81, dead on day 82, a text on day 45 gives 90 and fades again on day 72, and a reconnect gives health 100. Later, in Session 29, I broke the policy nine ways and the real tests caught eight (the ninth was an equivalent mutant).
 - **Credits used**: 5.64 (2 min 34 s)
-- **Screenshot**: (add file names)
 
 ---
 
@@ -986,10 +960,8 @@ Spec stage total: 107.13 credits (3.12 + 7.01 + 7.95 + 5.41 + 6.75 + 13.52 + 24.
   - `packages/shell/src/components/TimeMachine.range.test.tsx`: 17 tests (a 365-day range with jumps of 30, 90, 180 and 365; the exact offset of each jump; clamp with a jump of 400; Play ending at 365, half-way at 182.5; reduced-motion Play; the fallbacks; the defaults).
   - No existing test file, `packages/engine` or anything else was changed.
 - **Verification (in WSL, outside Kiro)**: `bash scripts/check.sh` passed: engine 701, shell 121 (104 before, plus 17), Study Dungeon 465. Kiro could confirm only the shell tests and both typechecks; its run of the Study Dungeon tests did not finish, so that confirmation is mine.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: Kiro's shell lost the Study Dungeon test run, as in earlier sessions.
 - **Credits used**: 10.82 (2 min 48 s).
-- **Screenshot**: (add file names)
 
 
 ---
@@ -1201,7 +1173,6 @@ Listed so the write-up does not count it as Kiro work. Done by Claude Code in WS
 - **What Kiro produced** (`apps/ghosted/src/`): `timeline.ts` (the dock's markers: start-fading times from the policy's next-due, go-dark times from `engine.forecast`) and test; `components/MoonDock.tsx` (the shell `TimeMachine` with a 365-day range and jumps +30, +90, +180 and +1 year, the moon's shade following `--age`, the preview banner, every write disabled while previewing), `ForecastControl.tsx` (7, 30 and 90 days; the 30-day list for the sample street is Sunita, Meera and Dan, the 7-day list says nobody), `BackupControls.tsx`, `ImportDialog.tsx`, their tests, `styles/dock.css`, `shell-controls-css.test.ts`, and the wiring in `App.tsx`. Import adds people one line at a time through the write gate; if storage fills part-way it keeps what was added and leaves the remaining lines in the box. New `App.test.tsx` cases check that an add, an import and a restore each change the privacy line.
 - **Decisions beyond the spec, accepted**: `MoonDock` takes a `timeZone` prop for marker dates; the import dialog shows a storage problem inside itself; `BackupControls` has `timeZone` and `download` props and the App reloads after the restore confirmation; a `.gh-age-dim` layer dims the street as `--age` rises; the backup download link is revoked with a 1-second `setTimeout`, as in Study Dungeon (task 5.9's motion test must not count it).
 - **Verification (in WSL, outside Kiro)**: for the first time nothing needed fixing: Ghosted typecheck clean, 530 tests passed, and the full `check.sh` passed on the first run.
-- **What I changed by hand**: nothing.
 - **Looked at the real page (mine, outside Kiro)**: screenshots at 1280 px, driven by the jump buttons. Today: 4 windows flickering. At +90 days (19 Feb 2027): 2 flickering, the nav reads "Fading 2, Empty windows 10, Still lit 0", the moon is high. At +180 days: "Nobody is fading." At +365 days (21 Nov 2027): a thin crescent moon, every window boarded up, "Empty windows 12". "Back to today" restores the hero. The only visual flaw: the fade and dark markers in the first month overlap in a cluster at the left of the track. One console message, the favicon 404.
 - **What went wrong or surprised me**: nothing broke. Kiro's choices were all small and listed.
 - **Credits used**: 94.72 (22 min 54 s).
@@ -1316,7 +1287,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - Test-quality check: no try/catch, skips, real-clock reads or existence-only tests, and expected values come from the spec.
   - Edge case: `rhythmDays` 0 would make `healthAt` return NaN. Checked afterwards: `person-form.ts` (`RHYTHM_MAX = 365`, whole days from 1) and `import-people.ts` already enforce 1 to 365, so no change is needed.
   - It said what it did not check: generator coverage in `test/generators.ts`, this log, and design section 2.2 line by line.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: it did not repeat the IDE run's `nextDueAt` finding (hard-coded 60 and 10, Session 36). Checked: `nextDueAt` now reads `ghostedPolicy.thresholds.weak` and `.dead`, so that issue was already fixed and the CLI run was right not to raise it.
 - **Credits used**: 1.74 for the session (0.15 for the first turn, 1.58 for the review; 1 min 29 s).
 ---
@@ -1392,7 +1362,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   | New untracked `src/untracked-c5.ts` | exit 1 | exit 1, file named |
 
   Then `bash scripts/check.sh` in the main tree: every step ok, "All checks passed." Tests: engine 701, shell 152, Study Dungeon 465, Ghosted 665, the same totals as before.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - The first attempt (Nov 21, cancelled) left `git diff` waiting in a pager, which blocked the IDE's shell and mixed later commands into the pager screen. To get out, **Kiro ran `git config --global core.pager cat` without asking**. It noticed straight away and ran `git config --global --unset core.pager`. If I had my own `core.pager` before, that value is gone. This run changed no git config and used `git --no-pager` or `GIT_PAGER=cat` per command.
   - The shell tool sometimes returned no output, or output cut off partway, so the verification results were saved to a log file and read from there. A script written to `\\wsl.localhost\Ubuntu\tmp` was not visible from the shell on the first try. It appeared a moment later.
@@ -1429,7 +1398,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   | Viewport height | 800px | 844px | 844px |
 
   Measured against the viewport alone, the first row was on screen at both sizes. Measured against the dock, which covers the bottom of the screen, it was not at 390×844: the row ended 21px below the dock's top edge, so the state labels ("boarded up", "flickering") were hidden. After the spacing change it ends 7px above the dock. At 1280×800 it ends 13px above the dock and needed no change. Screenshots checked by eye at both sizes.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - The shell returned no output or was blocked several times. The first preview server start was refused by the tool ("appears to start a server"), twice, so I stopped as the shell rules say and the developer started the server. The earlier L1 runs had also been cancelled for the same reason, which led to `shell-commands.md` (Session 44).
   - The first measurement script looked for the Street while the app was on the first-run welcome screen (no sample data loaded yet), so it returned null. A second run was blocked by the splash dialog. The script then dismissed the splash ("Walk in") and clicked "Load sample street". The first L1 test, earlier, had also used the wrong region name.
@@ -1448,7 +1416,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Kiro feature used**: Kiro IDE chat (agent mode), steering, specs.
 - **What Kiro produced**: `.kiro/steering/shell-commands.md` with `inclusion: always`. Its five rules: one command per call, with no long `&&` chains or heredocs; long output redirected to a file and read in a second call; long-running work in the background with `nohup`, waited on with `tail --pid=<pid> -f /dev/null` instead of a polling loop; no git config changes, using `git --no-pager` or `GIT_PAGER=cat` instead; and stop after the same failure twice, report the command and its output, and never try a third variant.
   - Rule 6, added at my request later in the same session: never start a server (anything with a port or host). Instead, ask me to start it in my own terminal, or use a draft deploy (`netlify deploy --build`, never `--prod`) and test its URL.
-- **What I changed by hand**: nothing.
 - **The L2 spec** (spec only, nothing built). Problem: at 1280×800 the dock in both apps is always open and covers about a quarter of the screen, and Ghosted's markers are glyphs with no words.
   - **Ghosted**: Requirement 34 (12 criteria), design section 11, tasks Group H (8.1 to 8.6), and design section 9.5 (focus order) updated.
   - **Study Dungeon**: Requirement 19 (14 criteria), design "Compact Time Dock", task 21 (21.1 to 21.5).
@@ -1471,7 +1438,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **What went wrong or surprised me**: nothing broke in this session. The shell rules come from the L1 runs, where several commands printed nothing and Kiro polled in loops instead of waiting on the process. Following them here, every command's output was readable: long output went to `/tmp` files and was read back.
 - **Not done**: L1 is still unverified (check, screenshots and its Session 43 entry). L2 is not built; Ghosted tasks 8.1 to 8.6 wait for my go-ahead.
 - **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
-- **Screenshot file names**: none.
 ---
 ## Session 45: Ghosted L2 build, the compact moon dock (tasks 8.1 to 8.5) (Nov 22, 2026)
 - **Goal**: build Ghosted's compact moon dock from the approved spec (Requirement 34, design section 11), tasks 8.1 to 8.5 only. No commands: no tests, typecheck or check scripts. Task 8.6 and every Study Dungeon task are left for later.
@@ -1511,14 +1477,12 @@ Work done outside Kiro (Claude Code) used none of these credits.
       - The exact toggle and hint words in `wording.test.ts`; `markerSoonLabel` in `timeline.test.ts`.
       - The 44 px toggle and `.gh-sr-only` in `layout-css.test.ts`; two `dock-narrow.test.ts` cases; hint and label contrast rows in `contrast.test.ts`.
     - `App.preview.property.test.tsx` only moves the slider, which works while collapsed, so it is unchanged (`numRuns` stays at 100).
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked. None of the new or changed tests, the typecheck or `scripts/check.sh` has been run, so failures are still possible. Task 8.6 runs them.
   - **One command did run.** Kiro made one shell call by mistake, a no-op `true` with no effect. It was against the "no commands" instruction, and Kiro reported it.
   - Without search, the tests that use the dock were found by reading every App-level test file.
 - **Not done**: task 8.6 (check, screenshots at 1280×800, 390×844 and 320×640, the L1 re-check), and every Study Dungeon task (21.x).
 - **Credits used**: the CLI's 8.6 verification turn was 7.60 (9 min 17 s; the CLI's running total was 21.93). The IDE build part is counted in the combined 305.38 shown in the Credits summary at the top of this log.
-- **Screenshot file names**: none.
 
 ---
 ## Session 46: the P4 spec, a loss forecast line on both heroes
@@ -1530,7 +1494,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Definitions**: the next 7 days is the rolling window `(realNow, realNow + 7 days]`, using the real time only. "Will die" / "goes dark" means listed by `engine.forecast(realNow, 7 days)`. "Will weaken" / "starts to flicker" means alive at `realNow`, `nextDueAt` in those 7 days, and not also dying. Each item is counted once, and an item already weak is never counted as weakening.
   - **Reused unchanged**: `timelineEvents` (Study Dungeon) and `dockMarkers` (Ghosted) on `engine.view(realNow)` and a 7-day `engine.forecast`, so the line agrees with the dock markers. Not reused: the existing 60- and 365-day forecasts, because bisection can date a death at exactly 7 days into day 8. Also not reused: Study Dungeon's preview diff, which misses a fact that weakens exactly at day 7. That preview line stays as it is and is the only one shown while previewing.
   - **Worked by hand from the policies**: the Study Dungeon sample gives 1 weakens (binary search, +6.74 days) and 1 dies (helicase, +5.29). The Ghosted sample gives 1 starts to flicker (Sunita, +2.4) and 0 go dark. Boundary tests sit exactly at 7 days in whole milliseconds. In Study Dungeon the weak crossing is not a whole millisecond, so it is tested 1 ms either side.
-- **What I changed by hand**: nothing.
 - **What I decided** (spec approved with these):
   - **Wording**: "in the next 7 days", never "this week", because the window is a rolling 7 days and not a calendar week. Every sentence, test expectation and spec line was changed to match. Examples: "If you do nothing, in the next 7 days 1 fact weakens and 1 dies." and "No window will start to flicker or go dark in the next 7 days."
   - **Exactly at day 7**: counted, as the dock marks it on day 7.
@@ -1543,7 +1506,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - No commands were run, so directories could not be listed. Test file names come from the specs and from reading files.
 - **Not done**: everything in Ghosted tasks 9.1 to 9.4 and Study Dungeon task 22. These wait for the developer's go-ahead.
 - **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
-- **Screenshot file names**: none.
 
 ---
 
@@ -1564,7 +1526,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Collapsed 320×640**: dock 174 px (27.2%), scrollHeight 174 = clientHeight 174. All five parts inside the dock. Page bottom padding 199 px. No horizontal scroll (320). PASS.
   - **Expanded 390×844**: dock 211 px (25%), `max-height` 260 px. Page bottom padding 236 px, last row ends 25 px above the dock. No horizontal page scroll. FAIL on jumps: "+30 days" and "+90 days" are visible. "+180 days", "+1 year" and "Play the year" are hidden, because the jump row (`.shell-time-machine-controls`, `overflow-x: auto`) is 592 px wide inside 280 px and the dock does not wrap it. "Back to today" was not visible in the expanded dock (it only appears while previewing a date).
   - **Expanded 320×640**: dock 211 px (33%, under the 45% limit). Page bottom padding 236 px. No horizontal page scroll. FAIL on jumps: row 592 px wide inside 210 px, only "+30 days" and "+90 days" visible. "+180 days", "+1 year" and "Play the year" are hidden.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - The first click on "Load sample street" timed out because the "Walk in" splash covered the page. Clicking "Walk in" first fixed it.
   - The earlier fix (Nov 22) made the collapsed bar pass, but the expanded dock still hides Play and three jumps behind a sideways scroll inside the dock. Requirement 34 is not met for the expanded dock at 390 and 320 wide. Nothing was fixed, as asked.
@@ -1582,7 +1543,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Expanded 320×640**: dock 315 px = 49.2% of 640. All five buttons inside, no inner scroll, padding 340 px, no horizontal scroll. The 45% limit FAILS (49.2%).
   - **"Back to today" at 146 days ahead, 390×844**: the dock grows to the 320 px cap (37.9%) and scrolls inside (scrollHeight 377 > clientHeight 320). The button sits at y 835 to 879, below the dock's bottom and below the 844 px viewport. FAIL.
   - **"Back to today" at 146 days ahead, 320×640**: dock 320 px (50%), scrollHeight 405 > clientHeight 320. Button at y 645 to 689, below the 640 px viewport. FAIL.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - The splash was not shown (data already loaded), so "Walk in" was not needed.
   - The dock now starts expanded on a fresh load, so the first collapsed screenshot attempt was of the expanded dock. I collapsed it with the toggle and re-took it before the final files were written.
@@ -1599,7 +1559,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **390×844, previewing 17 Apr 2027 (146 days ahead)**: dock 320 px (37.9%), scrollHeight 377 > clientHeight 320 (57 px of inner scroll). "Back to today" at y 787 to 831 (93.2% to 98.5% of the viewport height), fully inside the dock without scrolling it. All five jump/Play buttons also inside at scroll top, and reachable at scroll top and at scroll bottom. No horizontal page scroll (390). PASS.
   - **320×640, same date**: dock 320 px (50% of 640), scrollHeight 405 > clientHeight 320 (85 px of inner scroll). "Back to today" at y 569 to 613 (88.9% to 95.8%), fully inside the dock without scrolling it. All five buttons inside and reachable. No horizontal page scroll (320). Back-button visibility PASS. The dock is 50% of the viewport, over the 45% limit from the earlier check (still FAIL on that separate rule).
   - **Click "Back to today"** (a real click) at both widths: the page reads "Today, 22 Nov 2026" and the button disappears. PASS.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - The result differs from Session 48, where the button sat at y 835 to 879 (390) and 645 to 689 (320), below the viewport. `git status` shows uncommitted edits to `MoonDock.tsx`, `App.tsx` and several dock tests under `apps/ghosted/src`, so the dock was probably changed between runs. Kiro did not make those edits and did not look into them.
   - A tool call with a missing argument failed once (my mistake, not a repeated failure).
@@ -1627,7 +1586,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
     - `App.first-run.test.tsx`: none on the first run or the empty street.
     - `App.accessibility.test.tsx`: not in a live region and not in the Tab order.
   - **Line text**: 0 → "No window will start to flicker or go dark in the next 7 days."; 1 → "If you do nothing, in the next 7 days 1 window starts to flicker."; many → "If you do nothing, in the next 7 days 3 windows start to flicker and 2 go dark."
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked. None of the new or changed tests, the typecheck or `scripts/check.sh` has been run, so failures are still possible. Task 9.4 runs them.
   - **One command did run.** Kiro made one shell call by mistake, a no-op `echo` with no effect. It was against the "no commands" instruction, and Kiro reported it.
@@ -1636,7 +1594,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - With an 8px top margin and no bottom margin (as the design says), the line sits right on the hero buttons. The h2's 16px bottom margin collapses with it. Worth a look in the 9.4 browser check.
 - **Not done**: task 9.3's full search (see above) and task 9.4 (check, the Requirement 33.2 re-measure at 1280×800 and 390×844, screenshots).
 - **Credits used**: 31.93 (8 min 10 s)
-- **Screenshot file names**: none.
 
 ---
 ## Session 51: Ghosted P4 check, the "next 7 days" line (task 9.4), stopped at 390×844
@@ -1654,7 +1611,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Requirement 33.2 FAIL**: the first row ends 48.7 px below the dock's top edge, so it is partly hidden behind the dock without scrolling. Gap line to button 0 px. No horizontal scroll (390).
   - As instructed, no CSS was changed. Measurements stopped here.
 - **Not done**: 320×640 (all checks and screenshot), the 390 preview/"Back to today" check, and `ghosted-p4-320.png`. Not measured because the instruction was to stop when the first row does not fit at 390×844.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: the line has no spacing above the hero button at any width (design says `margin: 8px 0 0` on the line, but the button row starts right under it). The hero is 341.8 px tall at 390×844, against 184.6 px at 1280.
 - **Credits used**: 5.43 (6 min 11 s; the CLI's running session total was 17.74)
 - **Screenshot file names**: `ghosted-p4-1280.png`, `ghosted-p4-390.png`
@@ -1741,7 +1697,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
       - No transition or animation in `dock.css`.
       - The four `--dock-h` fallbacks.
   - `tasks.md`: 21.1 to 21.4 ticked. 21.5 and the parent task 21 are not.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked. None of the new or changed tests, the typecheck or `scripts/check.sh` has been run, so failures are still possible. Task 21.5 runs them.
   - **Two commands did run.** Kiro made two shell calls by mistake, a no-op `echo` each time, with no effect. They were against the "no commands" instruction, and Kiro reported them.
@@ -1750,7 +1705,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - Without search, the tests that use the dock were found from the design table and by reading the App-level test files I could find by name (`App.sound.test.tsx`, `App.storage-errors.test.tsx` and `Root.test.tsx` use no jump, Play or marker). A test file not listed in the design that clicks a jump, or that reads `timelineText.fold` or `unfold`, would fail in 21.5. The typecheck will catch any other use of `fold` or `unfold`.
 - **Not done**: task 21.5 (`scripts/check.sh`, `scripts/check-engine-unchanged.sh`, and the browser check at 320, 390 and 1280 px on a draft deploy or a server the developer starts).
 - **Credits used**: 62.17 (14 min 57 s)
-- **Screenshot file names**: none.
 
 ---
 ## Session 54: Study Dungeon L2 check, the compact dock (task 21.5), not ticked
@@ -1824,7 +1778,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
     - `theme.test.ts` (the existing wording test): exact words for the new function and no "this week".
   - **Line text**: 0 → "Nothing will weaken or die in the next 7 days."; 1 → "If you do nothing, in the next 7 days 1 fact weakens."; many → "If you do nothing, in the next 7 days 3 facts weaken and 2 die."
   - `tasks.md`: 22.1 to 22.3 ticked, with a status note under 22.3. 22.4 and the parent task 22 are not ticked.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked. None of the new or changed tests, the typecheck or `scripts/check.sh` has been run, so failures are still possible. Task 22.4 runs them.
   - **Two commands did run.** Kiro made two shell calls by mistake, a no-op `true` each time, with no effect. They were against the "no commands" instruction, and Kiro reported them.
@@ -1834,7 +1787,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Search**: without a full-text search, these test files were read for `sd-hero-sub`, `sd-hero-main` and the hero's `textContent`, and none compares the hero's whole text: `App.hero-autopsy.test.tsx`, `App.first-run.test.tsx`, `App.test.tsx` (first 260 lines), `App.accessibility.test.tsx` (first 70 lines), `App.extras.test.tsx`, `theme.test.ts`. **Not read**: the rest of `App.test.tsx` and `App.accessibility.test.tsx`, `App.tour.test.tsx`, `App.sound.test.tsx`, `App.storage-errors.test.tsx`, `Root.test.tsx`, `styles/layout-css.test.ts`, `contrast.test.ts`, `styles/animations.test.ts` and the component tests. A test that renders `HeroSection` on its own with an engine that has no `forecast` would also fail; none was found, but the typecheck will show it.
 - **Not done**: task 22.4 (`scripts/check.sh`, `scripts/check-engine-unchanged.sh`, and the browser look at 1280 and 390 px with the sample data).
 - **Credits used**: 42.46 (8 min 21 s)
-- **Screenshot file names**: none.
 
 ## Work outside Kiro on Nov 22: Expiry Reaper dropped
 - **Who and why**: Claude Code (Sonnet 5.5), outside Kiro, at the developer's request. The developer decided not to build the third app. The audit's go/no-go (planned for Nov 30) is settled early: no.
@@ -1877,7 +1829,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Design decisions written down**: the count is the picks whose `diesAt` is at or before `now + LOSS_FORECAST_DAYS` days (the P4 constant), kept only if the app's good event at `now` keeps them alive at the window's end, checked with the policy's own `applyEvent` and `healthAt`. A right answer cannot save a fact with a 1-day half-life, and a call cannot keep a window with a 1- or 2-day rhythm lit, so those are left out and the line never over-claims. The words name the event: "Answering these right saves …" and "A call or meet-up with these people keeps …", because a wrong answer or a text cannot keep the promise.
   - **Shell**: the panel keeps its budget and result in its own state, so no app-only change can put a line under the picks. One optional prop, `picksNote(picks) => string | null`, rendered between the picks list and the start button, inside the panel's 12 px flex gap. The new test file `TriagePanel.note.test.tsx` goes on the Ghosted shell allow-list in `scripts/check-engine-unchanged.sh` (task 10.1).
   - **Sentences**: Study Dungeon 1 → "Answering these right saves 1 fact that would die in the next 7 days."; many → "Answering these right saves 3 facts that would die in the next 7 days." Ghosted 1 → "A call or meet-up with these people keeps 1 window from going dark in the next 7 days."; many → "… keeps 3 windows from going dark in the next 7 days." 0 → no line in either app.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **One command ran.** Kiro made one shell call by mistake (`echo skip`), with no effect. It was against the "no commands" instruction.
   - **One edit was interrupted** (the first insert into the Ghosted design) and was retried once, successfully.
@@ -1886,7 +1837,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Search**: no full-text search was possible without commands. The workspace search tool found the Triage text in these test files, and only the matching lines were read: Study Dungeon `App.test.tsx`, `theme.test.ts`, `App.accessibility.test.tsx`; Ghosted `GhostedTriage.test.tsx`, `App.test.tsx`, `App.preview.test.tsx`, `App.storage-errors.test.tsx`, `App.preview.property.test.tsx`, `primary-buttons.test.tsx`, `contrast.test.ts`, `wording.test.ts`; shell `TriagePanel.interaction.test.tsx`, `TriagePanel.budgets.test.tsx`. Tasks 10.5 and 23.4 start with a `grep`.
 - **Open for the developer**: whether the line shows while previewing (proposed: yes, it follows the picks); the "saves" wording next to the preview banner's "nothing is saved".
 - **Credits used**: 44.99 (23 min 42 s)
-- **Screenshot file names**: none.
 
 ---
 ## Session 59: Ghosted P5, "What this session saves" under the Triage picks (tasks 10.1 to 10.5)
@@ -1916,7 +1866,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
     - `layout-css.test.ts`: no margin, `display: none` or `visibility: hidden` on the line; no app rule changes the panel's `gap` or `display`.
   - **Sentences**: 1 → "A call or meet-up with these people keeps 1 window from going dark in the next 7 days."; many → "A call or meet-up with these people keeps 3 windows from going dark in the next 7 days."; 0 → no line.
   - `tasks.md`: 10.1 to 10.5 ticked, with a status note under 10.5. 10.6 and the parent task 10 are not ticked.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked: no tests, no typecheck, no check scripts. Failures are still possible; task 10.6 runs them.
   - **Coverage thresholds not measured.** The property test's 5% branch thresholds (counted, at risk but left out, not at risk) were set without being able to run them. If one fails, the generator mix changes, never the threshold or `numRuns`.
@@ -1924,7 +1873,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **The shell boundary test** scans every shell source file for app words and colour names, so the new shell test uses placeholder words only.
 - **Not done**: task 10.6 (`scripts/check.sh`, `scripts/check-engine-unchanged.sh`, and the browser look at 1280×800 and 390×844 with the moon clock at +15 days).
 - **Credits used**: 55.98 (10 min 57 s)
-- **Screenshot file names**: none.
 
 ---
 ## Session 60: Kiro write-up brought up to date (Nov 22, 2026)
@@ -1937,7 +1885,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **What I changed by hand**: nothing yet.
 - **What went wrong or surprised me**: every shell call returned exit -1 with no output (three tries), so nothing was recounted. The line counts and the steering file count were not checked, and the count was taken out of the steering bullet rather than guessed.
 - **Credits used**: counted in the combined 305.38 shown in the Credits summary at the top of this log.
-- **Screenshot file names**: none.
 
 ## Session 61: Study Dungeon P5, "What this session saves" under the Triage picks (tasks 23.1 to 23.4)
 - **Goal**: build the Triage saves line for Study Dungeon (Requirement 21, design "What This Session Saves"), tasks 23.1 to 23.4 only, with the developer's decisions on the open points: the count may be lower than the picks whose `diesAt` is inside the window (a pick counts only if a right answer really keeps it alive); the line shows during a preview; a death in the last minute of the window may be missed. The shell's `picksNote` prop (Ghosted task 10.1) is used as it is. No engine or shell change, no Claude Code file edited, no commands. Task 23.5 (check) is left open.
@@ -1959,7 +1906,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
     - `styles/layout-css.test.ts`: the panel keeps `gap: 12px` and no other app rule changes it; the exact declarations of the new rule, none inside a media query; no rule at any width sets `display: none`, `visibility: hidden` or a negative margin on `.shell-triage-note`.
   - **Sentences**: 1 → "Answering these right saves 1 fact that would die in the next 7 days."; 2 → "Answering these right saves 2 facts that would die in the next 7 days."; 3 → "Answering these right saves 3 facts that would die in the next 7 days."; 0 → no line.
   - `tasks.md`: 23.1 to 23.4 ticked, with a status note under 23.4. 23.5 and the parent task 23 are not ticked.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked: no install, tests, typecheck or check scripts. Failures are still possible; task 23.5 runs them. The new property and coverage tests need `pnpm install` first, as `fast-check` is new to this app.
   - **Coverage thresholds not measured.** The 5% branch thresholds and the 10% state thresholds were written without a run. The "at risk but not saved" branch needs a weak fact with a 1-day half-life, which is the rarest; the generator is biased towards it. If a threshold fails, the generator mix changes, never the threshold or `numRuns`.
@@ -1967,7 +1913,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Search**: done with the workspace search over `apps/study-dungeon/src` test files for `shell-triage`, "Fight these first" and "Start the session", not with a shell `grep`. Matches only in `App.test.tsx` and `theme.test.ts`; none compares the whole Triage panel's text, so no existing case changed. Read in full: `App.test.tsx`, `styles/layout-css.test.ts`, `styles/global-css.test.ts`, `motion.test.ts`, `test/app-kit.tsx`, `test/fixtures.ts`, `test/dock.ts`. Read in part: `App.accessibility.test.tsx` (lines 1 to 120 and the Tab-order case), `theme.test.ts` (imports and lines 196 to 285), `loss-forecast.test.ts` (lines 1 to 60), `styles/animations-css.test.tsx` and `contrast.test.ts` (searched for shell classes and file reads only).
 - **Not done**: task 23.5 (`scripts/check.sh`, `scripts/check-engine-unchanged.sh`, and the browser look at 1280 and 390 px with the gap measurements).
 - **Credits used**: 43.12 (12 min 29 s)
-- **Screenshot file names**: none.
 
 ## Session 62: the E1 spec, a replay package `@decay-engine/insight`
 - **Goal**: spec task E1 without building it: a new package that replays an item's history in a throwaway engine and answers "what if it had been tended at `at`?", using only the engine's public API, so the engine-unchanged proof stays true. No commands.
@@ -1986,14 +1931,12 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **What Kiro changed from the request**:
   - "A good event gives a later death" is not true in general. When a later recorded tend also resets health to 100, the extra tend changes nothing. P-C is split into P-C1 (never earlier by a minute or more), P-C2 (strictly later when no recorded tend follows `at` in that life) and P-C3 (monotone in `at`). A non-monotone `crammingPolicy` is tested with worked numbers.
   - Recorded health and death times are matched within 1e-9 and within one minute, not exactly: unrecorded ticks re-base the stored item, and the engine's bisection depends on when it settled the item, which the history does not record.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - No commands were run, as asked, so nothing was listed or searched; file names come from reading files.
   - The engine's `BISECT_PRECISION_MS` is not exported, so the spec writes 60,000 again (open question 7).
   - The first save of this entry failed ("Internal error: Failed to save", twice; a Session 61 for Study Dungeon P5 had appeared in the file meanwhile), so the entry is numbered 62.
 - **Not done**: everything in `tasks.md`. Nothing is built until the developer says so.
 - **Credits used**: 28.34 (13 min 24 s)
-- **Screenshot file names**: none.
 
 ---
 
@@ -2002,7 +1945,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools (navigate, evaluate, resize, screenshot). Servers were already running (Ghosted 5173, Study Dungeon 5174).
 - **What Kiro produced**: measurements only (see the table in the chat reply), four screenshots in `docs/screenshots/` (`study-dungeon-p5-1280.png`, `study-dungeon-p5-390.png`, `ghosted-p5-1280.png`, `ghosted-p5-390.png`), this entry, and the ticks for 10.6 and 23.5 in the two `tasks.md` files.
 - **Results**: Study Dungeon at 20 min: "Answering these right saves 1 fact that would die in the next 7 days.", gaps 12 px / 12 px, contrast 8.45:1, no horizontal scroll at 1280, 390 or 320. Ghosted at +15 days, 30 min: "A call or meet-up with these people keeps 1 window from going dark in the next 7 days.", gaps 12 / 12, contrast 8.84:1, no horizontal scroll; no line at today; no "die" or "dead" in the page text.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: a first 1280 screenshot was taken in parallel with a resize and was retaken. The slider's value is in milliseconds, not days. The first `curl` reachability check was blocked by the shell's port warning, so reachability was proven by loading the pages.
 - **Credits used**: 11.17 (6 min 53 s)
 - **Screenshot file names**: `study-dungeon-p5-1280.png`, `study-dungeon-p5-390.png`, `ghosted-p5-1280.png`, `ghosted-p5-390.png`
@@ -2039,7 +1981,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **The log number**: the request said the last session was 62, but Session 63 (the P5 browser check) was already in the file.
 - **Not done by Kiro**: task 11.
 - **Credits used**: 41.34 (14 min 9 s), plus 1.3 (17 s) for the follow-up that produced this entry's text.
-- **Screenshot file names**: none.
 
 ---
 ## Session 65: the R1 spec, "Rescue Point" in the autopsy, both apps
@@ -2059,7 +2000,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
     - Study Dungeon, "Who painted the Sistine Chapel ceiling?": "A review on 23 Oct, when it first went weak, would have kept it alive until 6 Nov, 8 days longer."
     - Ghosted, Ayesha Khan: "A call on 9 Oct, when the window first flickered, would have kept the light on until 16 Nov, 16 days longer."
     - Tomas Novak (started dark) gets no line.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Ghosted's gain is a whole number of days for many rhythms** (1.2 × rhythm, for example 72 days for Leo). Taking P off then usually shows one day fewer ("71 days longer"). This is left to the developer (open points).
   - **A Ghosted rhythm edit after a text** cannot be replayed, because the old rhythm is not recorded. The replay guard hides the line in that case. A rhythm edit with no text before it replays exactly.
@@ -2068,7 +2008,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Open for the developer**: "first went weak" / "first flickered" when an earlier weak spell ended; one day fewer on exact days, or plain floor; end dates after today in Study Dungeon's sample; the short date format (year only when a year or more apart).
 - **Not done**: everything in groups 24 and 11. E1 task 11 (install and run) must pass first.
 - **Credits used**: 43.83 (14 min 31 s)
-- **Screenshot file names**: none.
 
 ---
 ## Session 66: Ghosted R1, "Rescue Point" in the autopsy (tasks 11.1 to 11.5)
@@ -2109,7 +2048,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Sentences**:
   - Sample at 1 Dec 2026 12:00 UTC: "A call on 9 Oct 2026, when the window started to flicker, would have kept the light on until 16 Nov 2026, 16 days longer." (Ayesha Khan)
   - Test fixture: "A call on 18 Feb 2024, when the window started to flicker, would have kept the light on until 9 May 2024, 36 days longer." (Ines)
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked, so failures are still possible; 11.6 runs them.
   - **The `grep` in 11.5 was not done**: this session had no shell and no search tool. A test outside the files read could still compare the whole autopsy text.
@@ -2120,7 +2058,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Test files not read**: every Ghosted test except `components/PersonAutopsy.test.tsx`, `wording.test.ts`, `App.accessibility.test.tsx`, `config.test.ts`, `app-boundary.test.ts`, `test/fixtures.ts`, `test/generators.ts`, `test/source-files.ts`. Most relevant among the unread: `App.test.tsx`, `App.preview.test.tsx`, `App.preview.property.test.tsx`, `App.storage-errors.test.tsx`, `App.session.test.tsx`, `autopsy-sentences.test.ts`, `started-dark.test.ts`, `primary-buttons.test.tsx`.
 - **Not done**: task 11.6.
 - **Credits used**: 25.68 (5 min 23 s)
-- **Screenshot file names**: none.
 
 ---
 ## Session 67: Study Dungeon R1, "Rescue Point" in the autopsy (tasks 24.1 to 24.5)
@@ -2158,7 +2095,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Sentences**:
   - Sample "Who painted the Sistine Chapel ceiling?", loaded at 1 Dec 2026 12:00 UTC: "A review on 23 Oct 2026, when it went weak, would have kept it alive until 6 Nov 2026, 8 days longer."
   - Test fixture d1 (new, added 1 Oct 2026): "A review on 2 Oct 2026, when it went weak, would have kept it alive until 15 Oct 2026, 8 days longer."
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked, so failures are still possible; 24.6 runs them.
   - **The `grep` in 24.5 was not done**: this session had no shell and no search tool.
@@ -2168,7 +2104,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Test files not read**: every Study Dungeon test except `App.hero-autopsy.test.tsx`, `App.accessibility.test.tsx`, `theme.test.ts`, `styles/layout-css.test.ts` (first 30 lines), `test/fixtures.ts`, `test/fact-generators.ts`, `test/app-kit.tsx`. Most relevant among the unread: `App.test.tsx`, `App.first-run.test.tsx`, `App.extras.test.tsx`, `autopsy-sentences.test.ts`, `autopsy-chart.test.ts`, `App.storage-errors.test.tsx`, `Root.test.tsx`.
 - **Not done**: task 24.6.
 - **Credits used**: 27.07 (5 min 44 s)
-- **Screenshot file names**: none.
 
 ---
 
@@ -2177,7 +2112,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools. Fresh state per app (unload save blocked, storage cleared, about:blank, then the app), sample loaded, tour skipped.
 - **What Kiro produced**: measurements only, four screenshots in `docs/screenshots/` (`study-dungeon-r1-1280.png`, `study-dungeon-r1-390.png`, `ghosted-r1-1280.png`, `ghosted-r1-390.png`), this entry, and the ticks for 11.6 and 24.6.
 - **Results**: Study Dungeon, Sistine Chapel: "A review on 16 Oct 2026, when it went weak, would have kept it alive until 29 Oct 2026, 8 days longer."; Frankenstein: 28 Oct 2026 to 3 Jan 2027, 44 days longer. Ghosted, Ayesha Khan: "A call on 1 Oct 2026, when the window started to flicker, would have kept the light on until 8 Nov 2026, 16 days longer."; Tomas Novak has no rescue line. In all cases the line is the second sentence, gaps 8 / 8 px, no horizontal scroll, not clipped, reachable by scrolling the dialog.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: the gaps are exactly 8 px (the minimum). Study Dungeon's dialog legend contains the word "Dead below 10", which is allowed there; the die/dead/late ban applies to Ghosted only. Not checked this time: initial focus on the title, and Tab and Escape behaviour (named in the task text but not in the request).
 - **Credits used**: 11.08 (4 min 40 s)
 - **Screenshot file names**: `study-dungeon-r1-1280.png`, `study-dungeon-r1-390.png`, `ghosted-r1-1280.png`, `ghosted-r1-390.png`
@@ -2207,7 +2141,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
     - Tests: new `live-changes.test.ts`, `tab-signal.test.tsx`, `App.live.test.tsx` and `styles/live-css.test.ts`; a case added to `theme.test.ts`.
   - **Sentences, Ghosted**: "Mira Castell's window started to flicker." / "… went dark." / "… went from lit to dark."; "Mira Castell's and Dan Okafor's windows started to flicker." (or "went dark"); "Mira Castell's window went dark and Dan Okafor's started to flicker."; "3 windows started to flicker, Mira Castell's among them."; "2 windows started to flicker and 1 went dark, Mira Castell's among them."
   - **Sentences, Study Dungeon** (as amended by the developer): "Gaze just weakened." / "Gaze just died and went to the Graveyard." / "Gaze just died in its sleep and went to the Graveyard."; "Gaze and Wisp just weakened." / "Gaze and Wisp just died and went to the Graveyard."; "Gaze just weakened and Wisp went to the Graveyard."; "3 facts weakened, Gaze's among them."; "3 facts went to the Graveyard, Gaze's among them."; "2 facts weakened and 1 went to the Graveyard, Gaze's among them."
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked, so failures are still possible; 12.6 and 25.6 run them.
   - **The helper agent**: Kiro handed the Study Dungeon half to a sub-agent to save context. That run was cancelled after it had written the Study Dungeon spec and 25.1, and it had ticked 25.2 to 25.5 before building them. Kiro then built 25.2 to 25.5 itself, with the developer's amended sentences, and fixed the design's wording table to match.
@@ -2222,7 +2155,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - Study Dungeon: the dialog component tests, `art/art.test.tsx` and the pure-module tests (none renders the App or fires a tick).
 - **Not done**: 12.6 and 25.6 (the full check and the browser look at 1280, 390 and 320 px).
 - **Credits used**: 199.22 in three parts: 116.96 (32 min 33 s, the Ghosted half and the start of Study Dungeon), 3.95 (21 s, the pause) and 78.31 (15 min 10 s, the Study Dungeon build)
-- **Screenshot file names**: none.
 
 ---
 
@@ -2231,7 +2163,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools. The page clock was installed on a blank page before the app loaded (`page.clock.install`), then moved with `page.clock.fastForward`, so each jump fires one minute tick. Fresh state per run (unload save blocked, storage cleared, about:blank, then the app), sample loaded, tour skipped.
 - **What Kiro produced**: measurements only, four screenshots of the toast (`study-dungeon-l3-1280.png`, `study-dungeon-l3-390.png`, `ghosted-l3-1280.png`, `ghosted-l3-390.png`), this entry, and the ticks for 12.6 and 25.6.
 - **Results**: both apps showed the toast inside the dock with 8 px to the dock bar, no horizontal scroll at any width, contrast 14.19:1 (Study Dungeon) and 14.76:1 (Ghosted), no toast at load, none during a preview, none at the first tick after "Back to today". Hidden tab: title "(N) <app>" and an icon link with a title, both put back when visible. Reduced motion: toast stays with no animation, no card marker.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: the toast fades after 6.5 s of real time (CSS animations ignore the fake clock), so each measurement was taken straight after the jump. Not checked: the shape of the favicon badge (title and href were read, the image was not decoded), Dismiss with the keyboard (it was clicked), and how far page content sits above the dock in Ghosted (the check gave nonsense numbers and was dropped).
 - **Credits used**: 10.60 (7 min 13 s)
 - **Screenshot file names**: `study-dungeon-l3-1280.png`, `study-dungeon-l3-390.png`, `ghosted-l3-1280.png`, `ghosted-l3-390.png`
@@ -2268,7 +2199,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
     - Not saved: "This choice cannot be saved in this browser, so it lasts until the page is closed."
     - Limit: "There is no server, so nothing can notify you when this tab is closed or the computer is asleep."
     - Privacy: "A notification shows only what is already on this page, and nothing is sent anywhere."
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run**, as asked, so failures are still possible; 13.6 and 26.6 run them.
   - **The log number**: the request said the last session was 69, but Session 70 (the L3 browser check) is already in the log, so this is Session 71.
@@ -2283,7 +2213,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - Study Dungeon: every other test file, including `App.test.tsx`, `App.live.test.tsx`, `App.extras.test.tsx`, `styles/layout-css.test.ts`, `contrast.test.ts`, `motion.test.ts`, its no-network check, and the `ResetData` tests.
 - **Not done**: 13.6 and 26.6 (the full check and the browser look at 1280, 390 and 320 px with the permission granted and denied).
 - **Credits used**: 94.72 (24 min 3 s)
-- **Screenshot file names**: none.
 
 ---
 
@@ -2292,7 +2221,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools (init script, clock, request log).
 - **What Kiro produced**: measurements only, four screenshots (`study-dungeon-l5-1280.png`, `study-dungeon-l5-390.png`, `ghosted-l5-1280.png`, `ghosted-l5-390.png`, the control turned on), this entry, and the tick for Ghosted 13.6. Study Dungeon 26.6 is left open.
 - **Results**: both apps behaved as specified in every scenario (off by default, one permission request only on the click, none on load, reload or tick, denied sentence with no retry, one notification per tick with the toast's sentence and one tag, none for the seven no-notify cases, click focuses and closes without changing data, storage failure and unsupported browser handled, no request outside the app's own origin). One check failed: in Study Dungeon the notification switch is a 17.6 px checkbox with a label 19.5 px tall (39 px at 390), so it is below the 44×44 px target size. Ghosted's switch is 44 px tall.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: the first run of the main script timed out on a click and left two tabs open; I closed them and ran it again, and the second run passed. In Ghosted the toast was not on screen when read after the first hidden change, so the notification text was compared with the toast only for the second change (and it matches); the L3 check had already shown the same sentence. The honest-limit sentence says nothing can notify you when the tab is closed or the computer is asleep; it does not use the words "only while the tab is open", though the label does say "while this tab is open".
 - **Credits used**: 9.47 (9 min 52 s)
 - **Screenshot file names**: `study-dungeon-l5-1280.png`, `study-dungeon-l5-390.png`, `ghosted-l5-1280.png`, `ghosted-l5-390.png`
@@ -2313,7 +2241,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Ghosted files**: new `first-look.ts`, `first-look-dock.ts`, `components/FirstLookSkip.tsx`, `styles/first-look.css`; changed `App.tsx`, `components/MoonDock.tsx` (optional `firstLook`; the markers and the time machine use the hook's `change`; Back to today calls `interrupt` first), `wording.ts` (`firstLookText`), `main.tsx`. Tests: new `first-look.test.ts`, `App.first-look.test.tsx`, `first-look-css.test.ts`.
   - **Study Dungeon files**: new `first-look.ts`, `first-look-dock.ts`, `components/FirstLookSkip.tsx`, `styles/first-look.css`; changed `App.tsx` (also "Back to today" in the top banner), `wording.ts` (`firstLookText`), `main.tsx`, and `components/TimeDock.tsx` (Claude Code's, named in task 27.3: the optional `firstLook` prop and a header line; the `onChange` prop is renamed inside and wrapped by the hook, so the marker and TimeMachine lines are unchanged). Tests: new `first-look.test.ts`, `App.first-look.test.tsx`, `styles/first-look-css.test.ts`.
   - **Words**: Skip "Skip the preview"; announcement "Showing the next 30 days. Nothing is saved."
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - **Nothing was run** (no tests, typecheck or build), so failures are still possible; 14.6 and 27.6 run them first. By mistake, Kiro made one shell tool call (`echo skip`), which returned nothing and changed nothing.
   - **The app has no frame source of its own in the browser** (see above). The request assumed it did.
@@ -2324,7 +2251,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Test files not read**: every other test file in both apps, including Ghosted `App.accessibility.test.tsx`, `primary-buttons.test.tsx`, `MoonDock.test.tsx`, `layout-css.test.ts`, `tokens.test.ts`, `wording.test.ts`, `App.live.test.tsx`, and Study Dungeon `App.accessibility.test.tsx`, `App.first-run.test.tsx`, `motion.test.ts`, `theme.test.ts`, `styles/layout-css.test.ts`, `contrast.test.ts`. None of them passes `firstLook`, so none can start a first look.
 - **Not done**: 14.6 and 27.6.
 - **Credits used**: 84.63 (24 min 51 s)
-- **Screenshot file names**: none.
 
 ---
 
@@ -2335,7 +2261,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Results, both apps**: the first look starts by itself about 0.2 s after the tour is skipped (Study Dungeon) or right after "Load sample street" once the splash is gone (Ghosted). The dock text goes from "Today, 24 Nov 2026" through about +1 day at 1 s, +10 at 2 s, +26 at 3 s and +30 days at 4 s ("24 Dec 2026"), then back to "Today, 24 Nov 2026" at about 5.05 s. The banner reads "FUTURE PREVIEW · NOTHING IS SAVED" with "Back to today". The live region says "Showing the next 30 days. Nothing is saved." once, and nothing else is announced while it plays. Skip (Enter), Escape, a slider arrow key, Play (labelled "Stop" while it plays), a jump (+7 days in Study Dungeon, +30 days in Ghosted) and "Back to today" all stop it at once on today, and the touch does not move the offset. Focus after Skip goes to `<main>` (Study Dungeon) or the hero heading (Ghosted). No write to engine storage while it plays (setItem was recorded). There is one write about 20 ms after it ends, at the real time. Under reduced motion it does not play and the flag is still `"1"`. A reload does not replay it. Counts at +30 days: Study Dungeon goes from Crypt 4 / Dungeon 4 / Graveyard 4 to 0 / 4 / 8, and Ghosted goes from Still lit 4 / Fading 4 / Empty windows 4 to 1 / 4 / 7, the same at 390 and 320. No console errors from either app. The only errors came from this session's own `unload` listener and a favicon 404.
 - **Failed, Study Dungeon only**: "Skip the preview" cannot be clicked or tapped. `.sd-dock` has `pointer-events: none` (`styles/dock.css` line 17), and the Skip button inherits it, so a click at its centre lands on the page behind it (`.sd-world`, `.sd-layout` or `.sd-toolbar-hint`). The keyboard works. The button is also 164.4 × 40 px at every width, below 44 px tall. Ghosted's is 175.6 × 44 and clickable.
 - **Open in both apps**: check 6 asked that clearing only the flag and reloading plays it again. It does not, because Requirement 40.1 and Requirement 25.1 make it due only after "Load sample", never on a page load with data. Check 9 asks for exactly that. It plays again after the flag and the data are both cleared and the sample is loaded again.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: the clock-guard message ("This device's clock is behind the last saved time…") showed in the live region twice in about 25 runs: once after Skip in Study Dungeon and once after a slider touch in Ghosted, both after the first look had ended. It did not happen again in five targeted retries, and no saved time was ahead of the real clock. While Skip shows, the dock is about 48 to 52 px taller, the same as for the toast (at 320 px its top is at 413 or 414 instead of 461 or 466), so at the top of the page it covers more of the hero. Inside the dock, Skip is at least 38 px from every control, and it never overlaps a dock control or the toast. Screenshots are 0.3 to 0.8 s late because the screenshot itself takes time.
 - **Credits used**: 17.81 (20 min 36 s; the CLI's running session total was 18.00)
 - **Screenshot file names**: `study-dungeon-l6-1280.png`, `study-dungeon-l6-390.png`, `ghosted-l6-1280.png`, `ghosted-l6-390.png`
@@ -2347,10 +2272,8 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **Kiro feature used**: Kiro CLI chat with the Playwright MCP tools (`page.mouse.click`, and `touchscreen.tap` in a separate context with `hasTouch`).
 - **What Kiro produced**: measurements only, this entry, and the tick for 27.6.
 - **Results**: Skip is 164.4 × 44 px with computed height `44px` and `pointer-events: auto` at all three sizes: at 16,662 at 1280×800, 16,631 at 390×844 and 16,420.5 at 320×640. `document.elementFromPoint` at its centre is the button every time. A real mouse click at 1280, 390 and 320, and a touch tap at 390, each stop the first look at once. The dock goes from "28 Nov 2026 · 3 days ahead" to "Today, 24 Nov 2026", the slider goes to 0, the banner and Skip are gone, and focus goes to `<main>` (`MAIN.sd-app`). All pass.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: nothing. The Session 74 note about the clock-guard message was not re-checked here.
 - **Credits used**: 1.46 (57 s)
-- **Screenshot file names**: none.
 
 ---
 
@@ -2369,10 +2292,8 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Keyboard**: 29 Tab stops, every one with a visible focus ring, including the dock's "Days ahead" and "Coming up". The keyboard can expand the dock, jump and go back to today. Escape closes the fight, autopsy and add dialogs.
   - **Console and network**: no console errors. No request to any other domain.
 - **Netlify badge**: a "Powered by Netlify" iframe (`#nl-badge-frame`, `srcdoc`, not in this repo, so Netlify adds it) sits fixed at the bottom right, 194 × 64 px (1086,736 at 1280; 196,780 at 390; 126,576 at 320). It takes clicks and covers dock controls. At 1280 and 320 a mouse click on "Coming up" lands on the badge. At 390 it covers the slider's centre, and with the dock open it covers Play (at 390 and 320) and +30 days (at 320). The keyboard still reaches every control.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: the first run stopped when a click on "Coming up" timed out on the badge. Later runs used the keyboard as a fallback and recorded the block. One script was rewritten because a local variable shadowed `URL`. Test facts named "Kiro test question <width>?" were added and removed in fresh storage only.
 - **Credits used**: 8.63 (9 min 30 s)
-- **Screenshot file names**: none.
 
 ---
 
@@ -2393,10 +2314,8 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Keyboard**: 72 Tab stops, every app control with a visible focus ring. The only stop without a ring is the Netlify badge iframe ("Powered by Netlify"), the last stop. Escape closes the autopsy, add and import dialogs.
   - **Console and network**: no console errors. No request to any other domain.
 - **Netlify badge**: the same injected "Powered by Netlify" iframe as on Study Dungeon, fixed at the bottom right, 194 × 64 px (1086,736 / 196,780 / 126,576). It takes clicks and is in the Tab order. It covers "Coming up" at 1280, and the "Days ahead" slider's centre at 320 (and at 390 during the first look). At 390 and 320 it covers the dock's "Back to today" while a preview is open. The keyboard still reaches every control.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: two script runs stopped on timeouts. One was a person row that has only an "Open" button (Edit and Remove are inside the open view). The other was the "Back to today" lookup during Play. Each was diagnosed with a separate evaluate call before going on. The dock remembers whether it is open across reloads, so the first keyboard toggle closed it in one run. Test people "Kiro Tester <width>" were added and removed in fresh storage only. The run went slightly past 20 minutes.
 - **Credits used**: 11.07 (12 min 42 s)
-- **Screenshot file names**: none.
 
 ---
 
@@ -2417,14 +2336,12 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Across all four**: no no-network or wording scan test. In Policy Lab and Life Triage, buttons and the file label are about 42 px tall and inputs about 38 px, so under 44 px. The `scripts/check.sh` header does not list the eight new steps. Neither new app can have component tests yet: Vitest runs in `node`, with no jsdom or Testing Library installed.
   - **Already met**: the README and the `policy-memory.ts` header both say the memory model is not FSRS and that its constants are hand-picked, not fitted to data. Only the app's own text does not.
 - **Second pass**: after the developer's go-ahead, Kiro re-read the README (for the live URLs: https://decay-engine-lab.netlify.app and https://decay-engine-life-triage-app.netlify.app), `check-policy.ts`, the engine's `validateImportance`, the doubling policy's `applyEvent`, both new apps' `tsconfig.json` and `vite.config.ts`, and looked for component tests (none). The spec was updated with each finding, and no gap from the first pass was dropped.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**:
   - No commands were run, so folders could not be listed. File names come from following imports, and a file nothing imports may be missing from the spec.
   - The first request said to write "NOT written in Kiro" here. The developer then said Kiro wrote the code, so this entry says that instead.
   - Two points conflict with `authorship.md`: `policy-memory.ts` is decay-rule code (Kiro's only exception is Ghosted), and `policy.ts` (Claude Code's file) gained `difficulty?` with no task naming it. Left for the developer (task 7.1).
   - The doubling policy drops a fact's `difficulty` on its next answer, so switching models back and forth resets difficulty to 5. Recorded in the design and pinned by task 2.6, not changed.
 - **Credits used**: counted in the combined 138.37 shown in the Credits summary at the top of this log.
-- **Screenshot file names**: none.
 
 ---
 
@@ -2451,7 +2368,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - **Guide**: `importance: 2`, the allowed importance and cost, a Policy Lab link with the trust note, and an accurate description of `checkPolicy`.
   - **`scripts/check.sh`**: header comment only (Claude Code's file, named by task 5.4).
   - **Spec**: the task ticks and status line, and design notes for the choices below.
-- **What I changed by hand**: nothing.
 - **Choices made**:
   - No new dependencies, so `pnpm-lock.yaml` is unchanged and Netlify's frozen-lockfile install still works. The page tests use `react-dom/server` instead of jsdom, and Policy Lab's P5 runs over a fixed grid instead of fast-check.
   - The memory model's habit of dropping a fact's difficulty after a doubling-policy answer is pinned by a test, not changed (it would need `policy.ts`, Claude Code's file).
@@ -2461,7 +2377,6 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - The memory switch's size is still unmeasured: its CSS was not found by reading.
   - Deploying needs the developer: the live sites still show the old text until the three apps are redeployed.
 - **Credits used**: counted in the combined 138.37 shown in the Credits summary at the top of this log.
-- **Screenshot file names**: none.
 
 ---
 
@@ -2473,10 +2388,8 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - `.kiro/steering/authorship.md`: a new section, "Exception: Study Dungeon's memory model". It records that the rules are the developer's (with every constant listed), the code is Kiro's, there was no spec first, and the `policy-reviewer` agent has not been run on it yet. It also records the `difficulty?` field Kiro added to `policy.ts` (Claude Code's file).
   - `README.md`: one sentence in the Kiro paragraph, on the same split as Ghosted's policy.
   - Extensions spec: task 7.1 ticked, new open task 7.2 (run `policy-reviewer`), and design section 7 and the requirements' authorship note updated.
-- **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: who chose the example rules in Policy Lab's presets and the guide's milk example is still not recorded. They are examples, not app policies, so they were left out of `authorship.md`.
 - **Credits used**: counted in the combined 138.37 shown in the Credits summary at the top of this log.
-- **Screenshot file names**: none.
 
 ## Session 81: deploy to Cloudflare Pages with a custom Power
 - **Goal**: Netlify credits ran out. Deploy the apps on a free host and keep the deploy inside Kiro.
@@ -2487,5 +2400,154 @@ Work done outside Kiro (Claude Code) used none of these credits.
 - **What I changed by hand**: created the Cloudflare account, connected the Git repo, set the build settings and made the API token. The token lives in `~/.cloudflare-env` in WSL, outside the repo.
 - **What went wrong or surprised me**: the first Cloudflare build failed. The second succeeded. Git-connected Pages projects cannot take direct uploads, so the script uses its own `decay-<app>` projects. The MCP server config is untested.
 - **Credits used**: counted in the combined 138.37 shown in the Credits summary at the top of this log.
-- **Screenshot file names**: none.
 - **Follow-up (same session)**: deployed all five sites to Cloudflare Pages with `scripts/deploy-cloudflare.sh` (`landing` target added): `decay-engine` (the landing page, at `https://decay-engine.pages.dev`; it was first deployed as `decay-engine-landing` and moved once the developer freed the name), `decay-engine-study-dungeon`, `decay-engine-ghosted`, `decay-engine-lab` and `decay-engine-life-triage`, each at `https://<name>.pages.dev`. Replaced the old `*.netlify.app` links with these in `README.md`, `site/index.html`, `scripts/check-site.sh`, `apps/policy-lab/src/App.tsx`, `apps/policy-lab/src/guide.test.ts`, `docs/ADDING_A_POLICY.md` and `docs/submission/`. Only the link lines changed in the files Claude Code wrote (`site/`, `check-site.sh`). Older log entries, specs and the audit keep the Netlify addresses as history. `check-site.sh` and the Policy Lab tests passed (35 tests). Policy Lab was redeployed after its footer links changed. The developer deleted the first Git-connected `decayengine` project.
+
+---
+
+## Session 82: `authorship.md` rewritten from the log and the write-up
+- **Goal**: make `.kiro/steering/authorship.md` match `docs/KIRO_LOG.md`, `docs/KIRO_WRITEUP.md` and the files' own header comments. File reads and edits only.
+- **Kiro feature used**: Kiro IDE chat (agent mode), steering.
+- **What Kiro produced**: a rewritten `authorship.md`. It now opens with the three authors and the rules for Kiro. It restores the two sections other files point to ("Exception: Ghosted's decay policy", named in `ghosted.md`, and "Exception: Study Dungeon's memory model", from Session 80). It groups Claude Code's work by period, adds what was missing (Ghosted's `autopsy-sentences.ts`, the Study Dungeon visual pass, answer checking and extras, the first engine-unchanged check, the test fixes), and marks the Haunt pass and Art direction pass as Claude Code (Opus 5.5). It also brings the Kiro list up to date (late features, insight, Policy Lab, Life Triage, scripts, browser checks), and adds a "Not recorded yet" section.
+- **What went wrong or surprised me**:
+  - The old file had lost two section headings, so the clock guard, P6 fixes and landing page sat under a heading called "Ghosted cause-of-death sentences", and the Haunt and Art direction lists named no author.
+  - The Haunt pass is credited from the header of `App.haunt.test.tsx` and the developer's word; the Art direction pass from the developer's word only. Neither has a log entry, and their other files carry no header.
+  - `packages/persist`, `packages/pwa`, `packages/cloud` and `supabase/` have no log entry and no header, so the file lists them as not recorded instead of guessing.
+  - Kiro's shell returned nothing on every command, so git history was not checked.
+- **Credits used**: not recorded.
+
+---
+
+## Session 83: `authorship.md` reorganised and redefined
+- **Goal**: restructure `.kiro/steering/authorship.md` around the vision, architecture, specs, design and technical decisions, implementation, app development, specs and browser checks; engine, visual work, testing and newer infrastructure. 
+- **Kiro feature used**: Kiro IDE chat (agent mode), steering.
+- **What Kiro produced**: the file now opens with a three-row role table. "What Kiro built" comes before Claude Code's list and is broken down by area (specs and setup, engine, shell, Ghosted, Study Dungeon, late features, Policy Lab and Life Triage, verification and deployment), with the credit and line figures from the write-up. 
+- **Credits used**: not recorded.
+
+---
+## Session 84: landing page redesign (feedback list, step 1)
+- **Goal**: step 1 of the developer's 24-point feedback list. Make the landing page more attractive, take the "Built with Kiro" strip off it, and stop linking Policy Lab from it (the developer chose option (a): keep Policy Lab in the repo as a developer tool).
+- **Kiro feature used**: Kiro IDE chat (agent mode), steering (`authorship.md`, `design-tokens.md`, `theme-and-wording.md`).
+- **What Kiro produced**:
+  - `site/index.html` and `site/styles.css` rewritten (Claude Code's files, changed with the developer's permission): a header with section links, a new hero ("Things fade. Save the ones that matter.") with two primary buttons, a larger two-world scene (bricks, a bat, a tombstone, stars, a third house with a boarded window, a streetlamp), an "Every item has a life" strip with the four states as shapes and labels and a health bar that drains past the weak 60 and dead 10 marks, three features with CSS icons, app cards with small scene previews, Life Triage as a wide card, three facts (0 engine lines, 2,000+ tests, no account), and a footer with one "How this was built" link to `docs/KIRO_WRITEUP.md`. The Kiroween badge, the Kiro strip, the Kiro bullet and the Policy Lab card are gone. Home palette (chalk on slate), system fonts only, motion only under `prefers-reduced-motion: no-preference`.
+  - `scripts/check-site.sh`: now also needs the Life Triage link and fails if Policy Lab is linked. Tested on a planted Policy Lab link (fails, exit 1) and on the real page (passes).
+  - `.kiro/specs/haunt-pass/requirements.md` line 98 and `authorship.md` updated to match.
+- **What went wrong or surprised me**: the Playwright MCP browser is not installed on Windows (`chrome-for-testing` missing), so the screenshots came from the Chromium already in WSL's Playwright cache, run headless on the file directly (no server).
+- **Credits used**: not recorded.
+- **Screenshots**: `docs/screenshots/s84-landing-1280.png`, `docs/screenshots/s84-landing-390.png`.
+---
+
+## Session 85: Life Triage check (feedback list, step 2)
+- **Goal**: confirm the step 2 Life Triage changes from Session 84, which were coded but not tested. Check the end of `apps/life-triage/src/files.test.ts` for a stray `)` after `.toBe(false)`, then run the tests.
+- **Kiro feature used**: Kiro CLI chat.
+- **What Kiro produced**: no code changes. The last test in `files.test.ts` ("adds no note when the file is in its own box") is well formed. `@decay-engine/life-triage` passed 14 tests and `@decay-engine/life-triage-app` passed 58 tests in 7 files.
+- **What went wrong or surprised me**: the 24-point list is not written in this log. Session 84 only mentions it. Steps 3 to 7 are not started, because their wording is not in the repo and I would be guessing at the design.
+- **Credits used**: not recorded.
+
+---
+
+## Session 87: Study Dungeon, step 3 (frame): Settings, Profile, Home, corner toast, `?tend=`
+- **Goal**: points 6 (app side), 7, 17, 18 and 20 of `docs/FEEDBACK_LIST.md` in Study Dungeon. Session 86 (IDE) left `Sheet.tsx` and `TopBar.tsx`; from this session the IDE works only in `apps/ghosted/` and Kiro CLI owns `apps/study-dungeon/`.
+- **Kiro feature used**: Kiro CLI chat.
+- **What Kiro produced**:
+  - Settings and Profile are side sheets (`Sheet`), opened from `TopBar` (Home link to `https://decay-engine.pages.dev/`, Settings, Sync / Profile). The settings that sat at the bottom of the page now sit in the Settings sheet. Both sheets stay mounted while closed.
+  - `SyncPanel` has a bare mode for the Profile sheet (`bare`, `active`, `onAccount`): no fold, loads when the sheet opens or when an earlier sign-in exists, and tells the top bar who is signed in, so the button reads "Sync" signed out and "Profile" signed in. `Root` no longer renders it.
+  - `activity.ts` (`activityRows`) and `ActivityList`: the Profile shows the engine's history, newest first, 50 rows. No new table: sync already merges every device's history log (`packages/cloud/src/merge.ts`), so after a sync the list holds every device's events. Auto-sync was already there (`browserAutoSync`, `controller.start()` syncs after sign-in).
+  - `CornerToast`: bottom right, a bar that runs down for 5 seconds, closes itself or with Dismiss. "Backup downloaded" uses it (the Settings sheet closes first, because a modal's backdrop would hide a toast).
+  - `?tend=<id>`: `tend-link.ts`, `main.tsx` reads and removes it from the address, `App` opens the fight for a living fact once. An id that is not here says "That fact is not on this device."; a dead fact says it is in the Graveyard.
+  - Memory model (point 15): a worked example from `grownHalfLife` (20 days standard, 23 when nearly forgotten, 11 straight away). The rules and constants did not change.
+  - Tests: `activity.test.ts`, `tend-link.test.ts`, `App.frame.test.tsx` (13 tests), and the App tests that used the settings now open the Settings sheet first (`openSettings`, `closeSettings`, `openProfile` in `test/app-kit.tsx`). The kit passes `env: {}` to the sync panel so tests never use the build's `.env.local`.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**:
+  - The IDE (Session 86) and the CLI wrote to `wording.ts` and `activity.ts` at the same time. The IDE's `activity.ts`, `activity.test.ts` and `ActivityLog.tsx` were deleted and mine restored; the IDE's wording blocks (`topBarText`, `activityText`, `toastText`, `fieldHelpText`, `tendLinkText`) were kept.
+  - React passes a nested dialog's `cancel` up to the parent dialog's `onCancel`, so one Escape on the reset confirmation also closed the Settings sheet. `Sheet` now ignores a cancel aimed at something else. A new test covers it.
+  - Two `MemoryModelToggle` tests from Session 86 failed for lack of `cleanup`.
+- **Credits used**: not recorded.
+
+---
+
+## Session 86: Ghosted, steps 3 to 7 (feedback list), IDE, file edits only
+- **Goal**: every Ghosted point of `docs/FEEDBACK_LIST.md` (6, 7, 8, 9, 10, 12, 13, 14, 16 to 24). The developer asked for no shell commands in the IDE; Kiro CLI runs the tests at the end. Early in this session the IDE also wrote `FEEDBACK_LIST.md`, the memory model wording (point 15) and some Study Dungeon files, at the same time as Session 87; from then on the IDE stayed in `apps/ghosted/` (see Session 87).
+- **Kiro feature used**: Kiro IDE chat (agent mode), steering (`ghosted.md`, `design-tokens.md`, `theme-and-wording.md`).
+- **What Kiro produced** (all in `apps/ghosted/src/` unless named):
+  - Points 7, 17, 20, 21: `components/TopBar.tsx` (Home to the landing page, Settings, Sync or Profile), `components/Sheet.tsx` (a mounted native dialog; ignores a cancel from a dialog inside it), Settings sheet with the spooky level, sound, share card, notifications, Back up, Restore and Reset; Profile sheet with sync and `components/ActivityLog.tsx` over `activity.ts` (`activityLines`, 200 newest, no "die" or "dead"). `SyncPanel` gets `bare`, `active`, `onAccount`, `onReturnedFromLink` and `notConfigured`; `Root` passes it to the App as `account` instead of rendering it in the footer.
+  - Point 18: `components/Toast.tsx`, a corner toast for every live-region message that is not a live change: 5 seconds with a shrinking bar, a problem stays until dismissed. The announcer's own text is now always visually hidden.
+  - Points 8, 16, 22 (`components/MoonDock.tsx`, `styles/dock.css`): the shell's Play stays on the collapsed bar (only the jumps fold away), "Back to now" is a button on the bar while previewing (offset 0, the real clock), the preview banner with its icons is gone (a screen-reader status says the preview), and "Coming up" moved under the time machine.
+  - Point 12: `packages/shell/src/components/TriagePanel.tsx` gets an optional `autoRun` prop (default off, today's panel unchanged): no Run button, a budget runs when chosen, a custom one while typed. `GhostedTriage` turns it on. Test: `TriagePanel.autorun.test.tsx`. Study Dungeon can use it too.
+  - Point 23: `ListTabs` in `components/ThreeLists.tsx` (WAI-ARIA tabs with glyph, name and count, arrow keys), `ThreeLists` gets `selected`, `firstOpenTab` picks the first list with someone in it. The section navigation (with its Street button) is no longer rendered; the hero's "See the empty windows" switches the tab, then focuses its heading.
+  - Point 24: the "Import people" button and dialog wiring are gone from the App. `ImportDialog.tsx` and its tests stay, unused.
+  - Point 13: `components/FieldHelp.tsx` (`useFieldHelp`), an (i) toggle beside importance, minutes and rhythm in `AddEditPersonDialog`. The rhythm note says the window starts to flicker "a little after" the rhythm, because the policy reaches 60 at 1.2 × rhythm days.
+  - Point 14: `share-card.ts` draws the three counters (Still lit, Fading, Empty windows) as boxes with count and state word; the old summary line is kept as the SVG's `<desc>`.
+  - Point 6: `tend-link.ts` (`readTendId`, `clearTendId`); the App opens Reach out (Reconnect for an empty window) on that person's tab once the splash is gone, or says "That person is not on this device."
+  - Points 9, 19: `components/FarTown.tsx`, stars over the page and far houses and a tree in each side margin from 1280px, aria-hidden. Point 10: `main.tsx` turns off scroll restoration and starts at the top; `styles/sheet.css` stops the page scrolling behind an open dialog and caps a dialog at the screen height.
+  - `no-network.test.ts` allows exactly the landing page's address as a link, with a self-test that other addresses and a fetch to it are still caught.
+  - New tests: `activity.test.ts`, `tend-link.test.ts`, `components/Toast.test.tsx`, `components/FieldHelp.test.tsx`.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**:
+  - Nothing here has been run: no typecheck and no tests. Existing Ghosted tests that expect the old layout will fail and need updating to the new behaviour (not weakening): the section navigation and its Street button, "Import people" in the toolbar, the settings and Back up / Restore / Reset under the lists, the preview banner's "Back to today", the "Coming up" toggle's place in the Tab order (Req 34.9), the Triage "Plan" button, the announcer's visible text, the share card's summary line, and the sync panel in the footer.
+  - Early on, the IDE overwrote Session 87's `apps/study-dungeon/src/activity.ts` with its own version while both ran; Session 87 restored its file.
+- **Follow-up (same session, after Kiro CLI ran the tests)**: Kiro CLI reported shell 171, Ghosted 1112 (after it updated the old-layout tests) and Study Dungeon 912 tests passing, and `check-engine-unchanged.sh` failing on the new shell test file. The IDE recorded `autoRun` as Ghosted **Requirement 41** (`.kiro/specs/ghosted/requirements.md`, and Requirement 29.4 amended), and added `TriagePanel.autorun.test.tsx` to the shell allow-list in `scripts/check-engine-unchanged.sh`. The check then passed: "engine: no code change since engine-complete (c67c553) … shell (Ghosted): within the allowed list". `docs/FEEDBACK_LIST.md` steps table updated.
+- **Credits used**: not recorded.
+
+---
+
+## Session 88: Study Dungeon, steps 4 to 7 (time bar, app points, background and margins)
+- **Goal**: the rest of the Study Dungeon points in `docs/FEEDBACK_LIST.md`: 8 and 16 (time bar), 10, 11, 12, 13, 14 (Study Dungeon items), 9 and 19 (margins and background). Kiro CLI owns `apps/study-dungeon/`; nothing in `packages/` or `apps/ghosted/` was changed.
+- **Kiro feature used**: Kiro CLI chat.
+- **What Kiro produced**:
+  - **Step 4, time bar (points 8, 16)**: "Back to today" and the line "Future preview · nothing is saved" are on the dock itself, with no icons; the top banner is gone. In the expanded dock the jumps and Play come first and "Coming up" with its timeline last (grid `order` in `dock.css`; the markup order is unchanged, so the Tab order still reaches "Coming up" before the jumps). Tests: `App.timebar.test.tsx`, `dock-order-css.test.ts`.
+  - **Step 5, items (points 10 to 14)**:
+    - **10**: `main.tsx` turns scroll restoration off and starts at the top. After an answer the fight and challenge dialogs focus their own result line (`useFocusResult`, `preventScroll`), and the old autofocus on Close is gone, so Tab reaches Close next. Returning focus to the opener no longer scrolls. The page behind a modal does not scroll (`html:has(dialog:modal)`).
+    - **11**: "Fight the weakest" shows the Dungeon and runs a session through every weak fact, weakest first. One weak fact stays a plain fight.
+    - **12**: the Triage run button is gone; the shell's `autoRun` prop (added by the IDE) is on.
+    - **13**: an (i) button beside Importance and Review cost, using the IDE's `fieldHelpText`.
+    - **14**: "Share a card" draws the three counters (Crypt, Dungeon, Graveyard) with a circle, triangle and cross, and the souls line.
+    - **Tests**: `App.weakest.test.tsx`, `App.triage-auto.test.tsx`, `FightDialog.focus.test.tsx`, a ChallengeDialog focus test, (i) tests in `AddEditFactDialog.test.tsx`, a new `share-card.test.ts`. The old tests that clicked the Triage button now rely on the picks showing at once.
+  - **Step 7, background and margins (points 9, 19)**: `styles/backdrop.css` gives the world a stone-brick wall (one inline SVG tile) and warm light from the floor. On screens 1280px and wider, `Margins` adds a pillar with chains and a flickering wall torch on each side (`aria-hidden`, CSS only, flames move only under no-preference). Tests: `Margins.test.tsx`.
+  - Checks: `tsc --noEmit` clean, `vite build` passes, `scripts/check-bundles.mjs` passes, the Study Dungeon suite is 911 tests in 87 files, all passing.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**:
+  - The developer asked for no Playwright screenshots, so none of this was looked at in a browser. The brick tile, the pillar and torch positions, the dock order and the toast position are untested visually and need a look at 1280, 390 and 320px.
+  - "Coming up" is moved with CSS `order`, so in the expanded dock the focus order and the visual order differ.
+  - The Settings sheet closes when a backup toast shows, because a modal's backdrop would cover a toast.
+  - Points 6 (Ghosted side), 12, 13, 21 to 24 for Ghosted and every Ghosted copy of the frame are the IDE's work in `apps/ghosted/`.
+- **Credits used**: not recorded.
+
+---
+
+## Session 89: Ghosted and the shell run for the first time, `check.sh`, preview deploys
+- **Goal**: run the typecheck and tests of `@decay-engine/shell` and `@decay-engine/ghosted`, which Session 86 wrote without running. Update Ghosted's old-layout tests to the new behaviour without weakening them. Move Study Dungeon's "Coming up" in the markup so the focus order matches the screen. Then run `scripts/check.sh`, update `docs/FEEDBACK_LIST.md`, and make preview deploys.
+- **Kiro feature used**: Kiro CLI chat.
+- **What Kiro produced**:
+  - **Shell**: typecheck clean, 171 tests passing as written (including Session 86's `TriagePanel.autorun.test.tsx`). Nothing changed.
+  - **Ghosted**: typecheck clean. The first run had 94 failing tests in 19 files, all from the new layout and none from a compile error. Each test now checks the new behaviour; none was deleted or loosened:
+    - **List tabs (point 23)**: `test/ui.ts` adds `listPanel`, which selects a list's tab and returns its panel, and `regionOrList`. The "section navigation" tests in `App.test.tsx` became list-tab tests: no nav and no Street button, the first open list is selected, one panel at a time, each tab's count, arrow keys and Home and End, the order hero → Street → Triage → tabs → list, and "See the empty windows" switching the tab and focusing its heading.
+      - The keyboard check in `App.accessibility.test.tsx` now expects WAI-ARIA's roving tabindex on the tabs: the selected tab is 0, the others are −1, and exactly one tab is selected.
+      - The preview checks (`App.preview.test.tsx`, `App.preview.property.test.tsx`) walk each list's tab, so every card's write button is still checked. The property test keeps 100 runs.
+    - **Settings sheet (point 7)**: `openSettings()` is used before the spooky level, sound, notifications, Back up, Restore and Reset. The tests that checked the notification switch's place "under the toolbar" now check it is in the Settings sheet and no longer under the toolbar. "No dialog opened" became "the only open dialog is the Settings sheet the test opened".
+      - There are new tests: both sheets open and every control in them is native, named and focusable. Escape on the Reset confirmation inside Settings closes only the confirmation, and focus returns to the button.
+      - Closed sheets are left out of the "every control on the page is reachable" list, because they are not on screen.
+    - **Time bar (points 16, 22)**: "Back to today" became "Back to now". The dock's Tab-order test now asserts the order on screen: slider, Back to now, jumps, Play, Coming up, then every marker. The CSS checks now assert that only the quiet jump buttons are hidden while collapsed, and that Play and the controls row are not.
+    - **Triage (point 12)**: the "Plan" clicks are gone, because picks show at once. The primary-button checks now expect Start reaching out as the panel's only filled button, and assert that there is no Plan button.
+    - **Import people (point 24)**: the import tests became checks that the button is gone.
+    - **`wording.test.ts`**: sample calls for the new functions (`topBarText.signedInAs`, the nine `activityText` functions, `fieldHelpText.show`), so their words go through the banned-phrase check too.
+    - **Source fixes, not test changes**:
+      - `styles/sheet.css` had its motion block outside `motion.css` and widths over 288px. The animation moved into the one no-preference block in `motion.css`. The sheet and toast widths are now `100%` and `calc(100vw - 32px)` with a `max-inline-size`. The far-side scenery is placed with insets instead of a width, and its media query is now `width >= 1280px`.
+      - `motion.test.ts` allows one more timer: the toast's 5-second `setTimeout`, matched exactly with its `clearTimeout`, like the backup URL clean-up.
+    - **Result**: 1112 tests in 103 files, all passing.
+  - **Study Dungeon (point 8)**: "Coming up" and its timeline are now after the shell's TimeMachine in `TimeDock.tsx` (`.sd-dock-bottom`), so Tab goes slider → jumps → Play → Coming up → markers → Back to today. This replaces the CSS `order` rules and `dock-order-css.test.ts` from Session 88. The collapsed grid areas no longer have a `toggle` cell.
+    - `TimeDock.test.tsx` and `layout-css.test.ts` expect the new order and areas. `App.timebar.test.tsx` checks the order in the app and that focus stays on the toggle.
+  - **`docs/FEEDBACK_LIST.md`**: the steps table and "Who does what" are updated. Steps 1 to 7 are done, and the browser look is the open item.
+  - **`scripts/check.sh`**: the first run failed on `engine unchanged` (the shell's `autoRun` test, since recorded as Ghosted Requirement 41) and on a type error in `App.timebar.test.tsx` (`string | null` passed to `indexOf`), which I fixed. The second run passed every step: engine 701, shell 171, Study Dungeon 912, Ghosted 1112, Policy Lab 35, Life Triage 14 and the app 58, Insight 74, persist 21, pwa 27, cloud 101. All builds, the default-bundle check and the landing page check passed.
+  - **Preview deploys** (`scripts/deploy-cloudflare.sh`, branch `preview`, no `--prod`):
+    - Landing: `https://7a463c63.decay-engine.pages.dev` (alias `https://preview.decay-engine.pages.dev`)
+    - Study Dungeon: `https://f961d4dc.decay-engine-study-dungeon.pages.dev` (alias `preview.decay-engine-study-dungeon.pages.dev`)
+    - Ghosted: `https://8fb6681c.decay-engine-ghosted.pages.dev` (alias `preview.decay-engine-ghosted.pages.dev`)
+    - Life Triage: `https://0963e133.decay-engine-life-triage.pages.dev` (alias `preview.decay-engine-life-triage.pages.dev`)
+    - Each answered 200 with its own page title.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**:
+  - Every one of Ghosted's 94 failures was an old-layout test, as Session 86 predicted. Its source had three real rule breaks the tests caught: motion outside `motion.css`, widths over 288px, and a timer the motion check did not know.
+  - Each deploy prints a wrangler error first ("A project with this name already exists", code 8000002). That is the script's `project create ... || true` and is harmless.
+  - The preview links point at production. Life Triage's "Open in" links (`apps/life-triage/src/links.ts`) and the landing page's app links go to the production `*.pages.dev` addresses, so `?tend=<id>` from the Life Triage preview opens the production apps, which do not have these changes until a `--prod` deploy.
+  - Nothing has been looked at in a browser yet, as the developer asked.
+- **Credits used**: not recorded.

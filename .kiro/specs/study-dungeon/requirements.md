@@ -230,13 +230,13 @@ type ReviewEvent = {
 
 ### Requirement 16: Shared Shell Components
 
-**User Story:** As a developer, I want to build reusable shell components that other apps can use, so that Ghosted and Expiry Reaper can share the same structure.
+**User Story:** As a developer, I want to build reusable shell components that other apps can use, so that Ghosted can share the same structure.
 
 #### Acceptance Criteria
 
 1. WHEN building the app, THE implementation SHALL place the counters (alive/weak/dead), item card, history log viewer, Triage panel, autopsy dialog, and time machine components in packages/shell.
 2. WHERE a shell component is rendered, WHEN the app uses it, THE component SHALL accept the app's skin (colors, fonts, CSS variables) and wording (list names, button labels, state names) as props.
-3. WHEN building shell components, THE implementation SHALL build only what Study Dungeon needs now, not what Ghosted or Expiry Reaper might need later.
+3. WHEN building shell components, THE implementation SHALL build only what Study Dungeon needs now, not what Ghosted might need later.
 
 ### Requirement 17: Policy Tests
 

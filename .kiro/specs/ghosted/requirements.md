@@ -406,7 +406,7 @@ type ContactEvent = { kind: "text" | "call" | "meetup" }
 1. THE Ghosted work SHALL make zero changes under `packages/engine/`.
 2. A check (`scripts/check-engine-unchanged.sh`, called by `scripts/check.sh`) SHALL work out the state before the Ghosted work from git history (the parent of the first commit that added anything under `.kiro/specs/ghosted`, or HEAD when nothing about Ghosted is committed yet), with no recorded file, and SHALL run `git diff --exit-code <that commit> -- packages/engine` and `git status --porcelain --untracked-files=all -- packages/engine`, failing if either reports a change. On a shallow clone, where that history is missing, it SHALL say it was skipped and not fail.
 3. WHERE Ghosted seems to need an engine change, THE work SHALL stop and the need SHALL be reported (`engine-boundary.md`).
-4. CHANGES under `packages/shell/` SHALL be limited to Requirements 26 to 28 and 36.11, and the same check SHALL fail when a shell file outside the files those requirements name (including every existing shell test) differs from that state. Requirement 32 needs no shell change; WHERE it turns out to need one, THE work SHALL stop and report it rather than widen this list. (Amended for task P5: Requirement 36.11 adds one optional TriagePanel prop and one new shell test file.)
+4. CHANGES under `packages/shell/` SHALL be limited to Requirements 26 to 28, 36.11 and 41.4, and the same check SHALL fail when a shell file outside the files those requirements name (including every existing shell test) differs from that state. Requirement 32 needs no shell change; WHERE it turns out to need one, THE work SHALL stop and report it rather than widen this list. (Amended for task P5: Requirement 36.11 adds one optional TriagePanel prop and one new shell test file. Amended in Session 86: Requirement 41.4 adds the optional `autoRun` prop and one new shell test file.)
 
 ### Requirement 30: Look and Fonts
 
@@ -631,6 +631,19 @@ Terms:
 9. WHEN it starts, THE App SHALL say once, through the existing polite live region (`#gh-announcer`), "Showing the next 30 days. Nothing is saved." It SHALL say nothing else while it plays, add no live region, and move no focus.
 10. THE words SHALL come from `wording.ts` (`firstLookText`) and pass the banned-phrase tests of Requirement 31.2.
 11. THE first look SHALL be off unless the App is given `firstLook` (main.tsx gives it), so existing tests that load the sample see no change.
+
+### Requirement 41: Triage without a run button (feedback list, point 12)
+
+**User Story:** As a user, I want the Triage picks to show as soon as I choose how much time I have, so that I do not press a button that seems to do nothing.
+
+Added in Session 86 from `docs/FEEDBACK_LIST.md`, point 12 (the developer: the button "does nothing when pressed because already it is automatic").
+
+#### Acceptance Criteria
+
+1. THE shell `TriagePanel` SHALL take one new optional prop, `autoRun`. WHEN it is omitted or false, THE panel SHALL render and behave exactly as before, so every existing shell, Study Dungeon and Ghosted test passes unchanged.
+2. WHEN `autoRun` is true, THE panel SHALL show no run button, SHALL run triage as soon as a budget choice is selected, and SHALL run a custom budget on each valid entry while it is typed. An entry that is not a valid budget SHALL show the existing error and run nothing; an empty box SHALL show no error.
+3. Ghosted's Triage (`GhostedTriage`) SHALL pass `autoRun`.
+4. THE shell change SHALL be limited to `packages/shell/src/components/TriagePanel.tsx` and one new test file, `packages/shell/src/components/TriagePanel.autorun.test.tsx`, which Requirement 29.4 and `scripts/check-engine-unchanged.sh` SHALL allow.
 
 ## Correctness Properties
 

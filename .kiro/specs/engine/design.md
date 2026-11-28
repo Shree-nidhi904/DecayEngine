@@ -4,7 +4,7 @@
 
 The Decay Engine is a pure TypeScript lifecycle management library that tracks items through states of alive, weak, and dead. It is a zero-dependency runtime package with a policy-driven architecture: applications supply a `DecayPolicy` object that defines how items decay and can be resurrected, while the engine enforces lifecycle rules, manages state transitions, maintains queues, records history, and persists data through a storage adapter.
 
-The engine knows nothing about what an item represents. All application-specific logic lives in the policy. This separation allows the same engine to power a spaced-repetition study app (Study Dungeon), a keep-in-touch app (Ghosted), or an expiry tracker (Expiry Reaper) without modification.
+The engine knows nothing about what an item represents. All application-specific logic lives in the policy. This separation allows the same engine to power a spaced-repetition study app (Study Dungeon), or a keep-in-touch app (Ghosted) without modification.
 
 **Key Design Principles:**
 - **Time as an argument**: The engine never reads the clock. Every function that needs time accepts a `now` parameter (milliseconds since Unix epoch).
@@ -1384,7 +1384,7 @@ Outcome tests check that the engine, driven by a real policy, produces hand-calc
 
 **Where they live**: with each app's policy, in `apps/<app>/src/policy.test.ts`, not in `packages/engine`. Two rules force this. The engine must never import an app (engine-boundary steering), and the real decay rules live inside each app (authorship steering). Each app's policy test file also runs `checkPolicy` on that policy. The engine package itself tests against the fake policy only, plus one engine-level outcome test for Triage (see Testing Strategy).
 
-**Reference rules** (from the "four questions" table in `reports/Decay Engine Home Wireframe.html` (private)). All three use thresholds weak = 60, dead = 10. These are the rules the outcome tests check; the developer writes the actual policy code.
+**Reference rules** (from the "four questions" table in `reports/Decay Engine Home Wireframe.html` (private)). Both use thresholds weak = 60, dead = 10. These are the rules the outcome tests check; the developer writes the actual policy code.
 
 1. **Study Dungeon** (halves every half-life since the last review):
    `health = item.health × 0.5 ^ ((now − item.lastEventAt) / halfLife)`.
@@ -1392,9 +1392,6 @@ Outcome tests check that the engine, driven by a real policy, produces hand-calc
 2. **Ghosted** (straight line, reaching 0 at three times the usual rhythm):
    `health = max(0, 100 × (1 − (now − policyData.lastContactAt) / (3 × rhythm)))`, with `rhythm` from `payload.rhythmDays`.
    It must decay from `lastContactAt`, never from `item.lastEventAt`: settle moves lastEventAt forward on every tick, so a formula based on it would jump back to 100 after each tick. A quick text (+40) is stored by moving `lastContactAt` forward to the time that gives the new health; a call or meet-up sets it to `now`.
-3. **Expiry Reaper** (date-based with a warning window):
-   100 while more than the warning window is left; `10 + 90 × (timeLeft / warningWindow)` inside the window; 0 on or after the date.
-   `expiresAt` and `warningDays` are user settings in the payload (so `edit` can change them). Renewing stores a new end date in policyData (`renewedUntil`).
 
 **Expected outcomes for an untended item created on day 0** (health in brackets). The day before each change is included on purpose: health exactly equal to a threshold still counts as the better state (`health >= weak` is alive, `health >= dead` is weak).
 
@@ -1402,7 +1399,6 @@ Outcome tests check that the engine, driven by a real policy, produces hand-calc
 |-----|-------|----------------|----------------|---------------|----------------|------------------------------|
 | Study Dungeon | half-life 10 days | 7 (61.6) | 8 (57.4) | 33 (10.2) | 34 (9.5) | 10 × log2(10) ≈ 33.22 days |
 | Ghosted | 30-day rhythm, last contact day 0 | 36 (exactly 60) | 37 (58.9) | 81 (exactly 10) | 82 (8.9) | just after 81 days |
-| Expiry Reaper | expires day 40, 30-day window | 23 (61) | 24 (58) | 39 (13) | 40 (0) | exactly day 40 |
 
 **Bisection checks**: after `tick` at day 90 on an untended item, `diedAt` (and the "died" entry) lies within 1 minute after the exact death time in the table, never before it. The alive→weak "state-changed" entry lies within 1 minute after the first moment health dropped below 60. Autopsy's `wentWeakAt` equals that entry's timestamp.
 
@@ -1788,7 +1784,6 @@ Error messages follow these conventions:
 **Real-policy outcome tests** live in each app, not in the engine package (see "Outcome Tests with Real Policies" above):
 - `apps/study-dungeon/src/policy.test.ts`
 - `apps/ghosted/src/policy.test.ts`
-- `apps/expiry-reaper/src/policy.test.ts`
 
 They are written when each app's policy is written, use the expected-outcomes table above, check bisection accuracy, and run `checkPolicy` on the policy.
 

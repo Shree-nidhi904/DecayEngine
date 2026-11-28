@@ -95,7 +95,7 @@ Each screen listed in design section 5 SHALL get the upgrade written there. The 
 
 ### Requirement 11: Landing page
 
-1. The landing page SHALL show the two apps on one engine in CSS art, and a "Built with Kiro" strip that links to the specs, steering, hooks, agent and MCP settings in the repo.
+1. The landing page SHALL show the two apps on one engine in CSS art, and a footer link ("How this was built") to `docs/KIRO_WRITEUP.md`. (Changed in Session 84 at the developer's request: the "Built with Kiro" strip was removed from the page.)
 2. It SHALL keep every rule in `scripts/check-site.sh`.
 
 ### Requirement 12: Nothing gets weaker

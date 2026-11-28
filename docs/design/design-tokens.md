@@ -58,18 +58,6 @@ Mood rule: weak and health at or above 35 is worried, below 35 is feral, alive i
 
 Window lit amount: `--lit = health / 100`. Weak windows flicker. Dead windows are boarded up.
 
-## Expiry Reaper (cold kitchen)
-
-```css
-:root {
-  --bg: #05090b; --panel: #0c1518; --panel-hi: #15222a; --line: #213640; --bone: #eef4f2; --dim: #a3b8b8;
-  --cold: #7ff0e0; --amber: #ffb85c; --rust: #ff6f61; --label: #f2ead3;
-  --display: "Special Elite", "Courier New", monospace;
-}
-```
-
-Item art is a jar whose liquid level is health. Dead jars are empty with the lid off.
-
 ## Thresholds shown everywhere
 
 Weak below 60. Dead below 10. Show both as marks on every health bar.

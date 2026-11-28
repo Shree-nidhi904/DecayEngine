@@ -73,7 +73,7 @@ packages/shell/
 - Accept `theme` (colors, fonts, CSS variables) and `wording` (list names, button labels, state names) as props
 - Render structure and layout, delegate styling to theme
 - Call engine methods via props (e.g., `onTend`, `onResurrect`) — never import engine directly
-- Built only for Study Dungeon's needs now; extended when Ghosted/Expiry Reaper require new features
+- Built only for Study Dungeon's needs now; extended when Ghosted requires new features
 
 **App Components** (`apps/study-dungeon`):
 - Create and own the single `DecayEngine` instance with `StudyDungeonPolicy` and `LocalStorageAdapter`

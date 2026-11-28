@@ -12,6 +12,9 @@ need 'decay-engine-study-dungeon.pages.dev' "the Study Dungeon link"
 need 'decay-engine-ghosted.pages.dev' "the Ghosted link"
 need 'github.com/Shree-nidhi904/DecayEngine"' "the source link"
 need 'docs/KIRO_WRITEUP.md' "the Kiro write-up link"
+need 'decay-engine-life-triage.pages.dev' "the Life Triage link"
+# Session 84: Policy Lab is a developer tool and is no longer linked from the landing page.
+grep -q 'decay-engine-lab.pages.dev' "$f" && { echo "site: Policy Lab should not be linked here"; fail=1; }
 need '<h1' "the h1"
 need 'lang="en"' "the lang attribute"
 grep -qi '<script' "$f" && { echo "site: a script tag is not allowed"; fail=1; }

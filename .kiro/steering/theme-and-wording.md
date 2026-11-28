@@ -86,21 +86,6 @@ Each app has its own palette:
 --mint: #8fe3c4;
 ```
 
-### Expiry Reaper (dropped, not built)
-```css
---bg: #05090b;
---panel: #0e1a1f;
---panel-hi: #15262d;
---line: #2f5058;
---text: #eef4f2;
---dim: #a3b8b8;
---acc: #7ff0e0;
---on: #03211e;
---good: #7ff0e0;
---warn: #ffb85c;
---bad: #ff6f61;
-```
-
 ### Home page (neutral chalk-on-slate)
 ```css
 --bg: #08090d;

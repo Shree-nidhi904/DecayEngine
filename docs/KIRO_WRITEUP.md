@@ -1,6 +1,6 @@
 # How I used Kiro to build Decay Engine
 
-Decay Engine is one engine for things that fade, with two apps on top: Study Dungeon (facts you are forgetting) and Ghosted (friendships going quiet). The engine has a small policy contract, and each app supplies its own decay rules and its own look. A third app, Expiry Reaper, was dropped on Nov 22; Ghosted is the reuse proof. Everything below comes from `docs/KIRO_LOG.md`, a session-by-session record I kept while building. I also used Claude Code (Anthropic's coding agent) outside Kiro for part of the work. This write-up says exactly which parts in the last section, and the log and `.kiro/steering/authorship.md` list the files.
+Decay Engine is one engine for things that fade, with two apps on top: Study Dungeon (facts you are forgetting) and Ghosted (friendships going quiet). The engine has a small policy contract, and each app supplies its own decay rules and its own look. Ghosted is the reuse proof. Everything below comes from `docs/KIRO_LOG.md`, a session-by-session record I kept while building. I also used Claude Code (Anthropic's coding agent) outside Kiro for part of the work. This write-up says exactly which parts in the last section, and the log and `.kiro/steering/authorship.md` list the files.
 
 ## Kiro built most of this project
 
@@ -124,7 +124,7 @@ I own the decay rules. Every formula and threshold is set in the specs. For Stud
 | Study Dungeon: lists, dialogs, time machine, Triage, autopsy, first run, hero, policy tests | Kiro |
 | Study Dungeon policy and cause-of-death sentences; engine class, Triage selection, Autopsy analysis, engine property tests (about 5,500 lines with tests) | **Claude Code**, outside Kiro, at my request |
 | Some Study Dungeon polish (visual pass, sound, backup, ranks, import), Ghosted's cause-of-death sentences, the check script (about 7,400 lines) | **Claude Code**, outside Kiro, at my request |
-| After Nov 21: the CSS fixes that followed Kiro's browser checks, the clock guard for a clock that moves backward (both apps), two small P6 fixes, the landing page in `site/`, one test fix, and removing the empty Expiry Reaper folder | **Claude Code**, outside Kiro, at my request (not in the line counts above) |
+| After Nov 21: the CSS fixes that followed Kiro's browser checks, the clock guard for a clock that moves backward (both apps), two small P6 fixes, the landing page in `site/`, one test fix | **Claude Code**, outside Kiro, at my request (not in the line counts above) |
 | Late features: compact time dock, 7-day loss line, Triage saves line, insight package, Rescue Point, live changes, notifications and first-look intro (specs and builds in both apps), and the browser checks from Kiro CLI | Kiro |
 | Product idea, decay rules, spec decisions, reviews and corrections of every stage | Me |
 
