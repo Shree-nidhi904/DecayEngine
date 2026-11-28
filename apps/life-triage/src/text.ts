@@ -15,13 +15,21 @@ export const MAX_AHEAD_DAYS = 365
 export const ltText = {
   title: "Life Triage",
   lede:
-    "One time budget for everything that is fading: facts and friends together. Study Dungeon and Ghosted keep your data in " +
-    "separate browser storage, so export a backup from each and load them here. Nothing is uploaded; the files are read in this page.",
+    "Say how many minutes you have. Life Triage looks at the facts you are forgetting and the people you are losing touch with, " +
+    "and tells you which ones to tend first.",
+  privacy: "Nothing is uploaded; the files are read in this page.",
+  howTo: "In Study Dungeon or Ghosted, open Settings and choose Back up. Then drop each file in its box below.",
+  detailsLabel: "Details and limits",
   limits:
-    `Budget 1 to 1,440 minutes. Look ahead 0 to ${MAX_AHEAD_DAYS} days. Backups up to version 1; one file per app, and a later file ` +
-    "replaces an earlier one. Study Dungeon backups are read with its default rules (each right answer doubles the half-life), " +
+    `Time: 1 to 1,440 minutes. Look ahead: 0 to ${MAX_AHEAD_DAYS} days. Backups up to version 1; one file per app, and a later file ` +
+    "replaces an earlier one. Study Dungeon backups are read with its default rules (each right answer doubles how long a fact lasts), " +
     "even if you chose the memory model there. Anything more than 10 years away shows as not within 10 years.",
-  loadFiles: "Load backup files",
+  loadFiles: "Choose a backup file",
+  slotFacts: "Study Dungeon backup",
+  slotFriends: "Ghosted backup",
+  slotEmpty: "No file yet (.json)",
+  slotLoaded: (count: number | undefined) => (count === undefined ? "Loaded" : `Loaded, ${count} item${count === 1 ? "" : "s"}`),
+  wrongSlot: (file: string, label: string) => `${file} is a ${label} backup, so it was loaded as ${label}.`,
   sample: "Use sample data",
   sampleLoaded: "Sample facts and people",
   budgetLabel: "I have (minutes)",
@@ -29,6 +37,15 @@ export const ltText = {
   begin: "Load a backup or use the sample data to begin.",
   doThese: "Do these",
   leftToFade: "Left to fade",
+  open: (label: string) => `Open in ${label}`,
+  summary: (picked: number, all: number, used: number, budget: number) =>
+    `Save ${picked} of ${all} fading items in ${used} of ${budget} minutes.`,
+  versusEven: (kept: number, even: number) =>
+    kept > even + 1e-9 && even > 0
+      ? `This plan saves ${Math.round(((kept - even) / even) * 100)}% more than splitting your minutes evenly between the apps.`
+      : kept > even + 1e-9
+        ? "This plan saves more than splitting your minutes evenly between the apps."
+        : "Splitting your minutes evenly between the apps would do just as well here.",
   nothingWeak: "Nothing is fading yet at this time.",
   budgetNote: (minutes: number) => `Using ${minutes} ${minutes === 1 ? "minute" : "minutes"} (1 to 1,440).`,
   aheadNote: (days: number) => `Using ${days} ${days === 1 ? "day" : "days"} ahead (0 to ${MAX_AHEAD_DAYS}).`,

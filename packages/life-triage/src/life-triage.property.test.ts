@@ -39,7 +39,9 @@ type Spec = { importance: number; cost: number; ageDays: number }
 const itemArb = fc.record({
   importance: fc.integer({ min: 1, max: 3 }),
   cost: fc.integer({ min: 1, max: 30 }),
-  ageDays: fc.double({ min: 0, max: 20, noNaN: true }),
+  // Hundredths of a day, not fc.double: fast-check 4 leans heavily on the edge
+  // values 0 and 20 for a double, which left almost every item brand new.
+  ageDays: fc.integer({ min: 0, max: 2000 }).map((n) => n / 100),
 })
 const scenarioArb = fc.record({
   facts: fc.array(itemArb, { maxLength: 6 }),

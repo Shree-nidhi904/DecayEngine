@@ -534,3 +534,87 @@
     animation: none;
   }
 }
+
+/* Guided tour: the "?" button at the bottom right, a lit part and a card beside it. */
+.shell-tour-help {
+  position: fixed;
+  inset-inline-end: 16px;
+  inset-block-end: calc(var(--dock-h, 0px) + 16px);
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  inline-size: 48px;
+  block-size: 48px;
+  padding: 0;
+  border: 1px solid var(--shell-accent);
+  border-radius: 50%;
+  background: var(--shell-panel-hi);
+  color: var(--shell-accent);
+  font-family: var(--shell-font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.5);
+}
+
+.shell-tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+/* The lit part is a hole in the dark: its huge shadow is the shade. */
+.shell-tour-spot {
+  position: fixed;
+  border: 2px solid var(--shell-accent);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.72);
+  pointer-events: none;
+}
+
+.shell-tour-shade {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.72);
+}
+
+.shell-tour-card {
+  position: fixed;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--shell-accent);
+  border-radius: 10px;
+  background: var(--shell-panel-hi);
+  color: var(--shell-text);
+  font-family: var(--shell-font-body);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.6);
+}
+
+.shell-tour-progress {
+  margin: 0 0 4px;
+  color: var(--shell-text-dim);
+  font-family: var(--shell-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shell-tour-title {
+  margin: 0 0 6px;
+  color: var(--shell-accent);
+  font-family: var(--shell-font-display);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.shell-tour-text {
+  margin: 0 0 12px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.shell-tour-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

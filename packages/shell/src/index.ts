@@ -41,3 +41,8 @@ export type { TriagePanelProps } from "./components/TriagePanel";
 
 export { AutopsyDialog, AUTOPSY_CHART_HEIGHT, AUTOPSY_CHART_WIDTH } from "./components/AutopsyDialog";
 export type { AutopsyChartPoint, AutopsyDialogProps, AutopsyMarker, AutopsyTendMark } from "./components/AutopsyDialog";
+
+export { GuidedTour } from "./components/GuidedTour";
+export type { GuidedTourProps, GuidedTourStep, GuidedTourWording } from "./components/GuidedTour";
+export { snapshotElements } from "./snapshot";
+export type { SnapshotOptions } from "./snapshot";

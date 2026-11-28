@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import { lifeTriage, type LifeCandidate } from "@decay-engine/life-triage"
 import { FACTS, FRIENDS, sampleSources } from "./load"
 import { clampAhead, clampBudget, detailOf, fateOf, ltText, nameOf } from "./text"
+import { tendLink } from "./links"
 
 const DAY = 86_400_000
 const NOW = Date.UTC(2026, 10, 24)
@@ -39,13 +40,13 @@ describe("limits", () => {
   })
 
   it("the page states every limit", () => {
-    expect(ltText.limits).toContain("Budget 1 to 1,440 minutes.")
-    expect(ltText.limits).toContain("Look ahead 0 to 365 days.")
+    expect(ltText.limits).toContain("Time: 1 to 1,440 minutes.")
+    expect(ltText.limits).toContain("Look ahead: 0 to 365 days.")
     expect(ltText.limits).toContain("Backups up to version 1; one file per app, and a later file replaces an earlier one.")
     expect(ltText.limits).toContain("Study Dungeon backups are read with its default rules")
     expect(ltText.limits).toContain("even if you chose the memory model there")
     expect(ltText.limits).toContain("not within 10 years")
-    expect(ltText.lede).toContain("Nothing is uploaded; the files are read in this page.")
+    expect(ltText.privacy).toBe("Nothing is uploaded; the files are read in this page.")
   })
 })
 
@@ -85,5 +86,28 @@ describe("when an item is lost", () => {
     for (const t of Object.values(ltText)) {
       if (typeof t === "string") expect(t).not.toMatch(/proven|scientific|research|clinical|optimal|guarantee/i)
     }
+  })
+})
+
+describe("the plan compared with an even split", () => {
+  it("says how much more the plan saves, in whole percent", () => {
+    expect(ltText.versusEven(150, 100)).toBe("This plan saves 50% more than splitting your minutes evenly between the apps.")
+    expect(ltText.versusEven(239.4, 200)).toBe("This plan saves 20% more than splitting your minutes evenly between the apps.")
+  })
+  it("says an even split would do as well when it would", () => {
+    expect(ltText.versusEven(239, 239)).toBe("Splitting your minutes evenly between the apps would do just as well here.")
+  })
+  it("still says more when an even split would save nothing", () => {
+    expect(ltText.versusEven(10, 0)).toBe("This plan saves more than splitting your minutes evenly between the apps.")
+  })
+  it("never uses the old jargon", () => {
+    for (const [k, v] of [[150, 100], [5, 5], [3, 0]]) expect(ltText.versusEven(k, v)).not.toMatch(/greedy|exact|value kept/i)
+  })
+})
+describe("links to the apps", () => {
+  it("opens each item in its own app by id", () => {
+    expect(tendLink(FACTS, "fact-3")).toBe("https://decay-engine-study-dungeon.pages.dev/?tend=fact-3")
+    expect(tendLink(FRIENDS, "a b")).toBe("https://decay-engine-ghosted.pages.dev/?tend=a%20b")
+    expect(tendLink("Other", "x")).toBeNull()
   })
 })

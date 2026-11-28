@@ -1,6 +1,10 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./App"
+import "@fontsource/ibm-plex-mono/400.css"
+import "@fontsource/pirata-one/400.css"
+import "@fontsource/spectral/400.css"
+import "@fontsource/spectral/600.css"
 import "./styles.css"
 
 createRoot(document.getElementById("root")!).render(

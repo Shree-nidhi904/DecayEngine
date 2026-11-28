@@ -35,6 +35,16 @@ describe("Life Triage page", () => {
     expect(html).toMatch(/<input id="a"[^>]*max="365"[^>]*aria-describedby="lt-limits lt-ahead-note"/)
   })
 
+  it("has one box per app, each taking .json files", () => {
+    expect(text).toContain(ltText.slotFacts)
+    expect(text).toContain(ltText.slotFriends)
+    expect(html).toMatch(/<input id="slot-facts" type="file" accept="application\/json,.json" multiple/)
+    expect(html).toMatch(/<input id="slot-friends" type="file" accept="application\/json,.json" multiple/)
+    expect(html.match(/No file yet \(.json\)/g)?.length).toBe(2)
+  })
+  it("keeps the limits in a details fold", () => {
+    expect(html).toMatch(/<details class="details"><summary>Details and limits<\/summary><p id="lt-limits"/)
+  })
   it("names the file control and the sample button", () => {
     expect(text).toContain(ltText.loadFiles)
     expect(html).toMatch(/<button type="button"[^>]*>Use sample data<\/button>/)

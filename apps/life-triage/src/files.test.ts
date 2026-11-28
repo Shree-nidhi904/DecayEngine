@@ -87,3 +87,21 @@ describe("readBackupFiles", () => {
     expect(r.sources).toEqual(before.sources)
   })
 })
+describe("readBackupFiles with a box", () => {
+  it("loads a file dropped in the wrong box as the app it is from, and says so", async () => {
+    const r = await readBackupFiles([file("people.json", peopleBackup(["Ines"]))], [], FACTS)
+    expect(r.sources.map((s) => s.label)).toEqual([FRIENDS])
+    expect(r.counts).toEqual({ [FRIENDS]: 1 })
+    expect(r.notes).toContain("people.json is a Ghosted backup, so it was loaded as Ghosted.")
+  })
+  it("adds no note when the file is in its own box", async () => {
+    const r = await readBackupFiles([file("facts.json", factsBackup(2))], [], FACTS)
+    expect(r.counts).toEqual({ [FACTS]: 2 })
+    expect(r.notes.some((n) => n.includes("so it was loaded as"))).toBe(false)
+  })
+  it("loads both apps from one pick of two files", async () => {
+    const r = await readBackupFiles([file("a.json", factsBackup(1)), file("b.json", peopleBackup(["Wren", "Tomas"]))], [], FACTS)
+    expect(r.sources.map((s) => s.label).sort()).toEqual([FACTS, FRIENDS].sort())
+    expect(r.counts).toEqual({ [FACTS]: 1, [FRIENDS]: 2 })
+  })
+})

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { lifeTriage, type Source } from "@decay-engine/life-triage"
-import { sampleSources } from "./load"
+import { FACTS, FRIENDS, sampleSources } from "./load"
+import { tendLink } from "./links"
 import { AccountLoader } from "./AccountLoader"
 import { readBackupFiles } from "./files"
 import { MAX_AHEAD_DAYS, clampAhead, clampBudget, detailOf, ltText, nameOf } from "./text"
@@ -16,6 +17,7 @@ export function App({ now: fixedNow }: AppProps = {}) {
   const [now] = useState(() => fixedNow ?? Date.now())
   const [sources, setSources] = useState<Source[]>([])
   const [notes, setNotes] = useState<string[]>([])
+  const [counts, setCounts] = useState<Record<string, number>>({})
   const [budgetInput, setBudgetInput] = useState(30)
   const [aheadInput, setAheadInput] = useState(0)
 
@@ -31,32 +33,53 @@ export function App({ now: fixedNow }: AppProps = {}) {
     }
   }, [sources, budget.minutes, at])
 
-  async function onFiles(files: FileList | null) {
+  async function onFiles(files: FileList | null, expected?: string) {
     if (!files) return
-    const read = await readBackupFiles(Array.from(files), sources)
+    const read = await readBackupFiles(Array.from(files), sources, expected)
     setSources(read.sources)
     setNotes(read.notes)
+    setCounts((old) => ({ ...old, ...read.counts }))
   }
 
   return (
     <main>
-      <h1>{ltText.title}</h1>
-      <p className="lede">{ltText.lede}</p>
-      <p id="lt-limits" className="lede">{ltText.limits}</p>
-
+      <header className="lt-head">
+        <h1>{ltText.title}</h1>
+        <p className="lede">{ltText.lede}</p>
+        <p className="lede lede-small">{ltText.howTo} {ltText.privacy}</p>
+      </header>
+      <section className="lt-panel" aria-label={ltText.title}>
+      <div className="slots">
+        {[FACTS, FRIENDS].map((label) => {
+          const loaded = sources.find((x) => x.label === label)
+          const slotId = label === FACTS ? "slot-facts" : "slot-friends"
+          return (
+            <label key={label} className={loaded ? "slot filebtn filled" : "slot filebtn"} htmlFor={slotId}>
+              <span className="slot-name">{label === FACTS ? ltText.slotFacts : ltText.slotFriends}</span>
+              <span className="slot-state">
+                {loaded ? ltText.slotLoaded(counts[label]) : ltText.slotEmpty}
+              </span>
+              <span className="slot-action">{ltText.loadFiles}</span>
+              <input id={slotId} type="file" accept="application/json,.json" multiple
+                onChange={(e) => { void onFiles(e.target.files, label); e.target.value = "" }} />
+            </label>
+          )
+        })}
+      </div>
       <div className="presets">
-        <label className="filebtn">
-          {ltText.loadFiles}
-          <input type="file" accept="application/json,.json" multiple onChange={(e) => onFiles(e.target.files)} />
-        </label>
-        <button type="button" onClick={() => { setSources(sampleSources(now)); setNotes([ltText.sampleLoaded]) }}>
+        <button type="button" onClick={() => { setSources(sampleSources(now)); setCounts({}); setNotes([ltText.sampleLoaded]) }}>
           {ltText.sample}
         </button>
       </div>
+      <details className="details">
+        <summary>{ltText.detailsLabel}</summary>
+        <p id="lt-limits" className="legend">{ltText.limits}</p>
+      </details>
       <AccountLoader
         existing={sources}
         onLoaded={(next, accountNotes) => {
           setSources(next)
+          setCounts({})
           setNotes(accountNotes)
         }}
       />
@@ -66,6 +89,8 @@ export function App({ now: fixedNow }: AppProps = {}) {
         </ul>
       )}
 
+      </section>
+      <section className="lt-panel">
       <div className="controls">
         <label htmlFor="b">{ltText.budgetLabel}</label>
         <input id="b" type="number" min={1} max={1440} value={budgetInput} aria-describedby="lt-limits lt-budget-note"
@@ -76,35 +101,44 @@ export function App({ now: fixedNow }: AppProps = {}) {
       </div>
       <p id="lt-budget-note" className="legend" aria-live="polite">{budget.note ?? ""}</p>
       <p id="lt-ahead-note" className="legend" aria-live="polite">{ahead.note ?? ""}</p>
+      </section>
 
       {typeof result === "string" && <p className="error" role="alert">{result}</p>}
       {result === null && <p className="blurb">{ltText.begin}</p>}
       {result !== null && typeof result !== "string" && (
-        <section aria-live="polite">
+        <section className="lt-panel lt-result" aria-live="polite">
           <p className="verdict pass">
-            Save {result.picks.length} of {result.picks.length + result.others.length} fading items in {result.totalMinutes} of {budget.minutes} minutes.
+            {ltText.summary(result.picks.length, result.picks.length + result.others.length, result.totalMinutes, budget.minutes)}
           </p>
-          <p className="legend">
-            Value kept {result.totalValue.toFixed(0)}. An even split of the time between your apps would keep {result.evenSplitValue.toFixed(0)}.
-            The choice across both apps is exact, not greedy.
-          </p>
+          <p className="legend">{ltText.versusEven(result.totalValue, result.evenSplitValue)}</p>
+          <div className="lt-cols">
+          <div className="lt-col lt-col-do">
           <h2>{ltText.doThese}</h2>
           <ul className="list">
             {result.picks.map((c) => (
-              <li key={c.source + c.id}><span className="tag">{c.source}</span> {nameOf(c)} <span className="mut">{detailOf(c, at, true)}</span></li>
+              <li key={c.source + c.id} className="pick">
+                <span><span className="tag">{c.source}</span> {nameOf(c)} <span className="mut">{detailOf(c, at, true)}</span></span>
+                {tendLink(c.source, c.id) !== null && (
+                  <a className="tend" href={tendLink(c.source, c.id) ?? undefined} target="_blank" rel="noopener">
+                    {ltText.open(c.source)} <span aria-hidden="true">→</span>
+                  </a>
+                )}
+              </li>
             ))}
             {result.picks.length === 0 && <li className="mut">{ltText.nothingWeak}</li>}
           </ul>
+          </div>
           {result.others.length > 0 && (
-            <>
+            <div className="lt-col lt-col-fade">
               <h2>{ltText.leftToFade}</h2>
               <ul className="list">
                 {result.others.map((c) => (
                   <li key={c.source + c.id}><span className="tag">{c.source}</span> {nameOf(c)} <span className="mut">{detailOf(c, at, false)}</span></li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
+          </div>
         </section>
       )}
     </main>

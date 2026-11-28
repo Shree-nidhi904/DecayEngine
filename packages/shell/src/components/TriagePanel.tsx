@@ -61,6 +61,12 @@ export interface TriagePanelProps<Payload, PolicyData> {
    * the panel renders exactly as without this prop.
    */
   picksNote?: (picks: TriageCandidate<Payload, PolicyData>[]) => string | null;
+  /**
+   * Run as soon as a budget is chosen, with no run button (feedback list,
+   * point 12). A custom budget runs on each valid entry; Enter still works.
+   * Omitted or false: today's behaviour, with the run button.
+   */
+  autoRun?: boolean;
 }
 
 /** Whole days from `now` to `diesAt`, rounded up, never below 0. */
@@ -97,6 +103,7 @@ export function TriagePanel<Payload, PolicyData>({
   budgets,
   defaultBudget,
   picksNote,
+  autoRun = false,
 }: TriagePanelProps<Payload, PolicyData>) {
   const text = wording.triage;
   const ids = {
@@ -230,6 +237,7 @@ export function TriagePanel<Payload, PolicyData>({
                 onChange={() => {
                   setChoice(minutes);
                   setInvalid(false);
+                  if (autoRun) setBudget(minutes);
                 }}
               />
               {text.minutes(minutes)}
@@ -255,13 +263,23 @@ export function TriagePanel<Payload, PolicyData>({
               value={customText}
               aria-invalid={invalid ? true : undefined}
               aria-describedby={invalid ? ids.error : undefined}
-              onChange={(event) => setCustomText(event.currentTarget.value)}
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                setCustomText(value);
+                if (!autoRun) return;
+                const minutes = parseBudget(value, maxBudgetMinutes);
+                // While typing, an empty box is not an error yet; anything else that is not a budget is.
+                setInvalid(minutes === null && value.trim() !== "");
+                setBudget(minutes);
+              }}
             />
           </div>
         )}
-        <button type="submit" className="shell-button shell-button-primary">
-          {text.run}
-        </button>
+        {!autoRun && (
+          <button type="submit" className="shell-button shell-button-primary">
+            {text.run}
+          </button>
+        )}
       </form>
       {invalid && (
         <p id={ids.error} className="shell-triage-error" role="alert">

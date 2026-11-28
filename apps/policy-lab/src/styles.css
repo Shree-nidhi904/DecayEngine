@@ -30,3 +30,15 @@ footer { margin-top:32px; color:var(--mut) } footer a { color:var(--acc) }
 button { min-height:44px; min-width:44px }
 input, textarea { min-height:44px }
 footer a { display:inline-block; min-height:44px; line-height:44px }
+/* Alignment (feedback, Nov 28): both columns start on the same line, the controls line up in two tidy rows. */
+.cols { align-items: start }
+.cols > section { min-width: 0 }
+.cols > section > :first-child { margin-top: 0 }
+.cols > section > label:first-of-type { margin-top: 12px }
+.warn { margin: 0 0 4px }
+.verdict { min-height: 44px; display: flex; align-items: center; margin: 0 0 8px }
+.chart { display: block }
+.controls { grid-template-columns: minmax(0, 1fr) 110px; margin-top: 16px }
+.controls label { align-self: center }
+.presets { margin-bottom: 8px }
+.blurb { margin: 0 0 20px }

@@ -16,6 +16,8 @@ function networkUses(text: string): string[] {
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/(^|[^:])\/\/.*$/gm, "$1")
     .replace(/href="[^"]*"/g, 'href=""')
+    // The apps' own addresses, used only as link targets (links.ts).
+    .replace(/"https:\/\/decay-engine-[a-z-]+\.pages\.dev\/"/g, '""')
   return NETWORK.filter((re) => re.test(code)).map(String)
 }
 
@@ -23,9 +25,11 @@ describe("Life Triage: no network", () => {
   it("the scan finds a planted request (self-test)", () => {
     expect(networkUses('navigator.sendBeacon("/x", data)')).toEqual([String(NETWORK[4])])
     expect(networkUses("// new WebSocket(u)")).toEqual([])
+    expect(networkUses('fetch("https://decay-engine-ghosted.pages.dev/")')).toEqual([String(NETWORK[0])])
+    expect(networkUses('const u = "https://evil.example/"')).toEqual([String(NETWORK[6])])
   })
 
-  for (const file of ["./App.tsx", "./load.ts", "./files.ts", "./text.ts", "./main.tsx", "./account.ts", "./AccountLoader.tsx"]) {
+  for (const file of ["./App.tsx", "./load.ts", "./files.ts", "./text.ts", "./main.tsx", "./account.ts", "./AccountLoader.tsx", "./links.ts"]) {
     it(`${file} makes no network request`, () => {
       expect(networkUses(read(file))).toEqual([])
     })
