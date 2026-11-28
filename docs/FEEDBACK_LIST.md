@@ -41,7 +41,7 @@ The developer's 24 points, word for word in meaning, with the decisions made in 
 | 6 Ghosted | 6 (app side), 12, 13, 23, 24 | Done (Session 86; tests run and old-layout tests updated in Kiro CLI, Session 89) |
 | 7 Background and margins | 9, 19 | Done. Study Dungeon: Session 88. Ghosted: Session 86 |
 
-Tests: shell 171, Study Dungeon 912, Ghosted 1112, all passing; typecheck clean; `check-engine-unchanged.sh` passes (shell autoRun recorded as Ghosted Requirement 41). Preview deploys: Session 89. No Playwright check is planned: the developer looks at the preview sites in the browser.
+Tests: shell 171, Study Dungeon 912, Ghosted 1112, all passing; typecheck clean; `check-engine-unchanged.sh` passes (shell autoRun recorded as Ghosted Requirement 41). Preview deploys: Session 89. Preview and production deploys of all four sites: Session 90. No Playwright check is planned: the developer looks at the sites in the browser.
 
 ## Who does what (from Session 86/87)
 

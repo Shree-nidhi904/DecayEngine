@@ -2551,3 +2551,15 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - The preview links point at production. Life Triage's "Open in" links (`apps/life-triage/src/links.ts`) and the landing page's app links go to the production `*.pages.dev` addresses, so `?tend=<id>` from the Life Triage preview opens the production apps, which do not have these changes until a `--prod` deploy.
   - Nothing has been looked at in a browser yet, as the developer asked.
 - **Credits used**: not recorded.
+
+---
+
+## Session 90: preview and production deploys of all four sites
+- **Goal**: the developer asked to deploy landing, Study Dungeon, Ghosted and Life Triage to preview and production. The code is the one `scripts/check.sh` passed in Session 89.
+- **Kiro feature used**: Kiro IDE chat (agent mode), the `cloudflare-pages-deployment` power (deploy skill).
+- **What Kiro produced**: one background run of `scripts/deploy-cloudflare.sh` for each site, first on the `preview` branch, then with `--prod`. All eight exited 0 (log in `/tmp/deploy-all.log`).
+  - Preview: `https://f0470e69.decay-engine.pages.dev`, `https://473c326a.decay-engine-study-dungeon.pages.dev`, `https://468a4d39.decay-engine-ghosted.pages.dev`, `https://23e95457.decay-engine-life-triage.pages.dev` (aliases `preview.<project>.pages.dev`).
+  - Production: `https://10c59914.decay-engine.pages.dev`, `https://7175e610.decay-engine-study-dungeon.pages.dev`, `https://6ddaec5a.decay-engine-ghosted.pages.dev`, `https://e0e31ea7.decay-engine-life-triage.pages.dev`, served at `https://decay-engine.pages.dev`, `https://decay-engine-study-dungeon.pages.dev`, `https://decay-engine-ghosted.pages.dev` and `https://decay-engine-life-triage.pages.dev`.
+- **What I changed by hand**: nothing.
+- **What went wrong or surprised me**: the IDE shell returned no output for most commands, so the progress was read from the log file. Each deploy printed the harmless "A project with this name already exists" error first, and wrangler warned that the working tree has uncommitted changes: the deployed code is not yet committed to git. Nothing was looked at in a browser.
+- **Credits used**: not recorded.
