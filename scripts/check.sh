@@ -9,7 +9,6 @@
 # Run it from anywhere in WSL:  bash scripts/check.sh
 # Exit code is 0 only when every step passes.
 #
-# Written by Claude Code (Opus 5.5), outside Kiro, at the developer's request; see .kiro/steering/authorship.md.
 # The three Ghosted steps were added by Kiro (Ghosted task 2.10, design section 8.3).
 # The two Insight steps were added by Kiro (task E1).
 # The eight Policy Lab and Life Triage steps were added by Kiro, according to the
@@ -67,8 +66,15 @@ step "test life-triage"      pnpm --filter @decay-engine/life-triage test
 step "typecheck lt app"     pnpm --filter @decay-engine/life-triage-app typecheck
 step "test lt app"          pnpm --filter @decay-engine/life-triage-app test
 step "build lt app"         pnpm --filter @decay-engine/life-triage-app build
+step "default bundles"   node scripts/check-bundles.mjs
 step "typecheck insight"  pnpm --filter @decay-engine/insight typecheck
 step "test insight"       pnpm --filter @decay-engine/insight test
+step "typecheck persist" pnpm --filter @decay-engine/persist typecheck
+step "test persist"      pnpm --filter @decay-engine/persist test
+step "typecheck pwa"     pnpm --filter @decay-engine/pwa typecheck
+step "test pwa"          pnpm --filter @decay-engine/pwa test
+step "typecheck cloud"   pnpm --filter @decay-engine/cloud typecheck
+step "test cloud"        pnpm --filter @decay-engine/cloud test
 step "landing page"       bash scripts/check-site.sh
 
 echo

@@ -15,7 +15,7 @@ Built for [Kiroween 2026](https://kiroween.devpost.com/) in the **Skeleton Crew*
 | **Study Dungeon** | Facts you study fade into monsters. Review them before they die. |
 | **Ghosted** | A street of windows, one per person. The light shows how recently you were in touch. |
 
-Both run on the same engine. Ghosted was built on it with **zero changes to `packages/engine`**, and a script in the check suite proves it. Everything runs in the browser: no accounts, no server, no network calls.
+Both run on the same engine. Ghosted was built on it with **zero changes to `packages/engine`**, and a script in the check suite proves it. Everything runs in the browser: by default, no accounts, no server, no network calls. Optional cloud sync and notifications exist for people who want them, off until you set up a Supabase project and sign in ([Cloud sync](#cloud-sync-optional)).
 
 [Run it](#running-it) · [How Kiro was used](#how-kiro-is-used) · [The Kiro log](docs/KIRO_LOG.md) · [Build status](#build-status)
 
@@ -112,6 +112,17 @@ Every engine function takes the current time as an input instead of reading the 
 The same idea gives the **forecast** (what dies within a horizon you choose) almost for free. Study Dungeon shows it as markers on the time machine and as a line in the hero.
 
 ---
+
+### The haunt pass: the world reacts
+
+Built from its own spec ([`.kiro/specs/haunt-pass`](.kiro/specs/haunt-pass/requirements.md)), the same in both apps:
+
+- **Watch it die as you scrub.** Drag the time machine and each window or card plays the moment it fades or dies. Lightning strikes on a death.
+- **Doom.** The whole scene gets darker as more things fade, and brightens again when you tend them.
+- **A guide with some mischief.** Wisp (Ghosted) and the Keeper (Study Dungeon) say one line about what is happening and what to tap next.
+- **The rescue is a moment.** Reconnecting or resurrecting plays a ring of light, rising spirits and a stamp.
+- **Share a card.** A picture of your street or dungeon tonight, made on your device. Ghosted shows no names unless you ask.
+- **Spooky level.** Calm turns off lightning and the ambient extras. Reduced motion is respected everywhere.
 
 ## App 1: Study Dungeon
 
@@ -240,7 +251,7 @@ Technology:
 | Tests | Vitest unit tests, outcome tests and fast-check property-based tests |
 | Apps | React with Vite, in a pnpm monorepo |
 | Look | CSS and SVG only |
-| Storage | The browser's local storage, so there are no accounts, no login and no server |
+| Storage | The browser's local storage by default, so there are no accounts, no login and no server. Optional cloud sync with your own Supabase project |
 
 Engine rules checked by property-based tests:
 
@@ -323,7 +334,19 @@ Ghosted's tests (Vitest with jsdom, fixed timestamps, never the real clock):
 - the policy: unit tests and hand-worked outcomes (for example, a 30-day rhythm left alone is exactly 60 on day 36, exactly 10 on day 81 and dark just after), and fast-check property tests for its rules, with a generator coverage check that lit, flickering and boarded-up people are all generated;
 - the components, the sample street and the autopsy sentences;
 - the App as a whole: the first run, a preview never saving anything (a property test over every write control), storage problems, and keyboard and focus;
-- source checks: no import from Study Dungeon, no network, no clock in the tests, colours from the Ghosted tokens only, contrast, motion only behind `prefers-reduced-motion`, the 320px layout and the wording rules.
+- source checks: no import from Study Dungeon, no network in the app's own source (the optional sync code is a separate package loaded on request), no clock in the tests, colours from the Ghosted tokens only, contrast, motion only behind `prefers-reduced-motion`, the 320px layout and the wording rules.
+
+## Cloud sync (optional)
+
+Off by default: with no settings in the build, the apps make no network request at all. To use it you bring your own [Supabase](https://supabase.com) project; nothing is hosted for you.
+
+- **Sync** a Study Dungeon or Ghosted save across your devices, signed in by an emailed link. Writes are checked against a revision, so two devices cannot overwrite each other, and a conflict asks you which copy to keep.
+- **A passphrase** (optional) encrypts the cloud copy on your device first, so the server holds only scrambled text.
+- **Notifications while the app is closed** (optional): your device works out when something will next change and tells the server only that time and one generic sentence, never a name or a fact. At most one a day, never between 22:00 and 08:00.
+- **Life Triage** can read both saves from your account instead of two files. It only reads.
+- **A PWA**: the apps install and work offline.
+
+Setup and limits: [docs/CLOUD.md](docs/CLOUD.md) and [docs/PUSH_SETUP.md](docs/PUSH_SETUP.md).
 
 ## Licence
 

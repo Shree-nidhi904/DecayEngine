@@ -1,9 +1,4 @@
 <!doctype html>
-<!--
-  The Decay Engine landing page (task P3): one URL that states the pitch and links the two apps.
-  Written by Claude Code, outside Kiro, at the developer's request. Static HTML and CSS only:
-  no framework, no script, no web fonts, no network request of its own.
--->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -23,12 +18,27 @@
 
   <main id="main">
     <section class="hero" aria-labelledby="pitch">
-      <div class="lights" aria-hidden="true">
-        <span class="l l1"></span><span class="l l2"></span><span class="l l3"></span>
-        <span class="l l4"></span><span class="l l5"></span><span class="l l6"></span>
+      <div class="worlds" aria-hidden="true">
+        <div class="world dungeon">
+          <span class="arch"></span>
+          <span class="torch t1"><i></i></span>
+          <span class="torch t2"><i></i></span>
+          <span class="eyes e1"><i></i><i></i></span>
+          <span class="eyes e2"><i></i><i></i></span>
+          <span class="slime"></span>
+          <span class="stone"></span>
+        </div>
+        <div class="core"><span class="ring"></span><span class="orb"></span><span class="core-label">engine</span></div>
+        <div class="world street">
+          <span class="moon"></span>
+          <span class="house h1"><i class="w on"></i><i class="w flick"></i><i class="w on"></i><i class="w off"></i></span>
+          <span class="house h2"><i class="w on"></i><i class="w dying"></i></span>
+          <span class="ghost"></span>
+        </div>
       </div>
       <h1 id="pitch">One engine for things that fade.</h1>
       <p class="lede">It shows what you will lose, helps you decide what to save, and tells you what died and why.</p>
+      <p class="badge"><strong>0 lines</strong> of engine code changed to build the second app.</p>
     </section>
 
     <section class="three" aria-label="What it does">
@@ -80,6 +90,19 @@
           <span class="go">Open Life Triage <span aria-hidden="true">→</span></span>
         </a>
       </div>
+    </section>
+
+    <section class="kiro" aria-labelledby="kiro-h">
+      <h2 id="kiro-h">Built with Kiro</h2>
+      <p class="kiro-sub">Every feature started as a spec. Open the files Kiro worked from.</p>
+      <ul class="kiro-grid">
+        <li><a href="https://github.com/Shree-nidhi904/DecayEngine/tree/main/.kiro/specs"><b>6</b> specs<span>requirements, design, tasks</span></a></li>
+        <li><a href="https://github.com/Shree-nidhi904/DecayEngine/tree/main/.kiro/steering"><b>11</b> steering docs<span>engine boundary, no fake tests, wording</span></a></li>
+        <li><a href="https://github.com/Shree-nidhi904/DecayEngine/tree/main/.kiro/hooks"><b>3</b> hooks<span>tests and policy checks on save</span></a></li>
+        <li><a href="https://github.com/Shree-nidhi904/DecayEngine/tree/main/.kiro/agents"><b>1</b> custom agent<span>a read-only policy reviewer</span></a></li>
+        <li><a href="https://github.com/Shree-nidhi904/DecayEngine/blob/main/.kiro/settings/mcp.json"><b>2</b> MCP servers<span>docs lookup and a real browser</span></a></li>
+        <li><a href="https://github.com/Shree-nidhi904/DecayEngine/blob/main/docs/KIRO_LOG.md"><b>Every</b> session logged<span>what Kiro did, and what surprised us</span></a></li>
+      </ul>
     </section>
 
     <section class="how" aria-labelledby="how-h">

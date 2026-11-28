@@ -72,27 +72,235 @@ a:focus-visible { outline: 3px solid var(--glow); outline-offset: 3px; border-ra
 
 .hero { padding-block: 56px 40px; }
 
-.lights { display: flex; gap: 10px; margin-block-end: 28px; }
-.l {
-  display: block;
-  inline-size: 22px;
-  block-size: 30px;
-  border: 2px solid #3a3560;
-  border-radius: 3px 3px 2px 2px;
-  background: #151128;
+/* ----- Haunt pass (Claude Code, Opus 5.5): one engine, two worlds. CSS art only. ----- */
+.worlds {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr);
+  align-items: end;
+  block-size: 180px;
+  margin-block-end: 32px;
 }
-.l1, .l2, .l4 { background: var(--glow); border-color: #b98f3c; box-shadow: 0 0 18px rgb(255 212 121 / 0.45); }
-.l3 { background: #ff9a4a; border-color: #b0641f; }
-.l5 { background: #1d1733; }
-.l6 { background: #151128; }
+.world {
+  position: relative;
+  block-size: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.dungeon { background: linear-gradient(180deg, #110d17, #060509); }
+.street { background: linear-gradient(180deg, #100e1a, #151128 70%, #1d1733); }
+
+.arch {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-end: 0;
+  inline-size: 96px;
+  block-size: 120px;
+  translate: -50% 0;
+  border: 6px solid #2b2235;
+  border-block-end: 0;
+  border-radius: 48px 48px 0 0;
+  background: radial-gradient(ellipse at 50% 100%, rgb(255 138 43 / 0.18), #060509 70%);
+}
+.torch { position: absolute; inset-block-start: 40px; inline-size: 6px; block-size: 26px; background: #5c483c; border-radius: 2px; }
+.torch i {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-end: 100%;
+  inline-size: 14px;
+  block-size: 20px;
+  translate: -50% 0;
+  border-radius: 50% 50% 40% 40%;
+  background: radial-gradient(circle at 50% 70%, #ffd479, #ff8a2b 60%, transparent 70%);
+  box-shadow: 0 0 22px rgb(255 138 43 / 0.7);
+}
+.t1 { inset-inline-start: 18%; }
+.t2 { inset-inline-end: 18%; }
+.eyes { position: absolute; display: flex; gap: 6px; }
+.eyes i { inline-size: 6px; block-size: 6px; border-radius: 50%; background: #9cf26b; box-shadow: 0 0 8px #9cf26b; }
+.e1 { inset-inline-start: 44%; inset-block-end: 70px; }
+.e2 { inset-inline-start: 54%; inset-block-end: 48px; }
+.e2 i { background: #ff5f77; box-shadow: 0 0 8px #ff5f77; }
+.slime {
+  position: absolute;
+  inset-inline-start: 10%;
+  inset-block-end: 0;
+  inline-size: 46px;
+  block-size: 30px;
+  border-radius: 50% 50% 8px 8px;
+  background: #9cf26b;
+  box-shadow: 0 0 18px rgb(156 242 107 / 0.45);
+}
+.stone {
+  position: absolute;
+  inset-inline-end: 10%;
+  inset-block-end: 0;
+  inline-size: 34px;
+  block-size: 44px;
+  border-radius: 17px 17px 2px 2px;
+  background: #1c1625;
+  border: 2px solid #b0a694;
+  border-block-end: 0;
+}
+
+.core { position: relative; display: grid; place-items: center; block-size: 100%; }
+.core::before,
+.core::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  block-size: 2px;
+  inline-size: 50%;
+  background: linear-gradient(90deg, #ff8a2b, #ff7ab8);
+  opacity: 0.6;
+}
+.core::before { inset-inline-start: 0; }
+.core::after { inset-inline-end: 0; }
+.orb {
+  position: relative;
+  z-index: 1;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #efe9f5, #ffd479 40%, #ff7ab8 85%);
+  box-shadow: 0 0 30px rgb(255 212 121 / 0.6), 0 0 70px rgb(255 122 184 / 0.35);
+}
+.ring {
+  position: absolute;
+  inline-size: 70px;
+  block-size: 70px;
+  border: 1px dashed rgb(255 212 121 / 0.6);
+  border-radius: 50%;
+}
+.core-label {
+  position: absolute;
+  inset-block-end: 22px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.moon {
+  position: absolute;
+  inset-inline-end: 14%;
+  inset-block-start: 18px;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: 50%;
+  background: #ece6ff;
+  box-shadow: 0 0 24px rgb(236 230 255 / 0.5);
+}
+.house {
+  position: absolute;
+  inset-block-end: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 20px);
+  gap: 8px;
+  padding: 10px;
+  background: #1d1733;
+  border: 1px solid #2c2548;
+  border-block-end: 0;
+}
+.house::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 100%;
+  block-size: 18px;
+  background: #1d1733;
+  clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
+.h1 { inset-inline-start: 10%; }
+.h2 { inset-inline-start: 52%; }
+.w { display: block; inline-size: 20px; block-size: 24px; border: 2px solid #0a0812; background: #1a1727; }
+.w.on, .w.dying { background: #ffd479; box-shadow: 0 0 12px rgb(255 212 121 / 0.55); }
+.w.flick { background: #ff9a4a; }
+.w.off { background: #151128; }
+.ghost {
+  position: absolute;
+  inset-block-start: 30px;
+  inset-inline-start: 6%;
+  inline-size: 22px;
+  block-size: 26px;
+  border-radius: 11px 11px 3px 3px;
+  background: rgb(239 233 245 / 0.3);
+}
+
+.badge {
+  display: inline-block;
+  margin: 20px 0 0;
+  padding: 8px 14px;
+  border: 1px solid #4a3a66;
+  border-radius: 999px;
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--dim);
+}
+.badge strong { color: var(--glow); }
 
 @media (prefers-reduced-motion: no-preference) {
-  .l3 { animation: flick 3.4s steps(1, end) infinite; }
+  .torch i { animation: flame 1.3s ease-in-out infinite alternate; }
+  .t2 i { animation-delay: -0.6s; }
+  .eyes { animation: blink 5s infinite; }
+  .e2 { animation-delay: -2.2s; }
+  .slime { animation: squish 2.6s ease-in-out infinite; }
+  .orb { animation: pulse 2.4s ease-in-out infinite; }
+  .ring { animation: spin 14s linear infinite; }
+  .w.flick { animation: flick 3.4s steps(1, end) infinite; }
+  .w.dying { animation: dying 6s infinite; }
+  .ghost { animation: drift 16s linear infinite; }
+  @keyframes flame { from { transform: scaleY(1); opacity: 1; } to { transform: scaleY(1.2) translateY(-2px); opacity: 0.8; } }
+  @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+  @keyframes squish { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.08, 0.9); } }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes flick {
     0%, 12%, 20%, 62%, 100% { opacity: 1; }
     14%, 18%, 64% { opacity: 0.35; }
   }
+  @keyframes dying {
+    0%, 40% { background: #ffd479; box-shadow: 0 0 12px rgb(255 212 121 / 0.55); }
+    48% { background: #ff9a4a; box-shadow: none; }
+    52% { background: #ffd479; }
+    58%, 92% { background: #151128; box-shadow: none; }
+    100% { background: #ffd479; box-shadow: 0 0 12px rgb(255 212 121 / 0.55); }
+  }
+  @keyframes drift {
+    0% { transform: translateX(0); opacity: 0; }
+    10%, 90% { opacity: 1; }
+    100% { transform: translateX(240px); opacity: 0; }
+  }
 }
+
+/* Built with Kiro */
+.kiro { padding-block: 8px 40px; }
+.kiro-sub { margin: 0 0 16px; color: var(--dim); font-size: 17px; }
+.kiro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kiro-grid a {
+  display: grid;
+  gap: 2px;
+  min-block-size: 44px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 14px;
+  text-decoration: none;
+}
+.kiro-grid a:hover { border-color: var(--glow); }
+.kiro-grid b { color: var(--glow); font-size: 22px; }
+.kiro-grid span { color: var(--dim); font-size: 13px; }
 
 h1 {
   margin: 0 0 16px;
@@ -165,5 +373,9 @@ h2 { margin: 0 0 8px; font-size: 22px; font-weight: 600; }
   body { font-size: 17px; }
   .three { grid-template-columns: minmax(0, 1fr); }
   .cards { grid-template-columns: minmax(0, 1fr); }
+  .kiro-grid { grid-template-columns: minmax(0, 1fr); }
+  .worlds { grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); block-size: 150px; }
+  .orb { inline-size: 32px; block-size: 32px; }
+  .ring, .core-label { display: none; }
   .hero { padding-block: 40px 28px; }
 }
