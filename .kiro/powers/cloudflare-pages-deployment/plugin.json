@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "cloudflare-pages-deployment",
+  "version": "1.0.0",
+  "description": "Deploy the Decay Engine static apps to Cloudflare Pages with wrangler, and inspect the Cloudflare account through Cloudflare's MCP server",
+  "author": {
+    "name": "Decay Engine"
+  },
+  "keywords": ["cloudflare", "pages", "deploy", "deployment", "hosting", "wrangler", "pages.dev", "publish"]
+}

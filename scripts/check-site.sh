@@ -8,8 +8,8 @@ f=site/index.html
 css=site/styles.css
 fail=0
 need() { grep -q "$1" "$f" || { echo "site: missing $2"; fail=1; }; }
-need 'decay-engine-study-dungeon.netlify.app' "the Study Dungeon link"
-need 'decay-engine-ghosted.netlify.app' "the Ghosted link"
+need 'decay-engine-study-dungeon.pages.dev' "the Study Dungeon link"
+need 'decay-engine-ghosted.pages.dev' "the Ghosted link"
 need 'github.com/Shree-nidhi904/DecayEngine"' "the source link"
 need 'docs/KIRO_WRITEUP.md' "the Kiro write-up link"
 need '<h1' "the h1"

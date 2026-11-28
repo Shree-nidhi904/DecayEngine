@@ -10,7 +10,7 @@ Needs the sync setup first (`supabase/migrations/20261128000000_sync.sql`, sign-
 ## One-time setup
 
 1. **Keys.** `npx web-push generate-vapid-keys --json`.
-   - Public key: `VITE_VAPID_PUBLIC_KEY=...` in each `apps/*/.env.local` and in the Netlify sites.
+   - Public key: `VITE_VAPID_PUBLIC_KEY=...` in each `apps/*/.env.local`. Rebuild and redeploy each app afterwards (the key is baked in at build time).
    - Private key: only as a Supabase secret (below). Never in the repo or the page.
 2. **Secrets.**
    ```bash

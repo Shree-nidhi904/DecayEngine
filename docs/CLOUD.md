@@ -31,7 +31,7 @@ and nothing is sent to anyone else.
 2. Authentication → URL Configuration: add each place the apps run as a Redirect URL
    (for example `http://localhost:4173/` and your site addresses).
 3. Put the project URL and **publishable** key in `apps/<app>/.env.local` (see `.env.example`)
-   and, for a deployed site, in the host's environment variables. Never a service-role key.
+   and, for a Cloudflare Pages deploy, the same file is what `scripts/deploy-cloudflare.sh` builds from (dashboard variables only apply to Git-connected builds). Never a service-role key.
 4. For notifications, follow [PUSH_SETUP.md](PUSH_SETUP.md).
 
 ## How sync behaves

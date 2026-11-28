@@ -191,9 +191,9 @@ export function App() {
 
       <footer>
         <a href="https://github.com/Shree-nidhi904/DecayEngine/blob/main/docs/ADDING_A_POLICY.md">Adding a policy</a> ·{" "}
-        <a href="https://decay-engine-study-dungeon.netlify.app">Study Dungeon</a> ·{" "}
-        <a href="https://decay-engine-ghosted.netlify.app">Ghosted</a> ·{" "}
-        <a href="https://decay-engine-life-triage-app.netlify.app">Life Triage</a>
+        <a href="https://decay-engine-study-dungeon.pages.dev">Study Dungeon</a> ·{" "}
+        <a href="https://decay-engine-ghosted.pages.dev">Ghosted</a> ·{" "}
+        <a href="https://decay-engine-life-triage.pages.dev">Life Triage</a>
       </footer>
     </main>
   )

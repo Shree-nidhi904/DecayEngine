@@ -34,6 +34,8 @@ Some of the code in this project was written by **Claude Code** (Anthropic's cod
 
 Kiro's usage panel on Nov 24 showed **2,649.91 of the 4,000 hackathon credits used**. About 2,344.53 of that is itemised in the sessions below. The other **305.38** belongs to IDE sessions whose own figure was not kept: 19, 38, 42, 44, 46, 60 and the build part of 45. The panel gives only a running total, so that amount is not split between them.
 
+Later the panel showed **2,788.28 of the 4,000 used, so 1,211.72 left**. That is **138.37** more than the Nov 24 figure (2,788.28 minus 2,649.91). It belongs to Sessions 78, 79, 80 and 81, whose own figures were not kept, and to the Cloudflare link and credits edits that closed Session 81. It is not split between them. The total of everything is 2,344.53 itemised, plus 305.38 and 138.37 combined (2,788.28).
+
 ---
 
 ## Session 1: steering documents (Nov 16, 2026)
@@ -2421,7 +2423,7 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - The first request said to write "NOT written in Kiro" here. The developer then said Kiro wrote the code, so this entry says that instead.
   - Two points conflict with `authorship.md`: `policy-memory.ts` is decay-rule code (Kiro's only exception is Ghosted), and `policy.ts` (Claude Code's file) gained `difficulty?` with no task naming it. Left for the developer (task 7.1).
   - The doubling policy drops a fact's `difficulty` on its next answer, so switching models back and forth resets difficulty to 5. Recorded in the design and pinned by task 2.6, not changed.
-- **Credits used**:
+- **Credits used**: counted in the combined 138.37 shown in the Credits summary at the top of this log.
 - **Screenshot file names**: none.
 
 ---
@@ -2458,7 +2460,7 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - Not every existing Study Dungeon test file was read. Any test that checks the old help text or scans every wording string could need a look.
   - The memory switch's size is still unmeasured: its CSS was not found by reading.
   - Deploying needs the developer: the live sites still show the old text until the three apps are redeployed.
-- **Credits used**:
+- **Credits used**: counted in the combined 138.37 shown in the Credits summary at the top of this log.
 - **Screenshot file names**: none.
 
 ---
@@ -2473,5 +2475,17 @@ Work done outside Kiro (Claude Code) used none of these credits.
   - Extensions spec: task 7.1 ticked, new open task 7.2 (run `policy-reviewer`), and design section 7 and the requirements' authorship note updated.
 - **What I changed by hand**: nothing.
 - **What went wrong or surprised me**: who chose the example rules in Policy Lab's presets and the guide's milk example is still not recorded. They are examples, not app policies, so they were left out of `authorship.md`.
-- **Credits used**:
+- **Credits used**: counted in the combined 138.37 shown in the Credits summary at the top of this log.
 - **Screenshot file names**: none.
+
+## Session 81: deploy to Cloudflare Pages with a custom Power
+- **Goal**: Netlify credits ran out. Deploy the apps on a free host and keep the deploy inside Kiro.
+- **Kiro feature used**: Kiro IDE chat (agent mode), a custom Power (`plugin.json`, a skill and `mcp.json`), MCP, web fetch of the Kiro and Cloudflare docs.
+- **What Kiro produced**:
+  - `.kiro/powers/cloudflare-pages-deployment/`: `plugin.json`, `skills/deploy/SKILL.md` (working Cloudflare build settings, preview first) and `mcp.json` (Cloudflare API MCP server, token read from the environment).
+  - `scripts/deploy-cloudflare.sh`: builds one app and uploads it with wrangler. Preview by default, `--prod` only on request.
+- **What I changed by hand**: created the Cloudflare account, connected the Git repo, set the build settings and made the API token. The token lives in `~/.cloudflare-env` in WSL, outside the repo.
+- **What went wrong or surprised me**: the first Cloudflare build failed. The second succeeded. Git-connected Pages projects cannot take direct uploads, so the script uses its own `decay-<app>` projects. The MCP server config is untested.
+- **Credits used**: counted in the combined 138.37 shown in the Credits summary at the top of this log.
+- **Screenshot file names**: none.
+- **Follow-up (same session)**: deployed all five sites to Cloudflare Pages with `scripts/deploy-cloudflare.sh` (`landing` target added): `decay-engine` (the landing page, at `https://decay-engine.pages.dev`; it was first deployed as `decay-engine-landing` and moved once the developer freed the name), `decay-engine-study-dungeon`, `decay-engine-ghosted`, `decay-engine-lab` and `decay-engine-life-triage`, each at `https://<name>.pages.dev`. Replaced the old `*.netlify.app` links with these in `README.md`, `site/index.html`, `scripts/check-site.sh`, `apps/policy-lab/src/App.tsx`, `apps/policy-lab/src/guide.test.ts`, `docs/ADDING_A_POLICY.md` and `docs/submission/`. Only the link lines changed in the files Claude Code wrote (`site/`, `check-site.sh`). Older log entries, specs and the audit keep the Netlify addresses as history. `check-site.sh` and the Policy Lab tests passed (35 tests). Policy Lab was redeployed after its footer links changed. The developer deleted the first Git-connected `decayengine` project.

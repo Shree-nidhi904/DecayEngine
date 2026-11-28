@@ -52,7 +52,7 @@ describe("docs/ADDING_A_POLICY.md", () => {
   })
 
   it("links to Policy Lab, and describes checkPolicy without overselling it", () => {
-    expect(guide).toContain("https://decay-engine-lab.netlify.app")
+    expect(guide).toContain("https://decay-engine-lab.pages.dev")
     expect(guide).not.toContain("runs the contract's rules")
     expect(guide).toMatch(/does not check `nextDueAt` or `resurrect`/)
   })

@@ -44,7 +44,7 @@ export const milkPolicy: DecayPolicy<Milk, MilkData, Event> = {
 }
 ```
 
-To see it run, paste the object (from `{` to `}`, without the types) into [Policy Lab](https://decay-engine-lab.netlify.app). Its "Milk (straight line)" example is this policy. The page runs the text as JavaScript in your browser, so paste only code you trust.
+To see it run, paste the object (from `{` to `}`, without the types) into [Policy Lab](https://decay-engine-lab.pages.dev). Its "Milk (straight line)" example is this policy. The page runs the text as JavaScript in your browser, so paste only code you trust.
 
 ## 3. Connect it
 

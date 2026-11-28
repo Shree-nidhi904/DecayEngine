@@ -1,10 +1,10 @@
 # Decay Engine
 
-**Start here: [decay-engine-landing.netlify.app](https://decay-engine-landing.netlify.app)**, one page with the pitch and both live apps.
+**Start here: [decay-engine.pages.dev](https://decay-engine.pages.dev)**, one page with the pitch and both live apps.
 
-- [Study Dungeon](https://decay-engine-study-dungeon.netlify.app): facts you study fade into monsters, so review them before they die.
-- [Ghosted](https://decay-engine-ghosted.netlify.app): a street of windows, one per person, where each light shows how recently you were in touch.
-- [Policy Lab](https://decay-engine-lab.netlify.app) and [Life Triage](https://decay-engine-life-triage-app.netlify.app): two small tools on the same engine. Write your own decay rules and watch them run, or plan one time budget across your facts and your friends. See [Beyond the two apps](#beyond-the-two-apps).
+- [Study Dungeon](https://decay-engine-study-dungeon.pages.dev): facts you study fade into monsters, so review them before they die.
+- [Ghosted](https://decay-engine-ghosted.pages.dev): a street of windows, one per person, where each light shows how recently you were in touch.
+- [Policy Lab](https://decay-engine-lab.pages.dev) and [Life Triage](https://decay-engine-life-triage.pages.dev): two small tools on the same engine. Write your own decay rules and watch them run, or plan one time budget across your facts and your friends. See [Beyond the two apps](#beyond-the-two-apps).
 
 **A hospital for the things in your life: one engine for things that fade, die, and can be brought back.**
 
