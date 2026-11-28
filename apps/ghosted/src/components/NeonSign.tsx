@@ -19,7 +19,18 @@ export interface NeonSignProps {
 export function NeonSign({ title, tagline }: NeonSignProps) {
   return (
     <div className="gh-sign-wrap">
-      <h1 className="gh-sign">{title}</h1>
+      {/* Haunt pass: one loose letter misfires now and then (motion.css). The h1's text is unchanged. */}
+      <h1 className="gh-sign">
+        {title.length > 4 ? (
+          <>
+            {title.slice(0, 4)}
+            <span className="gh-sign-loose">{title.charAt(4)}</span>
+            {title.slice(5)}
+          </>
+        ) : (
+          title
+        )}
+      </h1>
       <p className="gh-tagline">{tagline}</p>
     </div>
   )

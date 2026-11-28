@@ -10,6 +10,7 @@ import type { Person } from "../policy"
 import { stateWords } from "../wording"
 import { StateGlyph } from "./icons"
 import { Window } from "./Window"
+import type { Crossing } from "../preview-crossings"
 import "../styles/street.css"
 
 export interface HouseProps {
@@ -18,6 +19,26 @@ export interface HouseProps {
   onOpen: (person: Person) => void
   /** The person just tended or reconnected: their window flashes once. */
   relitId?: string
+  /** Haunt pass (Req 1.4): who crosses in the time machine's preview. */
+  crossed?: ReadonlyMap<string, Crossing>
+  /** Haunt pass: the people picked for a Triage session (the Séance look). */
+  picked?: ReadonlySet<string>
+  /** Art direction pass: the house's place on the street, which picks its roof. */
+  variant?: number
+}
+
+/** Roof shapes along the street, in turn (art only, scene.css). */
+export const ROOFS = ["gable", "steep", "flat", "mansard"] as const
+
+/**
+ * The porch light: the mean light of the house's windows, 0-1, 2 decimals.
+ * A dark window counts as 0, so a house with everyone gone dark has its
+ * porch light off too. Art only; each window still says its own state.
+ */
+export function porchValue(people: readonly Person[]): string {
+  if (people.length === 0) return "0"
+  const sum = people.reduce((acc, p) => acc + (shownState(p) === "dead" ? 0 : Math.min(1, Math.max(0, p.health / 100))), 0)
+  return (sum / people.length).toFixed(2)
 }
 
 /** Columns per house, as the wireframe: 1 for one person, 2 for two or three, 3 for more. */
@@ -44,13 +65,34 @@ export function houseWidth(columns: number): number {
   return columns * WINDOW_COLUMN_PX + 24
 }
 
-export function House({ name, people, onOpen, relitId }: HouseProps) {
+export function House({ name, people, onOpen, relitId, crossed, picked, variant = 0 }: HouseProps) {
   const columns = houseColumns(people.length)
-  const style = { "--c": String(columns), "--w": `${houseWidth(columns)}px` } as CSSProperties
+  const style = {
+    "--c": String(columns),
+    "--w": `${houseWidth(columns)}px`,
+    "--porch": porchValue(people),
+  } as CSSProperties
+  // Smoke rises from the chimney while anyone inside is still lit.
+  const warm = people.some((p) => shownState(p) === "alive")
 
   return (
-    <div className="gh-house" style={style}>
-      <div className="gh-house-roof" aria-hidden="true" />
+    <div className="gh-house" style={style} data-roof={ROOFS[variant % ROOFS.length]} data-warm={warm ? "" : undefined}>
+      <div className="gh-house-roof" aria-hidden="true">
+        <span className="gh-chimney">
+          <span className="gh-smoke">
+            <i />
+            <i />
+            <i />
+          </span>
+        </span>
+        <span className="gh-attic" />
+      </div>
+      {/* A streetlamp in the gap after this house (not after the last one). */}
+      <span className="gh-lamp" aria-hidden="true">
+        <span className="gh-lamp-cone" />
+        <span className="gh-lamp-head" />
+        <span className="gh-lamp-pole" />
+      </span>
       <div className="gh-house-body">
         <h3 className="gh-house-name">{name}</h3>
         <ul className="gh-wins">
@@ -62,6 +104,8 @@ export function House({ name, people, onOpen, relitId }: HouseProps) {
                   type="button"
                   className="gh-win"
                   data-state={state}
+                  data-crossed={crossed?.get(person.id)}
+                  data-picked={picked?.has(person.id) === true ? "" : undefined}
                   aria-label={windowName(person)}
                   onClick={() => onOpen(person)}
                 >
@@ -84,6 +128,10 @@ export function House({ name, people, onOpen, relitId }: HouseProps) {
             )
           })}
         </ul>
+        {/* The front door and its porch light (--porch). Art only. */}
+        <span className="gh-door" aria-hidden="true">
+          <span className="gh-porch-light" />
+        </span>
       </div>
     </div>
   )

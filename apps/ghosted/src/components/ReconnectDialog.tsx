@@ -28,6 +28,7 @@ import { contactChoice, dialogText, reconnectText } from "../wording"
 import type { WriteOutcome } from "../write-guard"
 import { useModalDialog } from "./useModalDialog"
 import { Window } from "./Window"
+import { Ritual } from "./Haunt"
 import "../styles/layout.css"
 import "../styles/dialogs.css"
 
@@ -116,7 +117,11 @@ export function ReconnectDialog({ engine, clock, person, blocked, write, onWrite
       </h2>
       <div className="gh-dialog-art">
         {lit ? (
-          <Window health={100} state="litAgain" size="dialog" boards="falling" relight />
+          <>
+            <Window health={100} state="litAgain" size="dialog" boards="falling" relight />
+            {/* Haunt pass (Req 4): the ring, the spirits and the stamp. Art only; the result line says it. */}
+            <Ritual />
+          </>
         ) : (
           <Window health={0} state="dead" size="dialog" />
         )}

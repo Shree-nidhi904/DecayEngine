@@ -26,6 +26,8 @@ import type { Person } from "../policy"
 import { ghostedShellTheme } from "../theme"
 import { ghostedWording, heroText } from "../wording"
 import { ghostedIcons } from "./icons"
+import { StreetPulse, Wisp } from "./Haunt"
+import type { DoomBand } from "../doom"
 import "../styles/layout.css"
 
 export interface HeroProps {
@@ -52,9 +54,21 @@ export interface HeroProps {
    * line is not shown.
    */
   loss?: LossForecast | null
+  /** Haunt pass (Req 5): Wisp's line, from guideLine. Not shown when undefined. */
+  guide?: string
+  /** Haunt pass (Req 2): the doom band for Wisp and the street pulse. */
+  band?: DoomBand
 }
 
 export type HeroCase = "first-run" | "empty" | "fading" | "dark" | "lit"
+
+/** The hero's case, as Hero picks it below; the App passes it to guideLine (haunt pass). */
+export function heroCaseOf(people: readonly Person[], firstRun: boolean): HeroCase {
+  if (firstRun) return "first-run"
+  if (people.length === 0) return "empty"
+  if (heroTarget(people) !== undefined) return "fading"
+  return stateCounts(people).dead > 0 ? "dark" : "lit"
+}
 
 type Action = { label: string; run: () => void }
 
@@ -70,6 +84,8 @@ export function Hero({
   onStartEmpty,
   onAdd,
   loss,
+  guide,
+  band = "calm",
 }: HeroProps) {
   const id = useId()
   const headingId = `${id}-message`
@@ -132,6 +148,7 @@ export function Hero({
   return (
     <section className="gh-hero" aria-labelledby={headingId} data-case={heroCase}>
       <div className="gh-hero-main">
+        {guide !== undefined && <Wisp line={guide} band={band} />}
         {previewDate !== undefined && <p className="gh-hero-eyebrow">{heroText.previewEyebrow(previewDate)}</p>}
         <h2 id={headingId} ref={headingRef} tabIndex={-1} className="gh-hero-title">
           {message}
@@ -149,6 +166,7 @@ export function Hero({
             {blocked}
           </p>
         )}
+        {heroCase !== "first-run" && heroCase !== "empty" && <StreetPulse band={band} />}
       </div>
       <div className="gh-hero-stats">
         <Counters

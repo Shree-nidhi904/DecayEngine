@@ -23,8 +23,17 @@ describe("keys", () => {
     expect(OWN_PEOPLE_FLAG).toBe("ghosted:own-people")
   })
 
-  it("RESET_KEYS are exactly Ghosted's three keys, with no tour flag", () => {
-    expect(RESET_KEYS).toEqual(["decay-engine:ghosted", "ghosted:started", "ghosted:own-people"])
+  it("RESET_KEYS are exactly Ghosted's own keys (snapshot, its meta record, the backup reminder's three flags, the sync note, two flags), with no tour flag", () => {
+    expect(RESET_KEYS).toEqual([
+      "decay-engine:ghosted",
+      "decay-engine:ghosted:meta",
+      "ghosted:last-backup",
+      "ghosted:first-seen",
+      "ghosted:backup-snooze",
+      "ghosted:sync-state",
+      "ghosted:started",
+      "ghosted:own-people",
+    ])
     expect(RESET_KEYS.some((key) => key.includes("tour"))).toBe(false)
   })
 })
@@ -75,14 +84,23 @@ describe("resetAllData", () => {
 
     resetAllData(storage, reload)
 
-    expect(storage.removed).toEqual(["decay-engine:ghosted", "ghosted:started", "ghosted:own-people"])
+    expect(storage.removed).toEqual([
+      "decay-engine:ghosted",
+      "decay-engine:ghosted:meta",
+      "ghosted:last-backup",
+      "ghosted:first-seen",
+      "ghosted:backup-snooze",
+      "ghosted:sync-state",
+      "ghosted:started",
+      "ghosted:own-people",
+    ])
     expect(storage.snapshot()).toEqual({
       "decay-engine:study-dungeon": '{"kept":true}',
       "study-dungeon:sound": "on",
       "study-dungeon:started": "1",
     })
     expect(reload).toHaveBeenCalledTimes(1)
-    expect(order).toEqual(["reload after 3 removals"])
+    expect(order).toEqual(["reload after 8 removals"])
   })
 
   it("shows first run again afterwards", () => {

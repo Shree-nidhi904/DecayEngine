@@ -14,8 +14,9 @@
 // Pure: these functions only look at an error and decide what it means.
 
 import { DecayEngineError } from "@decay-engine/engine"
+import { PersistError } from "@decay-engine/persist"
 
-export type WriteProblem = "full" | "unavailable"
+export type WriteProblem = "full" | "unavailable" | "stale"
 export type LoadProblem = "corrupt" | "unavailable"
 export type StorageProblem = WriteProblem | LoadProblem
 
@@ -24,6 +25,8 @@ export const storageProblemText: Readonly<Record<StorageProblem, string>> = {
   full: "Storage full. Your browser has no room left for Ghosted, so that change was not saved. Remove a few people, or free some browser storage, and try again.",
   unavailable:
     "Ghosted cannot use your browser's storage, so nothing can be saved. Private browsing or blocked site data can cause this.",
+  stale:
+    "Another tab changed your Ghosted data, so that change was not saved. Reload this page to see the latest, then try again.",
   corrupt:
     "Your saved people could not be read. They may have been changed outside Ghosted. Reset all data to start again.",
 }
@@ -36,6 +39,8 @@ export const storageProblemText: Readonly<Record<StorageProblem, string>> = {
 export function classifyWriteError(error: unknown): WriteProblem | null {
   if (isQuotaError(error)) return "full"
   if (error instanceof DecayEngineError && error.code === "STORAGE_UNAVAILABLE") return "unavailable"
+  // Another tab (or a restore) wrote after this tab loaded; VersionedAdapter refused to overwrite it.
+  if (error instanceof PersistError && error.code === "STALE_WRITE") return "stale"
   return null
 }
 
@@ -60,7 +65,11 @@ export function classifyLoadError(error: unknown): LoadProblem | null {
     if (CORRUPT_SNAPSHOT_CODES.has(error.code)) return "corrupt"
     return null
   }
-  // LocalStorageAdapter.load passes JSON.parse's SyntaxError through unchanged.
+  // Data from a newer app, or a broken migration: not readable by this build.
+  if (error instanceof PersistError && (error.code === "UNSUPPORTED_APP_DATA_VERSION" || error.code === "MIGRATION_FAILED")) {
+    return "corrupt"
+  }
+  // VersionedAdapter.load passes JSON.parse's SyntaxError through unchanged.
   if (error instanceof SyntaxError) return "corrupt"
   // Reading localStorage itself can throw a SecurityError when site data is blocked.
   if (isNamedError(error, "SecurityError")) return "unavailable"

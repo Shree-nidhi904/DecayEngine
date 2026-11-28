@@ -21,6 +21,7 @@
 
 import { useId, useRef } from "react"
 import { checkBackup, makeBackup, type RestoreCheck } from "../backup"
+import { markBackedUp } from "../backup-reminder"
 import type { FlagStorage } from "../first-run"
 import type { BlockedReason } from "../lists"
 import { isoDateAt } from "../person-form"
@@ -86,6 +87,7 @@ export function BackupControls({
     }
     const name = backupText.fileName(isoDateAt(now.getTime(), timeZone))
     download(name, text)
+    markBackedUp(storage, now.getTime())
     announce(backupText.saved(name))
   }
 

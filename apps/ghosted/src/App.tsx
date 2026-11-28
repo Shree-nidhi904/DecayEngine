@@ -52,7 +52,7 @@
 // to its opener; when the opener is gone (a removed person's card), focus
 // goes to the hero heading (Req 24.3).
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react"
 import { MAX_FORECAST_HORIZON_MS } from "@decay-engine/engine"
 import type { FrameScheduler } from "@decay-engine/shell"
 import { applyBackup, type RestoreCheck } from "./backup"
@@ -115,7 +115,17 @@ import {
 import { FirstLookSkip } from "./components/FirstLookSkip"
 import { firstLookOffsetForProgress, firstLookSeen, markFirstLookSeen } from "./first-look"
 import type { FirstLookDockControl } from "./first-look-dock"
+import { countDeaths, previewCrossings } from "./preview-crossings"
+import { doom, doomBand } from "./doom"
+import { guideLine, guideRotation } from "./guide"
+import { readSpooky, saveSpooky, type SpookyLevel } from "./spooky-level"
+import { buzz, createSoundPlayer, loadSoundEnabled, saveSoundEnabled } from "./sound"
+import { Lightning, type Strike } from "./components/Haunt"
+import { HauntSettings } from "./components/HauntSettings"
+import { ShareCard } from "./components/ShareCard"
+import { heroCaseOf } from "./components/Hero"
 import "./styles/layout.css"
+import "./styles/haunt.css"
 
 /** The id of the polite live region that announces changes and storage problems. */
 export const ANNOUNCER_ID = "gh-announcer"
@@ -183,7 +193,7 @@ export type Session = { ids: string[]; position: number; skipped: { name: string
 type Announcement = { id: number; text: string; problem: boolean; toast: boolean }
 
 /** The live-change message on screen (task L3). `id` changes with every new message. */
-type ToastState = { id: number; text: string; announced: boolean }
+type ToastState = { id: number; text: string; announced: boolean; worst?: string }
 
 /** "14 Nov 2023" in the given time zone (the viewer's when omitted). */
 function makeDateFormatter(timeZone: string | undefined): (ms: number) => string {
@@ -275,6 +285,16 @@ export function App({
     [now, realNow, people, darkAt, version]
   )
   const counts = useMemo(() => stateCounts(people), [people])
+
+  // previewing: who fades and who goes dark between today and the previewed
+  // day (Req 1); how grim the street looks at the time shown (Req 2).
+  const crossed = useMemo(
+    () => (previewing ? previewCrossings(engine.view(realNow), people) : new Map<string, never>()),
+    [previewing, engine, realNow, people]
+  )
+  const deaths = countDeaths(crossed)
+  const doomValue = useMemo(() => doom(people), [people])
+  const band = doomBand(doomValue)
   const formatDate = useMemo(() => makeDateFormatter(timeZone), [timeZone])
   // The dock's markers mark days ahead of today, so they are read at the real
   // time and stay put while the slider moves (design section 4.2).
@@ -604,6 +624,77 @@ export function App({
     [storage]
   )
   const announcePlain = useCallback((text: string) => announce(text), [announce])
+
+  // Haunt pass settings (Req 6, 8): preferences, kept in `storage`.
+  const [spooky, setSpooky] = useState<SpookyLevel>(() => readSpooky(storage))
+  const [spookySaved, setSpookySaved] = useState(true)
+  const changeSpooky = useCallback(
+    (level: SpookyLevel) => {
+      setSpooky(level)
+      setSpookySaved(saveSpooky(storage, level))
+    },
+    [storage]
+  )
+  const [soundOn, setSoundOn] = useState(() => loadSoundEnabled(storage))
+  const soundOnRef = useRef(soundOn)
+  soundOnRef.current = soundOn
+  const [sound] = useState(() => createSoundPlayer({ isEnabled: () => soundOnRef.current }))
+  const changeSound = useCallback(
+    (on: boolean) => {
+      soundOnRef.current = on
+      setSoundOn(on)
+      saveSoundEnabled(storage, on)
+    },
+    [storage]
+  )
+  // Lightning (Req 3): a dark strike when the preview shows one more window going
+  // dark, a bright one after a reconnect. Never under reduced motion or "calm".
+  const [strike, setStrike] = useState<Strike | null>(null)
+  const strikesOn = spooky === "haunted" && !prefersReducedMotion()
+  const fire = useCallback(
+    (kind: Strike["kind"]) => setStrike((s) => ({ n: (s?.n ?? 0) + 1, kind })),
+    []
+  )
+  const clearStrike = useCallback(() => setStrike(null), [])
+  const lastDeaths = useRef(0)
+  useEffect(() => {
+    if (deaths > lastDeaths.current) {
+      if (strikesOn) fire("dark")
+      sound.play("lightOff")
+      if (soundOnRef.current) buzz(40)
+    }
+    lastDeaths.current = deaths
+  }, [deaths, strikesOn, fire, sound])
+  // The window just reached or lit again flashes on the street too.
+  const [relitId, setRelitId] = useState<string | undefined>(undefined)
+  const reconnected = useCallback(
+    (personId: string, ok: boolean) => {
+      if (!ok) return
+      setRelitId(personId)
+      if (strikesOn) fire("bright")
+      sound.play("relight")
+      if (soundOnRef.current) buzz([30, 40, 60])
+    },
+    [strikesOn, fire, sound]
+  )
+  const reachedOut = useCallback(
+    (personId: string, wentDark: boolean) => {
+      if (wentDark) return
+      setRelitId(personId)
+      sound.play("lightOn")
+    },
+    [sound]
+  )
+  // The pointer, for Wisp's eyes and the flashlight (Req 7). Set as CSS variables, no state.
+  const appRef = useRef<HTMLDivElement>(null)
+  const onPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const el = appRef.current
+    if (el === null || event.pointerType !== "mouse") return
+    el.style.setProperty("--px", `${event.clientX}px`)
+    el.style.setProperty("--py", `${event.clientY}px`)
+    el.style.setProperty("--pxr", (event.clientX / Math.max(1, window.innerWidth)).toFixed(3))
+    el.style.setProperty("--pyr", (event.clientY / Math.max(1, window.innerHeight)).toFixed(3))
+  }, [])
   useEffect(() => {
     if (previewing) baseline.current = null
   }, [previewing])
@@ -667,7 +758,7 @@ export function App({
           // A storage problem or the clock notice keeps the live region this tick.
           const quiet = failed || saidOther
           if (!quiet) announce(notice.text, false, true)
-          setToast((t) => ({ id: (t?.id ?? 0) + 1, text: notice.text, announced: !quiet }))
+          setToast((t) => ({ id: (t?.id ?? 0) + 1, text: notice.text, announced: !quiet, worst: notice.worst }))
           setJustChanged(prefersReducedMotion() ? new Set() : new Set(notice.changes.map((c) => c.id)))
           recordTabChanges(notice.changes.length, notice.worst)
         }
@@ -734,17 +825,33 @@ export function App({
     : undefined
 
   const age = Math.min(1, previewOffsetMs / AGE_SPAN_MS)
-  const appStyle = { "--age": age.toFixed(4) } as CSSProperties
+  const appStyle = { "--age": age.toFixed(4), "--doom": doomValue.toFixed(4) } as CSSProperties
+  const guide = guideLine({
+    heroCase: heroCaseOf(people, firstRun),
+    previewing,
+    band,
+    dies: deaths,
+    rotation: guideRotation(realNow),
+  })
+  const picked = useMemo(() => (session === null ? undefined : new Set(session.ids)), [session])
 
   return (
     <div
+      ref={appRef}
       className="gh-app"
       style={appStyle}
       data-previewing={previewing ? "" : undefined}
       data-dialog={openDialog?.kind}
+      data-doom={band}
+      data-spooky={spooky}
+      data-seance={session !== null ? "" : undefined}
+      onPointerMove={onPointerMove}
     >
       {/* The street dims as the dock looks ahead (dock.css reads --age). */}
       <div className="gh-age-dim" aria-hidden="true" />
+      {/* Haunt pass: the edges darken with doom, and lightning strikes (haunt.css, motion.css). */}
+      <div className="gh-doom-veil" aria-hidden="true" />
+      <Lightning strike={strike} onDone={clearStrike} />
       {showSplash && <Splash onDone={closeSplash} />}
       <header className="gh-header">
         <NeonSign title={appText.name} tagline={appText.tagline} />
@@ -777,10 +884,19 @@ export function App({
           onStartEmpty={startEmpty}
           onAdd={openAdd}
           loss={previewing || firstRun ? undefined : loss}
+          guide={guide}
+          band={band}
         />
         {people.length > 0 && (
           <>
-            <Street people={people} onOpen={openPerson} headingRef={streetHeading} />
+            <Street
+              people={people}
+              onOpen={openPerson}
+              headingRef={streetHeading}
+              relitId={relitId}
+              crossed={crossed}
+              picked={picked}
+            />
             <SectionNav counts={counts} onGoTo={goTo} />
             <GhostedTriage
               engine={engine}
@@ -804,6 +920,14 @@ export function App({
             <ForecastControl engine={engine} now={now} version={version} formatDate={formatDate} />
           </>
         )}
+        <HauntSettings
+          spooky={spooky}
+          spookySaved={spookySaved}
+          onSpooky={changeSpooky}
+          sound={soundOn}
+          onSound={changeSound}
+          share={people.length > 0 ? <ShareCard people={engine.view(realNow)} announce={announcePlain} /> : undefined}
+        />
         <div className="gh-toolbar">
           {/* Quiet: the hero holds the page's filled "Add a person" on an empty street. */}
           <button
@@ -862,7 +986,13 @@ export function App({
             <>
               {firstLookPlaying && <FirstLookSkip onSkip={endFirstLook} />}
               {toast !== null && (
-                <LiveToast key={toast.id} text={toast.text} announced={toast.announced} onDone={clearToast} />
+                <LiveToast
+                  key={toast.id}
+                  text={toast.text}
+                  announced={toast.announced}
+                  onDone={clearToast}
+                  worst={toast.worst}
+                />
               )}
             </>
           )
@@ -939,6 +1069,7 @@ export function App({
           }
           write={write}
           onWrite={bumpVersion}
+          onResult={(result) => reachedOut(openDialog.person.id, "wentDark" in result)}
           onClose={session === null ? closeDialog : nextInSession}
           formatDate={formatDate}
         />
@@ -965,6 +1096,7 @@ export function App({
           blocked={blocked}
           write={write}
           onWrite={bumpVersion}
+          onResult={(result) => reconnected(openDialog.person.id, result.ok)}
           onClose={closeDialog}
         />
       )}

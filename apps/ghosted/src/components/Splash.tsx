@@ -13,6 +13,7 @@
 import { appText, splashText } from "../wording"
 import { useModalDialog } from "./useModalDialog"
 import { Window } from "./Window"
+import { Sky } from "./Haunt"
 import "../styles/layout.css"
 import "../styles/sign.css"
 
@@ -37,6 +38,7 @@ export function Splash({ onDone }: SplashProps) {
         onDone()
       }}
     >
+      <Sky />
       <div className="gh-splash-in">
         <div className="gh-splash-windows" aria-hidden="true">
           {Array.from({ length: SPLASH_WINDOWS }, (_, i) => (

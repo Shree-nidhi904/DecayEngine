@@ -10,6 +10,7 @@ import React from "react"
 import { createRoot } from "react-dom/client"
 import { Root } from "./Root"
 import { createEngine } from "./engine-instance"
+import { registerApp } from "./pwa"
 import type { FlagStorage } from "./first-run"
 import type { SessionFlagStorage } from "./splash"
 import "@fontsource/monoton/400.css"
@@ -59,3 +60,6 @@ createRoot(rootElement).render(
     />
   </React.StrictMode>
 )
+
+// Offline support: registers the service worker in production builds only.
+registerApp(import.meta.env.PROD, import.meta.env.BASE_URL)

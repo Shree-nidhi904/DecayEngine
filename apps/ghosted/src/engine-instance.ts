@@ -9,21 +9,22 @@
 // (storage-errors.ts) and shows the problem screen instead of a blank page.
 // It does not tick; settling is started by useSettleTicks (see ticking.ts).
 
-import { DecayEngine, LocalStorageAdapter, type IdGenerator } from "@decay-engine/engine"
+import { DecayEngine, type IdGenerator } from "@decay-engine/engine"
+import { VersionedAdapter } from "@decay-engine/persist"
 import { ghostedPolicy, type ContactEvent, type PersonPayload, type PersonPolicyData } from "./policy"
 
 export type GhostedEngine = DecayEngine<PersonPayload, PersonPolicyData, ContactEvent>
 
 export const idGenerator: IdGenerator = () => crypto.randomUUID()
 
-/** The namespace LocalStorageAdapter stores under ("decay-engine:ghosted"). */
+/** The namespace VersionedAdapter stores under (same key as LocalStorageAdapter would) ("decay-engine:ghosted"). */
 export const STORAGE_NAMESPACE = "ghosted"
 
 /** Builds the engine on localStorage. Throws if the saved snapshot cannot be loaded. */
 export function createEngine(): GhostedEngine {
   return new DecayEngine<PersonPayload, PersonPolicyData, ContactEvent>(
     ghostedPolicy,
-    new LocalStorageAdapter(STORAGE_NAMESPACE),
+    new VersionedAdapter(STORAGE_NAMESPACE),
     idGenerator
   )
 }

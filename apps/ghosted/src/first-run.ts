@@ -18,6 +18,15 @@ export const STARTED_FLAG = "ghosted:started"
 /** Where LocalStorageAdapter("ghosted") keeps the snapshot (Req 23.1). */
 export const ENGINE_STORAGE_KEY = "decay-engine:ghosted"
 
+/** The backup reminder's three flags (backup-reminder.ts); they are about the data, so reset clears them. */
+export const BACKUP_REMINDER_KEYS = ["ghosted:last-backup", "ghosted:first-seen", "ghosted:backup-snooze"] as const
+
+/** What the last cloud sync left behind (cloud-link.ts). Reset clears it, so the next sync treats this device as new. */
+export const SYNC_STATE_KEY = "ghosted:sync-state"
+
+/** The sidecar record @decay-engine/persist keeps next to the snapshot (version, revision). */
+export const ENGINE_META_KEY = `${ENGINE_STORAGE_KEY}:meta`
+
 /**
  * Set once the user adds, imports or restores people of their own. The
  * privacy line then stops saying the names are made up (Req 15.2).
@@ -28,7 +37,7 @@ export const OWN_PEOPLE_FLAG = "ghosted:own-people"
  * Every key "Reset all data" removes: Ghosted's keys only (Req 20.7). The
  * splash flag lives in sessionStorage and is not data, so it is not here.
  */
-export const RESET_KEYS: readonly string[] = [ENGINE_STORAGE_KEY, STARTED_FLAG, OWN_PEOPLE_FLAG]
+export const RESET_KEYS: readonly string[] = [ENGINE_STORAGE_KEY, ENGINE_META_KEY, ...BACKUP_REMINDER_KEYS, SYNC_STATE_KEY, STARTED_FLAG, OWN_PEOPLE_FLAG]
 
 /** The part of Storage the app uses. window.localStorage fits it. */
 export type FlagStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">

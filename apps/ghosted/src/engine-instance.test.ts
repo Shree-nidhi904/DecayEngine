@@ -36,7 +36,7 @@ describe("createEngine", () => {
     expect(stored.items.map((item: { id: string }) => item.id)).toEqual([id])
     expect(stored.items[0].payload).toEqual(mira.payload)
     expect(stored.items[0].policyData).toEqual({ lastContactAt: T0 })
-    expect(Object.keys(localStorage)).toEqual([KEY])
+    expect(Object.keys(localStorage).sort()).toEqual([KEY, `${KEY}:meta`])
   })
 
   it("gives each person a different id", () => {

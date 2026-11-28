@@ -1,0 +1,600 @@
+/*
+
+ * Depth, from far to near: sky and moon, a hazy town on the horizon, fog,
+ * the houses (each with its own roof, a chimney, a door and a porch light),
+ * streetlamps in the gaps, the wet road with the windows reflected in it,
+ * ground fog, and a bare branch in the top corner.
+ *
+ * Ghosted tokens only, with color-mix for tints (#000 only for the hard
+ * shadow). No animation or transition here: every movement is in motion.css,
+ * inside its one reduced-motion block. Scenery only: text keeps its own
+ * colours and every state is still said by light, glyph and word.
+ */
+
+/* ----- The scene: full bleed inside the Street plot, a real night sky ----- */
+.gh-street .gh-street-scene {
+  margin-inline: -20px;
+  padding-inline: 20px;
+  padding-block-start: 72px;
+  border-block: 1px solid var(--line);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel) 55%, var(--bg)) 0%,
+      color-mix(in srgb, var(--panel) 85%, var(--wall-lo)) 40%,
+      color-mix(in srgb, var(--wall) 70%, var(--sign)) 160%
+    );
+  isolation: isolate;
+}
+
+/* ----- The moon: craters, a halo, and its shade (the phase follows --age) ----- */
+.gh-sky .gh-sky-moon {
+  inset-inline-end: 9%;
+  inset-block-start: 9%;
+  inline-size: 54px;
+  block-size: 54px;
+  background:
+    radial-gradient(circle at 34% 40%, color-mix(in srgb, var(--moon-shade) 13%, transparent) 0 5px, transparent 6px),
+    radial-gradient(circle at 60% 66%, color-mix(in srgb, var(--moon-shade) 11%, transparent) 0 7px, transparent 8px),
+    radial-gradient(circle at 64% 30%, color-mix(in srgb, var(--moon-shade) 10%, transparent) 0 3px, transparent 4px),
+    radial-gradient(circle at 36% 34%, color-mix(in srgb, var(--moon) calc(100% - var(--doom, 0) * 45%), var(--rust)), color-mix(in srgb, color-mix(in srgb, var(--moon) calc(100% - var(--doom, 0) * 45%), var(--rust)) 80%, var(--dim)));
+  box-shadow:
+    0 0 0 14px color-mix(in srgb, var(--moon) 4%, transparent),
+    0 0 0 34px color-mix(in srgb, var(--moon) 2%, transparent),
+    0 0 40px color-mix(in srgb, var(--moon) 35%, transparent),
+    0 0 140px 30px color-mix(in srgb, var(--moon) 9%, transparent);
+}
+/* The shade is clipped to the disc (overflow), so it darkens the moon and never the sky. */
+.gh-sky .gh-sky-moon {
+  overflow: hidden;
+}
+.gh-sky .gh-sky-moon::after {
+  inset: -4px;
+  background: color-mix(in srgb, var(--moon-shade) 92%, transparent);
+  box-shadow: 0 0 8px 4px color-mix(in srgb, var(--moon-shade) 92%, transparent);
+  transform: translateX(calc(40px - var(--age, 0) * 36px));
+}
+
+/* Thin clouds across the moon; they drift only with motion. */
+.gh-cloud {
+  position: absolute;
+  inset-inline-end: 2%;
+  inset-block-start: 12%;
+  inline-size: 260px;
+  block-size: 16px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--dim) 16%, transparent), transparent 70%);
+}
+.gh-cloud + .gh-cloud {
+  inset-inline-end: 24%;
+  inset-block-start: 24%;
+  inline-size: 280px;
+  block-size: 22px;
+  opacity: 0.7;
+}
+
+/* ----- The town on the horizon: far roofs hazy, near roofs darker ----- */
+.gh-skyline {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 72px;
+  z-index: 0;
+  inline-size: 100%;
+  block-size: 150px;
+  pointer-events: none;
+}
+.gh-skyline-far {
+  fill: color-mix(in srgb, var(--wall-edge) 60%, var(--panel));
+  opacity: calc(0.9 - var(--doom, 0) * 0.3);
+}
+.gh-skyline-near {
+  fill: color-mix(in srgb, var(--wall-lo) 55%, var(--bg));
+}
+.gh-town-win {
+  fill: var(--glow);
+  opacity: calc(0.55 - var(--doom, 0) * 0.35);
+}
+
+/* ----- Houses: they stand on the pavement, the road below them ----- */
+.gh-street-scene .gh-houses {
+  z-index: 2;
+  gap: 36px 20px;
+  padding-block-end: 0;
+  border-block-end: 0;
+  /* The wet road mirrors the houses' lower half (art only; Chromium and WebKit). */
+  -webkit-box-reflect: below 0 linear-gradient(transparent 78%, color-mix(in srgb, var(--bg) 24%, transparent));
+}
+
+.gh-street-scene .gh-house {
+  position: relative;
+}
+
+/* The roof is a box; its shape, the chimney and the attic window sit inside it. */
+.gh-street-scene .gh-house-roof {
+  position: relative;
+  isolation: isolate;
+  block-size: 30px;
+  margin-block-end: 0;
+  background: none;
+  clip-path: none;
+}
+.gh-street-scene .gh-house-roof::before {
+  content: "";
+  position: absolute;
+  inset: 0 -8px 0;
+  z-index: 1;
+  /* The moon is on the right: that slope catches a little of its light. */
+  background:
+    repeating-linear-gradient(180deg, transparent 0 5px, color-mix(in srgb, var(--frame) 35%, transparent) 5px 6px),
+    linear-gradient(90deg, var(--wall-lo) 50%, color-mix(in srgb, var(--wall) 88%, var(--moon)) 50%);
+  clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
+.gh-house[data-roof="steep"] .gh-house-roof {
+  block-size: 52px;
+}
+.gh-house[data-roof="flat"] .gh-house-roof {
+  block-size: 16px;
+}
+.gh-house[data-roof="flat"] .gh-house-roof::before {
+  inset: 4px -4px 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--wall) 80%, var(--moon)) 0 3px, var(--wall-lo) 3px);
+  clip-path: none;
+}
+.gh-house[data-roof="mansard"] .gh-house-roof {
+  block-size: 36px;
+}
+.gh-house[data-roof="mansard"] .gh-house-roof::before {
+  clip-path: polygon(0 100%, 12% 0, 88% 0, 100% 100%);
+}
+
+/* The chimney rises behind the roof slope. */
+.gh-chimney {
+  position: absolute;
+  inset-block-end: 40%;
+  inset-inline-end: 20%;
+  z-index: 0;
+  inline-size: 13px;
+  block-size: 28px;
+  background: linear-gradient(90deg, var(--wall-lo), var(--wall-edge));
+  box-shadow: 0 -3px 0 0 var(--frame);
+}
+.gh-house[data-roof="steep"] .gh-chimney {
+  inset-inline-end: auto;
+  inset-inline-start: 22%;
+  inset-block-end: 46%;
+}
+.gh-house[data-roof="flat"] .gh-chimney {
+  inset-block-end: 40%;
+  inset-inline-end: auto;
+  inset-inline-start: 16%;
+  block-size: 20px;
+}
+.gh-house[data-roof="mansard"] .gh-chimney {
+  inset-block-end: 80%;
+}
+
+/* Smoke: only with motion, and only while someone inside is lit (motion.css). */
+.gh-smoke {
+  display: none;
+  position: absolute;
+  inset-block-end: 100%;
+  inset-inline-start: 50%;
+  inline-size: 0;
+  block-size: 0;
+}
+.gh-smoke i {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: -6px;
+  inline-size: 18px;
+  block-size: 18px;
+  margin-inline-start: -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--dim) 26%, transparent), transparent 70%);
+  opacity: 0;
+}
+
+/* A round attic window under the steep roof, lit with the house (--porch). */
+.gh-attic {
+  display: none;
+}
+.gh-house[data-roof="steep"] .gh-attic {
+  display: block;
+  position: absolute;
+  inset-block-end: 9px;
+  inset-inline-start: 50%;
+  z-index: 2;
+  inline-size: 16px;
+  block-size: 16px;
+  margin-inline-start: -8px;
+  border: 2px solid var(--frame);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--glow) calc(var(--porch, 0) * 70%), var(--frame));
+  box-shadow: 0 0 calc(var(--porch, 0) * 14px) color-mix(in srgb, var(--glow) 40%, transparent);
+}
+
+/* The wall: clapboard lines, and moonlight on its right edge. */
+.gh-street-scene .gh-house-body {
+  position: relative;
+  border-color: var(--wall-edge);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 13px, color-mix(in srgb, var(--frame) 28%, transparent) 13px 14px),
+    linear-gradient(180deg, var(--wall), var(--wall-lo));
+  box-shadow: inset -2px 0 0 color-mix(in srgb, var(--moon) 9%, transparent);
+}
+
+/* The house name as a small painted plaque. */
+.gh-street-scene .gh-house-name {
+  display: table;
+  margin: 0 auto 12px;
+  padding: 2px 10px;
+  border: 1px solid var(--wall-edge);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--frame) 75%, transparent);
+  color: var(--dim);
+}
+
+/* Each house stands on its own strip of pavement, also when the street wraps. */
+.gh-street-scene .gh-house::after {
+  content: "";
+  position: absolute;
+  inset-block-end: -6px;
+  inset-inline: -10px;
+  block-size: 6px;
+  background: color-mix(in srgb, var(--wall-edge) 70%, var(--wall-lo));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--moon) 12%, transparent);
+}
+
+/* ----- The front door and its porch light ----- */
+.gh-door {
+  position: relative;
+  display: block;
+  inline-size: 26px;
+  block-size: 38px;
+  margin: 12px auto -12px;
+  border: 2px solid var(--wall-edge);
+  border-block-end: 0;
+  border-radius: 13px 13px 0 0;
+  background:
+    linear-gradient(90deg, transparent 48%, color-mix(in srgb, var(--wall-edge) 60%, transparent) 48% 52%, transparent 52%),
+    linear-gradient(180deg, color-mix(in srgb, var(--frame) 70%, var(--wall-lo)), var(--frame));
+}
+/* The knob. */
+.gh-door::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 55%;
+  inset-inline-end: 4px;
+  inline-size: 3px;
+  block-size: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--glow) calc(30% + var(--porch, 0) * 50%), var(--wall-edge));
+}
+/* Warm light on the wall around the lantern, as bright as the house is lit. */
+.gh-door::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -18px;
+  inset-inline-start: -40px;
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--glow) 24%, transparent), transparent 70%);
+  opacity: var(--porch, 0);
+  pointer-events: none;
+}
+.gh-porch-light {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: -14px;
+  inline-size: 6px;
+  block-size: 9px;
+  border: 1px solid var(--frame);
+  border-radius: 2px 2px 1px 1px;
+  background: color-mix(in srgb, var(--glow) calc(var(--porch, 0) * 100%), var(--frame));
+  box-shadow: 0 0 calc(var(--porch, 0) * 12px) color-mix(in srgb, var(--glow) 60%, transparent);
+}
+
+/* ----- Streetlamps in the gaps between houses ----- */
+.gh-lamp {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: -11px;
+  z-index: 3;
+  inline-size: 2px;
+  block-size: 0;
+  pointer-events: none;
+}
+.gh-house:last-child .gh-lamp {
+  display: none;
+}
+.gh-lamp-pole {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: -2px;
+  inline-size: 5px;
+  block-size: 128px;
+  background: linear-gradient(90deg, var(--frame), color-mix(in srgb, var(--wall-edge) 80%, var(--moon)) 70%, var(--frame));
+}
+/* The base of the pole. */
+.gh-lamp-pole::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: -4px;
+  inline-size: 13px;
+  block-size: 8px;
+  border-radius: 2px 2px 0 0;
+  background: var(--frame);
+}
+.gh-lamp-head {
+  position: absolute;
+  inset-block-end: 126px;
+  inset-inline-start: -8px;
+  inline-size: 18px;
+  block-size: 16px;
+  background: color-mix(in srgb, var(--glow) calc(100% - var(--doom, 0) * 60%), var(--frame));
+  clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%);
+  box-shadow: 0 0 18px var(--glow);
+}
+/* The cap over the lamp. */
+.gh-lamp-head::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  block-size: 5px;
+  background: var(--frame);
+}
+/* The light falling to the pavement, dimmer as the street gets grim. */
+.gh-lamp-cone {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: -60px;
+  inline-size: 122px;
+  block-size: 128px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--glow) 26%, transparent), color-mix(in srgb, var(--glow) 6%, transparent));
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  opacity: calc(0.85 - var(--doom, 0) * 0.5);
+}
+/* The pool of light on the ground. */
+.gh-lamp::after {
+  content: "";
+  position: absolute;
+  inset-block-end: -14px;
+  inset-inline-start: -70px;
+  inline-size: 142px;
+  block-size: 26px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--glow) 22%, transparent), transparent 70%);
+  opacity: calc(1 - var(--doom, 0) * 0.6);
+}
+
+/* ----- The road: kerb, wet asphalt, a dashed centre line ----- */
+.gh-road {
+  position: relative;
+  z-index: 1;
+  display: block;
+  block-size: 64px;
+  margin-inline: -20px;
+  margin-block-start: 6px;
+  border-block-start: 4px solid color-mix(in srgb, var(--wall-edge) 50%, var(--frame));
+  background:
+    radial-gradient(ellipse 30% 40% at 50% 0, color-mix(in srgb, var(--moon) 5%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--frame) 70%, var(--wall-lo)), var(--bg));
+}
+.gh-road-line {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 62%;
+  block-size: 2px;
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--glow) 30%, transparent) 0 34px, transparent 34px 80px);
+}
+
+/* Ground fog in front of everything low: thicker as more windows go dark. */
+.gh-groundfog {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 3;
+  block-size: 120px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 40% 60% at 20% 100%, color-mix(in srgb, var(--dim) 9%, transparent), transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 100%, color-mix(in srgb, var(--dim) 8%, transparent), transparent 70%),
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--dim) 6%, transparent));
+  background-size: 200% 100%;
+  opacity: calc(0.6 + var(--doom, 0) * 0.8);
+}
+
+/* The branch: the nearest thing, dark against the sky. */
+.gh-branch {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 3;
+  inline-size: 240px;
+  block-size: auto;
+  pointer-events: none;
+  transform-origin: 0 0;
+  filter: drop-shadow(1px -1px 0 color-mix(in srgb, var(--moon) 16%, transparent));
+}
+.gh-branch-limb {
+  fill: none;
+  stroke: var(--frame);
+  stroke-linecap: round;
+}
+.gh-leaf {
+  fill: color-mix(in srgb, var(--board-lo) 55%, var(--frame));
+}
+
+/* ----- Hero counters: three small house fronts, one window each ----- */
+.gh-hero .shell-counters .shell-counter {
+  position: relative;
+  gap: 4px;
+  margin-block-start: 14px;
+  padding: 66px 8px 12px;
+  border: 1px solid var(--wall-edge);
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 13px, color-mix(in srgb, var(--frame) 28%, transparent) 13px 14px),
+    linear-gradient(180deg, var(--wall), var(--wall-lo));
+  box-shadow: 0 6px 0 #000;
+}
+/* The roof over each front. */
+.gh-hero .shell-counters .shell-counter::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 100%;
+  inset-inline: -6px;
+  block-size: 16px;
+  background: linear-gradient(90deg, var(--wall-lo) 50%, color-mix(in srgb, var(--wall) 88%, var(--moon)) 50%);
+  clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
+/* The window: mullions over the state's light. */
+.gh-hero .shell-counters .shell-counter::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-start: 50%;
+  inline-size: 36px;
+  block-size: 44px;
+  margin-inline-start: -18px;
+  border: 3px solid var(--frame);
+  border-radius: 2px;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 1.5px), var(--frame) calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+    linear-gradient(180deg, transparent 54%, var(--frame) 54% calc(54% + 3px), transparent calc(54% + 3px)),
+    var(--glow);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--glow) 55%, transparent);
+}
+.gh-hero .shell-counters .shell-counter[data-state="weak"]::before {
+  background:
+    linear-gradient(90deg, transparent calc(50% - 1.5px), var(--frame) calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+    linear-gradient(180deg, transparent 54%, var(--frame) 54% calc(54% + 3px), transparent calc(54% + 3px)),
+    color-mix(in srgb, var(--flick) 80%, var(--frame));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--flick) 45%, transparent);
+}
+.gh-hero .shell-counters .shell-counter[data-state="dead"]::before {
+  background:
+    linear-gradient(-8deg, transparent 22%, var(--board) 22% 38%, transparent 38% 56%, var(--board-2-lo) 56% 72%, transparent 72%),
+    var(--bg);
+  box-shadow: inset 0 0 10px #000;
+}
+
+/* Narrow screens: the hero stays short (Req 33.2), so the fronts become plain tiles with a lit top edge. */
+@media (max-width: 760px) {
+  .gh-street .gh-street-scene {
+    margin-inline: -14px;
+    padding-inline: 14px;
+    padding-block-start: 64px;
+  }
+  .gh-road {
+    margin-inline: -14px;
+    block-size: 48px;
+  }
+  .gh-skyline {
+    inset-block-end: 56px;
+    block-size: 110px;
+  }
+  .gh-branch {
+    inline-size: 150px;
+  }
+  .gh-hero .shell-counters .shell-counter {
+    margin-block-start: 0;
+    padding: 10px 6px;
+    border-block-start: 3px solid var(--glow);
+  }
+  .gh-hero .shell-counters .shell-counter[data-state="weak"] {
+    border-block-start-color: var(--flick);
+  }
+  .gh-hero .shell-counters .shell-counter[data-state="dead"] {
+    border-block-start-color: var(--board);
+  }
+  .gh-hero .shell-counters .shell-counter::before,
+  .gh-hero .shell-counters .shell-counter::after {
+    display: none;
+  }
+}
+
+/* ----- Person cards: the top of each card is the front of their house ----- */
+.gh-cards .gh-card-top {
+  position: relative;
+  margin: -16px -16px 0;
+  padding: 16px;
+  border-block-end: 1px solid var(--wall-edge);
+  border-radius: 8px 8px 0 0;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 13px, color-mix(in srgb, var(--frame) 28%, transparent) 13px 14px),
+    linear-gradient(180deg, var(--wall), var(--wall-lo));
+}
+.gh-cards .gh-card[data-state="dead"] .gh-card-top {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 13px, color-mix(in srgb, var(--frame) 35%, transparent) 13px 14px),
+    linear-gradient(180deg, color-mix(in srgb, var(--wall-lo) 70%, var(--bg)), var(--bg));
+}
+
+/* ----- The night around the page, and the neon sign hung over the street ----- */
+html {
+  background:
+    radial-gradient(ellipse 70% 420px at 50% 0, color-mix(in srgb, var(--sign) 10%, var(--bg)), transparent),
+    radial-gradient(ellipse 120% 60% at 50% 100%, color-mix(in srgb, var(--wall-lo) 60%, var(--bg)), transparent),
+    var(--bg);
+  background-attachment: fixed;
+}
+html body {
+  background: transparent;
+}
+
+.gh-header {
+  padding-block-start: 40px;
+}
+/* A dark backplate with screws, hung on two cables from above. */
+.gh-header .gh-sign-wrap {
+  position: relative;
+  padding: 18px clamp(16px, 4vw, 40px) 14px;
+  border: 1px solid color-mix(in srgb, var(--border-hero) 70%, var(--frame));
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 10px 10px, var(--border) 0 2px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 10px) 10px, var(--border) 0 2px, transparent 2.5px),
+    radial-gradient(circle at 10px calc(100% - 10px), var(--border) 0 2px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), var(--border) 0 2px, transparent 2.5px),
+    radial-gradient(ellipse 70% 90% at 50% 50%, color-mix(in srgb, var(--sign) 9%, var(--frame)), var(--frame));
+  box-shadow:
+    0 0 90px color-mix(in srgb, var(--sign) 14%, transparent),
+    0 6px 0 #000;
+}
+.gh-header .gh-sign-wrap::before,
+.gh-header .gh-sign-wrap::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 100%;
+  inset-inline-start: 18%;
+  inline-size: 2px;
+  block-size: 48px;
+  background: linear-gradient(180deg, transparent, var(--border));
+}
+.gh-header .gh-sign-wrap::after {
+  inset-inline-start: auto;
+  inset-inline-end: 18%;
+}
+
+/* Narrow screens: a smaller plate, so the hero and the street keep their room (Req 33.2). */
+@media (max-width: 760px) {
+  .gh-header {
+    padding-block-start: 28px;
+  }
+  .gh-header .gh-sign-wrap {
+    padding: 12px 16px 10px;
+  }
+  .gh-header .gh-sign-wrap::before,
+  .gh-header .gh-sign-wrap::after {
+    block-size: 36px;
+  }
+}
+
+/* The cobweb stays on top of a dark card's house front. */
+.gh-card .gh-card-web {
+  z-index: 2;
+}

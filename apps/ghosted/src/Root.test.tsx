@@ -9,7 +9,7 @@ import { DecayEngineError, type StorageAdapter } from "@decay-engine/engine"
 import { Root } from "./Root"
 import { ANNOUNCER_ID } from "./App"
 import { problemScreenText } from "./components/ErrorBoundary"
-import { ENGINE_STORAGE_KEY, OWN_PEOPLE_FLAG, STARTED_FLAG } from "./first-run"
+import { ENGINE_STORAGE_KEY, OWN_PEOPLE_FLAG, RESET_KEYS, STARTED_FLAG } from "./first-run"
 import { storageProblemText } from "./storage-errors"
 import type { Scheduler } from "./ticking"
 import { FakeStorage } from "./test/fake-storage"
@@ -58,8 +58,14 @@ describe("Root", () => {
     expect(screen.getByText(problemScreenText.confirmReset)).toBeTruthy()
     expect(storage.removed).toEqual([])
     fireEvent.click(screen.getByRole("button", { name: problemScreenText.confirm }))
-    expect(storage.removed).toEqual([ENGINE_STORAGE_KEY, STARTED_FLAG, OWN_PEOPLE_FLAG])
-    expect(storage.snapshot()).toEqual({ "decay-engine:study-dungeon": "{}" })
+    expect(storage.removed).toEqual(RESET_KEYS)
+    // Reset does not take the unreadable text with it: a copy was kept at startup.
+    const left = storage.snapshot()
+    const copyKeys = Object.keys(left).filter((key) => key.startsWith(`${ENGINE_STORAGE_KEY}:corrupt-`))
+    expect(copyKeys).toHaveLength(1)
+    expect(left[copyKeys[0]!]).toBe("[1, 2, 3]")
+    expect(left["decay-engine:study-dungeon"]).toBe("{}")
+    expect(Object.keys(left)).toHaveLength(2)
     expect(reload).toHaveBeenCalledTimes(2)
   })
 

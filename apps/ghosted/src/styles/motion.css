@@ -136,6 +136,431 @@
     animation: gh-toast-life 6.5s forwards;
   }
 
+
+  /* A window going dark while the time machine looks ahead (Req 1.4): flicker, flare, slam. */
+  .gh-win[data-crossed="dies"] .gh-pane {
+    animation: gh-die 1.1s ease-out 1;
+  }
+  .gh-win[data-crossed="dies"]::after {
+    content: "";
+    position: absolute;
+    inset: auto 10% 30% 10%;
+    block-size: 10px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--dim) 55%, transparent), transparent);
+    pointer-events: none;
+    animation: gh-dust 1.2s ease-out 0.7s both;
+  }
+  /* A window starting to flicker in the preview: one stutter. */
+  .gh-win[data-crossed="fades"] .gh-pane {
+    animation: gh-stutter 0.9s 1;
+  }
+  .gh-win {
+    position: relative;
+    transition: transform 0.2s;
+  }
+  .gh-win:hover,
+  .gh-win:focus-visible {
+    transform: translateY(-3px) scale(1.04);
+  }
+
+  /* Lightning (Req 3): one flash, then animationend removes it. */
+  .gh-app[data-spooky="haunted"] .gh-lightning {
+    display: block;
+    animation: gh-strike 0.75s ease-out forwards;
+  }
+  .gh-app[data-spooky="haunted"] .gh-lightning[data-kind="bright"] {
+    animation: gh-strike-bright 1.1s ease-out forwards;
+  }
+
+  /* The flashlight (Req 7): a soft lantern glow at the pointer, fine pointers only. */
+  @media (hover: hover) and (pointer: fine) {
+    .gh-app[data-spooky="haunted"] .gh-flashlight {
+      display: block;
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background: radial-gradient(
+        circle 140px at var(--px, -999px) var(--py, -999px),
+        color-mix(in srgb, var(--glow) 16%, transparent),
+        transparent 70%
+      );
+      background-attachment: fixed;
+      mix-blend-mode: screen;
+    }
+  }
+
+  /* A ghost drifting along the street while someone's window is dark. */
+  .gh-app[data-spooky="haunted"] .gh-street-scene[data-dark] .gh-street-ghost {
+    display: block;
+    position: absolute;
+    inset-block-start: 18%;
+    inset-inline-start: 0;
+    z-index: 1;
+    inline-size: 34px;
+    block-size: 38px;
+    fill: color-mix(in srgb, var(--bone) 28%, transparent);
+    pointer-events: none;
+    animation: gh-ghost-drift 26s linear infinite;
+  }
+  .gh-street-ghost-eye {
+    fill: var(--bg);
+  }
+
+  /* Bats across the moon, now and then. */
+  .gh-app[data-spooky="haunted"] .gh-bat {
+    display: block;
+    position: absolute;
+    inset-block-start: 14%;
+    inset-inline-start: 0;
+    inline-size: 14px;
+    block-size: 6px;
+    background: var(--frame);
+    clip-path: polygon(0 0, 30% 60%, 50% 20%, 70% 60%, 100% 0, 80% 100%, 50% 60%, 20% 100%);
+    animation: gh-bat 17s linear infinite;
+  }
+  .gh-app[data-spooky="haunted"] .gh-bat + .gh-bat {
+    inset-block-start: 24%;
+    animation-duration: 23s;
+    animation-delay: -9s;
+  }
+
+  /* Stars twinkle; the moon's glow moves with the preview. */
+  .gh-star {
+    animation: gh-twinkle 4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * -0.7s);
+  }
+  .gh-sky-moon::after {
+    transition: transform 0.3s;
+  }
+
+  /* Wisp floats, and sinks a little lower when the street is grim. */
+  .gh-wisp-art {
+    animation: gh-wisp-float 3.2s ease-in-out infinite;
+  }
+  .gh-wisp[data-band="grim"] .gh-wisp-art {
+    animation-duration: 5s;
+  }
+  .gh-wisp-eyes {
+    transition: transform 0.15s;
+  }
+  .gh-wisp-line {
+    animation: gh-bubble 0.5s ease-out both;
+  }
+
+  /* The street pulse: the trace runs along the line, faster as the street gets grim. */
+  .gh-pulse-trace {
+    stroke-dasharray: 18 82;
+    animation: gh-pulse-run calc(3.4s - var(--doom, 0) * 2.2s) linear infinite;
+  }
+
+  /* The reconnect ritual (Req 4): the ring opens, spirits rise, the stamp lands. */
+  .gh-ritual-ring {
+    animation: gh-ring 1.2s ease-out both;
+  }
+  .gh-spirit {
+    display: block;
+    position: absolute;
+    inset-block-end: 20%;
+    inset-inline-start: calc(18% + var(--i) * 9%);
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 50%;
+    background: var(--mint);
+    box-shadow: 0 0 10px var(--mint);
+    opacity: 0;
+    animation: gh-spirit 1.6s ease-out both;
+    animation-delay: calc(0.15s + var(--i) * 0.08s);
+  }
+  .gh-ritual-stamp {
+    animation: gh-stamp 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) 1s both;
+  }
+
+  /* The sign: one letter is loose and misfires now and then. */
+  .gh-sign-loose {
+    animation: gh-loose 7s infinite;
+  }
+  .gh-app[data-doom="grim"] .gh-sign-loose {
+    animation-duration: 2.6s;
+  }
+
+  /* The splash: the moon rises and stars come out before the windows light. */
+  .gh-splash .gh-sky-moon {
+    animation: gh-moonrise 2.4s ease-out both;
+  }
+  .gh-splash .gh-splash-enter {
+    animation: gh-beckon 2.4s ease-in-out 2.8s infinite;
+  }
+
+  /* A toast about a window going dark shakes once. */
+  .gh-toast[data-worst="dead"] {
+    animation:
+      gh-toast-life 6.5s forwards,
+      gh-shake 0.5s 1;
+  }
+
+  @keyframes gh-die {
+    0% {
+      filter: brightness(1);
+    }
+    12% {
+      filter: brightness(0.3);
+    }
+    22% {
+      filter: brightness(1.6);
+    }
+    32% {
+      filter: brightness(0.2);
+    }
+    45% {
+      filter: brightness(2.4);
+      transform: scale(1.06);
+    }
+    60% {
+      filter: brightness(0);
+      transform: scale(0.97);
+    }
+    100% {
+      filter: none;
+      transform: none;
+    }
+  }
+
+  @keyframes gh-dust {
+    from {
+      opacity: 0.9;
+      transform: scaleX(0.4);
+    }
+    to {
+      opacity: 0;
+      transform: scaleX(1.6) translateY(-6px);
+    }
+  }
+
+  @keyframes gh-stutter {
+    0%,
+    100% {
+      filter: none;
+    }
+    25% {
+      filter: brightness(0.5);
+    }
+    40% {
+      filter: brightness(1.2);
+    }
+    60% {
+      filter: brightness(0.6);
+    }
+  }
+
+  @keyframes gh-strike {
+    0% {
+      opacity: 0;
+    }
+    6% {
+      opacity: 0.9;
+    }
+    14% {
+      opacity: 0.1;
+    }
+    22% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gh-strike-bright {
+    0% {
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gh-ghost-drift {
+    0% {
+      transform: translateX(-60px) translateY(0);
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    50% {
+      transform: translateX(45vw) translateY(-14px);
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(95vw) translateY(0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes gh-bat {
+    0% {
+      transform: translateX(-30px) translateY(0) scaleY(1);
+    }
+    25% {
+      transform: translateX(25vw) translateY(-8px) scaleY(0.4);
+    }
+    50% {
+      transform: translateX(50vw) translateY(4px) scaleY(1);
+    }
+    75% {
+      transform: translateX(75vw) translateY(-6px) scaleY(0.4);
+    }
+    100% {
+      transform: translateX(105vw) translateY(0) scaleY(1);
+    }
+  }
+
+  @keyframes gh-twinkle {
+    0%,
+    100% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+
+  @keyframes gh-wisp-float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-2deg);
+    }
+    50% {
+      transform: translateY(-6px) rotate(2deg);
+    }
+  }
+
+  @keyframes gh-bubble {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes gh-pulse-run {
+    from {
+      stroke-dashoffset: 100;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes gh-ring {
+    from {
+      opacity: 0;
+      transform: scale(0.2);
+    }
+    60% {
+      opacity: 1;
+    }
+    to {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes gh-spirit {
+    0% {
+      opacity: 0;
+      transform: translateY(0) scale(0.5);
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-90px) scale(1.2);
+    }
+  }
+
+  @keyframes gh-stamp {
+    from {
+      opacity: 0;
+      transform: rotate(-8deg) scale(2.4);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(-8deg) scale(1);
+    }
+  }
+
+  @keyframes gh-loose {
+    0%,
+    80%,
+    100% {
+      opacity: 1;
+    }
+    82% {
+      opacity: 0.15;
+    }
+    84% {
+      opacity: 0.9;
+    }
+    86% {
+      opacity: 0.1;
+    }
+    90% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes gh-moonrise {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes gh-beckon {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--glow) 0%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 0 8px color-mix(in srgb, var(--glow) 25%, transparent);
+    }
+  }
+
+  @keyframes gh-shake {
+    0%,
+    100% {
+      translate: 0;
+    }
+    20% {
+      translate: -6px 0;
+    }
+    40% {
+      translate: 5px 0;
+    }
+    60% {
+      translate: -3px 0;
+    }
+    80% {
+      translate: 2px 0;
+    }
+  }
+
   @keyframes gh-flicker-out {
     0% {
       filter: brightness(1.8);
@@ -281,6 +706,132 @@
     }
     100% {
       filter: none;
+    }
+  }
+
+  /* Smoke curls from the chimney while someone inside is lit. */
+  .gh-house[data-warm] .gh-smoke {
+    display: block;
+  }
+  .gh-smoke i {
+    animation: gh-smoke 7s ease-out infinite;
+  }
+  .gh-smoke i:nth-child(2) {
+    animation-delay: -2.3s;
+  }
+  .gh-smoke i:nth-child(3) {
+    animation-delay: -4.6s;
+  }
+
+  /* Clouds cross the moon, very slowly. */
+  .gh-cloud {
+    animation: gh-cloud 70s ease-in-out infinite alternate;
+  }
+  .gh-cloud + .gh-cloud {
+    animation-duration: 95s;
+    animation-delay: -30s;
+  }
+
+  /* Far windows in the town go out and come back, each in its own time. */
+  .gh-town-win {
+    animation: gh-town 17s steps(1, end) infinite;
+    animation-delay: calc(var(--i) * -2.9s);
+  }
+
+  /* Ground fog rolls the other way from the high fog. */
+  .gh-groundfog {
+    animation: gh-fog 80s linear infinite reverse;
+  }
+
+  /* The branch sways a little in the wind (ambient, haunted only). */
+  .gh-app[data-spooky="haunted"] .gh-branch {
+    animation: gh-sway 9s ease-in-out infinite;
+  }
+
+  /* Streetlamps buzz as the street gets worse (ambient, haunted only). */
+  .gh-app[data-spooky="haunted"][data-doom="uneasy"] .gh-lamp-head,
+  .gh-app[data-spooky="haunted"][data-doom="uneasy"] .gh-lamp-cone {
+    animation: gh-lamp-buzz 11s infinite;
+  }
+  .gh-app[data-spooky="haunted"][data-doom="grim"] .gh-lamp-head,
+  .gh-app[data-spooky="haunted"][data-doom="grim"] .gh-lamp-cone {
+    animation: gh-lamp-buzz 3.6s infinite;
+  }
+  .gh-house:nth-child(2n) .gh-lamp-head,
+  .gh-house:nth-child(2n) .gh-lamp-cone {
+    animation-delay: -1.7s;
+  }
+
+  /* The hero's fading front flickers like the windows it counts. */
+  .gh-hero .shell-counters .shell-counter[data-state="weak"]::before {
+    animation: gh-flicker 3.2s infinite;
+  }
+
+  @keyframes gh-smoke {
+    0% {
+      transform: translate(0, 0) scale(0.5);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: translate(14px, -46px) scale(1.9);
+      opacity: 0;
+    }
+  }
+
+  @keyframes gh-cloud {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-180px);
+    }
+  }
+
+  @keyframes gh-town {
+    0%,
+    100% {
+      opacity: calc(0.55 - var(--doom, 0) * 0.35);
+    }
+    72% {
+      opacity: 0.05;
+    }
+    86% {
+      opacity: calc(0.55 - var(--doom, 0) * 0.35);
+    }
+  }
+
+  @keyframes gh-sway {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    50% {
+      transform: rotate(1.6deg);
+    }
+  }
+
+  @keyframes gh-lamp-buzz {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    91% {
+      opacity: 1;
+    }
+    92% {
+      opacity: 0.25;
+    }
+    93.5% {
+      opacity: 0.9;
+    }
+    95% {
+      opacity: 0.15;
+    }
+    97% {
+      opacity: 1;
     }
   }
 }

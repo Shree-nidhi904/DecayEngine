@@ -8,6 +8,8 @@
 // a real engine from it before anything is replaced (Req 21.3).
 
 import { DecayEngine } from "@decay-engine/engine"
+import { bumpRevision } from "@decay-engine/persist"
+import { STORAGE_NAMESPACE } from "./engine-instance"
 import { ghostedPolicy, type ContactEvent, type PersonPayload, type PersonPolicyData } from "./policy"
 import { ENGINE_STORAGE_KEY, OWN_PEOPLE_FLAG, STARTED_FLAG, type FlagStorage } from "./first-run"
 import { backupRefusals } from "./wording"
@@ -62,8 +64,10 @@ export function checkBackup(text: string): RestoreCheck {
 }
 
 /** Replaces the saved people with a checked backup's snapshot. The app reloads afterwards. */
-export function applyBackup(storage: Pick<FlagStorage, "setItem">, snapshot: unknown): void {
+export function applyBackup(storage: Pick<FlagStorage, "getItem" | "setItem">, snapshot: unknown): void {
   storage.setItem(ENGINE_STORAGE_KEY, JSON.stringify(snapshot))
+  // Tabs that loaded the old data must reload before saving, not write over the restore.
+  bumpRevision(storage, STORAGE_NAMESPACE, Date.now())
   storage.setItem(STARTED_FLAG, "1")
   storage.setItem(OWN_PEOPLE_FLAG, "1")
 }

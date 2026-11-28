@@ -143,6 +143,12 @@ export function PersonCard({
       data-state={state}
       aria-labelledby={headingId}
     >
+      {dead && (
+        <svg className="gh-card-web" viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+          <path d="M44 0L14 30M44 0L24 40M44 0L4 18M44 0L34 44M44 0L0 8" />
+          <path d="M36 0q2 8 8 8M26 0q3 16 18 18M16 0q4 24 28 28" />
+        </svg>
+      )}
       <div className="gh-card-top">
         <Window health={person.health} state={state} size="card" />
         <div className="gh-card-who">

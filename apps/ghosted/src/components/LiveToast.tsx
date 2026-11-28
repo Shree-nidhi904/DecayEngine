@@ -19,26 +19,29 @@ import "../styles/toast.css"
 
 export interface LiveToastProps {
   text: string
+  /** Haunt pass: "dark" when a window went dark, so the toast shakes once (motion.css). */
+  worst?: string
   /** True when the App's live region said these words, so the visible copy is hidden from screen readers. */
   announced: boolean
   /** Dismiss, or the end of the fade-out. */
   onDone: () => void
 }
 
-export function LiveToast({ text, announced, onDone }: LiveToastProps) {
+export function LiveToast({ text, announced, onDone, worst }: LiveToastProps) {
   // The fade's end (a native listener, so it hears the unprefixed event; only the toast's own animation counts).
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const toast = ref.current
     if (toast === null) return
     const ended = (event: Event) => {
-      if (event.target === toast) onDone()
+      // The haunt pass's one-off shake on a "went dark" toast is not the end of its life.
+      if (event.target === toast && (event as AnimationEvent).animationName !== "gh-shake") onDone()
     }
     toast.addEventListener("animationend", ended)
     return () => toast.removeEventListener("animationend", ended)
   }, [onDone])
   return (
-    <div ref={ref} className="gh-toast">
+    <div ref={ref} className="gh-toast" data-worst={worst}>
       <p className="gh-toast-text" aria-hidden={announced ? "true" : undefined}>
         {text}
       </p>

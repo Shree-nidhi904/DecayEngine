@@ -12,8 +12,12 @@ import { groupHouses } from "../street"
 import { freshnessText, stateWords, streetText } from "../wording"
 import { Glyph } from "./icons"
 import { House } from "./House"
+import { Sky, StreetGhost } from "./Haunt"
+import { Branch, Road, Skyline } from "./Scene"
+import type { Crossing } from "../preview-crossings"
 import "../styles/street.css"
 import "../styles/motion.css"
+import "../styles/scene.css"
 
 export interface StreetProps {
   people: readonly Person[]
@@ -23,6 +27,10 @@ export interface StreetProps {
   headingRef: RefObject<HTMLHeadingElement>
   /** The person just tended or reconnected: one relight flash. */
   relitId?: string
+  /** Haunt pass (Req 1.4): who crosses in the time machine's preview. */
+  crossed?: ReadonlyMap<string, Crossing>
+  /** Haunt pass: the people picked for a Triage session. */
+  picked?: ReadonlySet<string>
 }
 
 /** The legend: circle "lit", triangle "flickering", cross "boarded up" (Req 10.3). */
@@ -32,9 +40,10 @@ const LEGEND = [
   { shape: "cross", word: stateWords.dead, state: "dead" },
 ] as const
 
-export function Street({ people, onOpen, headingRef, relitId }: StreetProps) {
+export function Street({ people, onOpen, headingRef, relitId, crossed, picked }: StreetProps) {
   const headingId = useId()
   const houses = useMemo(() => groupHouses(people), [people])
+  const anyDark = people.some((p) => p.state === "dead")
 
   return (
     <section className="gh-plot gh-street" data-section="street" aria-labelledby={headingId}>
@@ -42,14 +51,32 @@ export function Street({ people, onOpen, headingRef, relitId }: StreetProps) {
         {streetText.title}
       </h2>
       <p className="gh-plot-sub">{freshnessText.streetNote}</p>
-      <div className="gh-street-scene">
+      <div className="gh-street-scene" data-dark={anyDark ? "" : undefined}>
+        {/* Haunt pass: the sky, a ghost when a window is dark, and the flashlight (haunt.css, motion.css). */}
+        <Sky />
+        {/* Art direction pass: the town on the horizon, then fog, then the houses. */}
+        <Skyline />
         <span className="gh-fog" aria-hidden="true" />
+        <StreetGhost />
         <div className="gh-houses">
-          {houses.map((house) => (
-            <House key={house.name} name={house.name} people={house.people} onOpen={onOpen} relitId={relitId} />
+          {houses.map((house, index) => (
+            <House
+              key={house.name}
+              variant={index}
+              name={house.name}
+              people={house.people}
+              onOpen={onOpen}
+              relitId={relitId}
+              crossed={crossed}
+              picked={picked}
+            />
           ))}
         </div>
+        <Road />
         <span className="gh-headlights" aria-hidden="true" />
+        <span className="gh-groundfog" aria-hidden="true" />
+        <Branch />
+        <span className="gh-flashlight" aria-hidden="true" />
       </div>
       <ul className="gh-legend">
         {LEGEND.map(({ shape, word, state }) => (

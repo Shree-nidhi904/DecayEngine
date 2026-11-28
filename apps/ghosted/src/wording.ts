@@ -556,3 +556,73 @@ export const listsText = {
   startsFading: (n: number) => (n === 0 ? "starts fading today" : `starts fading in ${days(n)}`),
   open: "Open",
 } as const
+
+export const wispText = {
+  name: "Wisp",
+  firstRun: [
+    "Boo! I'm Wisp. Load the sample street and I'll show you around.",
+    "Psst. Load the sample street. I've been lonely out here.",
+  ],
+  empty: [
+    "An empty street. Even I find that spooky. Add a person to light a window.",
+    "No windows yet. Add someone you'd like to keep in touch with.",
+  ],
+  lit: [
+    "Every window is lit. Suspiciously cosy. Drag the moon to peek ahead.",
+    "All lit. I've got nothing to haunt. Drag the moon and see who fades first.",
+  ],
+  fading: [
+    "A few windows are flickering. One message fixes that. Tap Reach out.",
+    "Flicker, flicker. Somebody's light is low. Reach out while it's warm.",
+    "I can see a window going dim. A two-line text counts. Reach out.",
+  ],
+  grim: [
+    "Okay, now it's properly spooky out here. Try a Séance: pick a few minutes below.",
+    "So many dim windows. Start small: reach out to the first one.",
+  ],
+  dark: [
+    "Some windows went dark. Read the autopsy, then decide if you'd like to reconnect.",
+    "Boarded-up windows can be opened again. Look at the empty windows.",
+  ],
+  previewCalm: [
+    "Peeking into the future, are we? It looks fine so far. Drag further.",
+    "Nothing changes while you look ahead. Keep dragging, I dare you.",
+  ],
+  previewUneasy: [
+    "Ooh, the street is getting dim out there. Back to today to fix it.",
+    "See the flicker spreading? That's the street if you do nothing. Back to today.",
+  ],
+  previewDark: [
+    "Ooh. Windows went dark in this future. Spooky. Fixable, though: back to today.",
+    "That's what silence looks like. Go back to today and reach out first.",
+  ],
+} as const
+
+/** The haunt pass's other words (Req 3-9). */
+export const hauntText = {
+  /** The street pulse under the hero heading, said in words as well as drawn. */
+  pulseLabel: "Street pulse",
+  pulse: { calm: "steady", uneasy: "uneasy", grim: "faint" },
+  /** The reconnect ritual's stamp (Req 4.1). */
+  litAgainStamp: "Lit again",
+  spooky: {
+    label: "Spooky level",
+    haunted: "Haunted",
+    calm: "Calm",
+    help: "Calm turns off lightning, the flashlight and the drifting extras. Windows still flicker and go dark.",
+    notSaved: "This choice cannot be saved in this browser, so it lasts until the page is closed.",
+  },
+  sound: {
+    label: "Sound",
+    help: "Soft sounds when a window lights or goes dark. Made in your browser; off until you turn it on.",
+  },
+  share: {
+    button: "Share a card",
+    names: "Include first names",
+    title: "My street tonight",
+    privacy: "Made on your device. Nothing is uploaded.",
+    footer: "Ghosted · built on Decay Engine",
+    made: "Your street card is downloading.",
+    failed: "This browser could not make the card.",
+  },
+} as const

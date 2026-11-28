@@ -199,7 +199,7 @@ describe("classifyLoadError and createEngineSafely", () => {
 
 describe("storageProblemText", () => {
   it("has one Ghosted sentence per problem", () => {
-    expect(Object.keys(storageProblemText).sort()).toEqual(["corrupt", "full", "unavailable"])
+    expect(Object.keys(storageProblemText).sort()).toEqual(["corrupt", "full", "stale", "unavailable"])
     expect(storageProblemText.full.startsWith("Storage full.")).toBe(true)
     expect(storageProblemText.corrupt).toContain("Reset all data")
     for (const sentence of Object.values(storageProblemText)) {

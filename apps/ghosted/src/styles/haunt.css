@@ -1,0 +1,338 @@
+/*
+ * Ghosted tokens only, with color-mix for tints. No animation or transition
+ * here: every movement is in motion.css, inside its one reduced-motion block.
+ * Under reduced motion, and with the Spooky level "calm", the lightning, the
+ * flashlight, the drifting ghost and the bats are not shown at all.
+ * --doom (0-1, set on .gh-app) tints scenery only, never text.
+ */
+
+/* ----- Doom: the page's edges darken as more windows go dark ----- */
+.gh-doom-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(ellipse 75% 70% at 50% 45%, transparent 55%, var(--frame));
+  opacity: calc(var(--doom, 0) * 0.75);
+}
+
+/* ----- Lightning (Req 3): shown only inside the motion block ----- */
+.gh-lightning {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0;
+}
+.gh-lightning[data-kind="dark"] {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--moon) 55%, transparent), color-mix(in srgb, var(--moon) 15%, transparent));
+}
+.gh-lightning[data-kind="bright"] {
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--mint) 45%, transparent), transparent 65%);
+}
+
+/* ----- The sky over the street ----- */
+.gh-sky {
+  position: absolute;
+  inset: 0 0 40% 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.gh-star {
+  position: absolute;
+  inset-inline-start: var(--x);
+  inset-block-start: var(--y);
+  inline-size: calc(var(--s) * 3px);
+  block-size: calc(var(--s) * 3px);
+  border-radius: 50%;
+  background: var(--moon);
+  opacity: calc(0.75 - var(--doom, 0) * 0.45);
+}
+/* The moon's glow, which turns a little red as the street gets grim. */
+.gh-sky-moon {
+  position: absolute;
+  inset-inline-end: 8%;
+  inset-block-start: 10%;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--moon) calc(100% - var(--doom, 0) * 45%), var(--rust));
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--moon) 45%, transparent),
+    0 0 70px color-mix(in srgb, var(--moon) 18%, transparent);
+}
+.gh-sky-moon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--moon-shade);
+  transform: translateX(calc(34px - var(--age, 0) * 30px));
+}
+.gh-bat {
+  display: none;
+}
+
+/* Fog thickens with doom (the drift itself is in motion.css). */
+.gh-street-scene .gh-fog {
+  opacity: calc(0.7 + var(--doom, 0) * 0.9);
+}
+
+/* ----- The flashlight (Req 7): light only, never shade ----- */
+.gh-flashlight {
+  display: none;
+}
+
+/* A ghost drifting past while a window is dark. */
+.gh-street-ghost {
+  display: none;
+}
+
+/* Hover and focus lean a window in, with a warm spill on the wall (the move is in motion.css). */
+.gh-win:hover .gh-pane:not([data-state="dead"]),
+.gh-win:focus-visible .gh-pane:not([data-state="dead"]) {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--glow) 50%, transparent),
+    0 0 28px color-mix(in srgb, var(--glow) calc(var(--lit) * 55%), transparent);
+}
+
+/* Séance: during a Triage session the street is dim except for the picked windows (data-seance). */
+.gh-app[data-seance] .gh-street-scene .gh-win:not([data-picked]) {
+  opacity: 0.55;
+}
+.gh-app[data-seance] .gh-win[data-picked] .gh-pane {
+  outline: 2px solid var(--flick);
+  outline-offset: 3px;
+}
+
+/* ----- Wisp, the guide (Req 5) ----- */
+.gh-wisp {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-block: 0 16px;
+}
+.gh-wisp-art {
+  flex: none;
+  inline-size: 52px;
+  block-size: 58px;
+  overflow: visible;
+}
+.gh-wisp-body {
+  fill: var(--bone);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--bone) 45%, transparent));
+}
+.gh-wisp[data-band="grim"] .gh-wisp-body {
+  fill: var(--dim);
+}
+.gh-wisp-eyes {
+  fill: var(--bg);
+  transform: translate(calc((var(--pxr, 0.5) - 0.5) * 6px), calc((var(--pyr, 0.5) - 0.5) * 4px));
+}
+.gh-wisp-mouth {
+  fill: none;
+  stroke: var(--bg);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.gh-wisp[data-band="grim"] .gh-wisp-mouth {
+  transform: rotate(180deg);
+  transform-origin: 32px 46px;
+}
+.gh-wisp-cheek {
+  fill: color-mix(in srgb, var(--sign) 55%, transparent);
+}
+.gh-wisp-line {
+  position: relative;
+  min-inline-size: 0;
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px 12px 12px 2px;
+  background: var(--panel);
+  color: var(--bone);
+  font-size: 15px;
+  line-height: 1.45;
+  box-shadow: 0 4px 0 #000;
+}
+
+/* ----- Street pulse ----- */
+.gh-pulse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0 0 16px;
+  color: var(--dim);
+}
+.gh-pulse-line {
+  inline-size: min(100%, 200px);
+  block-size: 28px;
+}
+.gh-pulse-ghost,
+.gh-pulse-trace {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.gh-pulse-ghost {
+  stroke: color-mix(in srgb, var(--mint) 25%, transparent);
+}
+.gh-pulse-trace {
+  stroke: var(--mint);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--mint) 70%, transparent));
+}
+.gh-pulse[data-band="uneasy"] .gh-pulse-trace {
+  stroke: var(--flick);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--flick) 70%, transparent));
+}
+.gh-pulse[data-band="grim"] .gh-pulse-trace {
+  stroke: var(--rust);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--rust) 70%, transparent));
+}
+.gh-pulse-word {
+  color: var(--bone);
+  font-weight: 600;
+}
+
+/* ----- The reconnect ritual (Req 4) ----- */
+.gh-dialog-art {
+  position: relative;
+}
+.gh-ritual {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.gh-ritual-ring {
+  position: absolute;
+  inline-size: 120px;
+  block-size: 120px;
+  border: 2px solid color-mix(in srgb, var(--mint) 70%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--mint) 45%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--mint) 35%, transparent);
+  opacity: 0.6;
+}
+.gh-spirit {
+  display: none;
+}
+.gh-ritual-stamp {
+  position: absolute;
+  inset-block-end: -6px;
+  inset-inline-end: 8%;
+  padding: 2px 10px;
+  border: 2px solid var(--mint);
+  border-radius: 4px;
+  color: var(--mint);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--panel);
+  transform: rotate(-8deg);
+}
+
+/* ----- Person cards: a glowing filament in the bar, a cobweb on dark cards ----- */
+.gh-card .gh-bar-fill {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--glow) 55%, transparent);
+}
+.gh-card .gh-bar[data-state="weak"] .gh-bar-fill {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--flick) 65%, transparent);
+}
+.gh-card[data-state="dead"] {
+  position: relative;
+  background: linear-gradient(180deg, var(--panel), var(--bg));
+}
+.gh-card-web {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: 44px;
+  block-size: 44px;
+  pointer-events: none;
+  stroke: color-mix(in srgb, var(--dim) 45%, transparent);
+  stroke-width: 1;
+  fill: none;
+}
+
+/* ----- Settings ----- */
+.gh-haunt-settings .gh-share {
+  display: grid;
+  gap: 8px;
+}
+.gh-share-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.gh-share-names {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 44px;
+  color: var(--bone);
+}
+.gh-share-names input {
+  inline-size: 20px;
+  block-size: 20px;
+  accent-color: var(--glow);
+}
+
+/* Room above the roofs for the sky. */
+.gh-street-scene {
+  padding-block-start: 64px;
+}
+
+/* The haunt settings box, in the notification setting's style (notify.css). */
+.gh-haunt-settings {
+  display: grid;
+  gap: 12px;
+  margin-block: 16px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.gh-haunt-toggle {
+  justify-content: space-between;
+  gap: 12px;
+  inline-size: 100%;
+  text-align: start;
+  white-space: normal;
+}
+.gh-haunt-toggle[aria-pressed="true"] {
+  border-color: var(--glow);
+}
+.gh-haunt-label {
+  min-inline-size: 0;
+}
+.gh-haunt-state {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--dim);
+}
+.gh-haunt-toggle[aria-pressed="true"] .gh-haunt-state {
+  color: var(--glow);
+}
+.gh-haunt-note {
+  margin: 0;
+  color: var(--dim);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* The dock's moon turns a little red as the street gets grim. */
+.gh-dock .gh-moon-face {
+  fill: color-mix(in srgb, var(--moon) calc(100% - var(--doom, 0) * 40%), var(--rust));
+}

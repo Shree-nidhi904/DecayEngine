@@ -152,8 +152,18 @@ describe("art: CSS and inline SVG only (Req 30.3)", () => {
     expect(readText(join(APP_DIR, "index.html"))).not.toMatch(/<img\b/i)
   })
 
-  it("no image files in the app", () => {
-    const images = listFiles(APP_DIR, (rel) => !rel.startsWith("dist/") && /\.(png|jpe?g|gif|webp|avif|svg|ico|bmp|tiff?)$/i.test(rel))
+  // The one exception: public/icons/ holds the install icons named in the web
+  // app manifest (and the iOS home-screen icon). A browser will only offer to
+  // install an app whose manifest points at image files, so these cannot be
+  // CSS or inline SVG. They are not drawn in the app; nothing in src/ uses them.
+  it("no image files in the app, except the install icons in public/icons/", () => {
+    const images = listFiles(
+      APP_DIR,
+      (rel) =>
+        !rel.startsWith("dist/") &&
+        !rel.startsWith("public/icons/") &&
+        /\.(png|jpe?g|gif|webp|avif|svg|ico|bmp|tiff?)$/i.test(rel)
+    )
     expect(images).toEqual([])
   })
 

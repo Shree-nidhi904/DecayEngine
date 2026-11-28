@@ -27,6 +27,7 @@ import { ghostedPolicy, type ContactEvent, type Person } from "../policy"
 import { contactChoice, dialogText, reachOutText } from "../wording"
 import type { WriteOutcome } from "../write-guard"
 import { useModalDialog } from "./useModalDialog"
+import { Window } from "./Window"
 import "../styles/layout.css"
 import "../styles/dialogs.css"
 
@@ -74,6 +75,12 @@ function previewAt(engine: Pick<GhostedEngine, "view">, id: string, t: number): 
   return { before: shownFreshness(settled.health), after }
 }
 
+/** The Reach out dialog's window at a freshness: flickering below the policy's weak line. */
+function LiveWindow({ freshness, relight = false }: { freshness: number; relight?: boolean }) {
+  const state = freshness < ghostedPolicy.thresholds.weak ? "weak" : "alive"
+  return <Window health={freshness} state={state} size="dialog" relight={relight} />
+}
+
 export function ReachOutDialog({
   engine,
   clock,
@@ -94,6 +101,8 @@ export function ReachOutDialog({
   // Read once, when the dialog opens.
   const [preview] = useState(() => previewAt(engine, person.id, clock()))
   const [state, setState] = useState<Step>(() => (preview === null ? { step: "dark" } : { step: "choose" }))
+  // Haunt pass (Req 10): the window brightens to each choice's freshness while it is aimed at.
+  const [aim, setAim] = useState<ContactKind | null>(null)
   // Guards against a second pick before React re-renders.
   const picked = useRef(false)
 
@@ -166,6 +175,9 @@ export function ReachOutDialog({
 
       {state.step === "choose" && preview !== null && (
         <>
+          <div className="gh-dialog-art">
+            <LiveWindow freshness={aim === null ? preview.before : preview.after[aim]} />
+          </div>
           <p className="gh-dialog-question" tabIndex={-1} data-autofocus>
             {reachOutText.question(first)}
           </p>
@@ -180,6 +192,10 @@ export function ReachOutDialog({
                   aria-describedby={blocked !== undefined ? blockedId : undefined}
                   title={blocked}
                   onClick={() => pick(kind)}
+                  onPointerEnter={() => setAim(kind)}
+                  onPointerLeave={() => setAim(null)}
+                  onFocus={() => setAim(kind)}
+                  onBlur={() => setAim(null)}
                 >
                   <span className="gh-choice-kind">{contactChoice[kind]}</span>{" "}
                   <span className="gh-choice-effect gh-number">
@@ -199,6 +215,11 @@ export function ReachOutDialog({
 
       {state.step !== "choose" && (
         <>
+          {state.step === "done" && (
+            <div className="gh-dialog-art">
+              <LiveWindow freshness={state.after} relight />
+            </div>
+          )}
           <p ref={resultRef} role="status" className="gh-dialog-result" tabIndex={-1} data-autofocus>
             {resultText}
           </p>
